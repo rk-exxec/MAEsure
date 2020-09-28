@@ -39,8 +39,9 @@ class Droplet():
         self.base_diam = 0
 
 def evaluate_droplet(img, y_base) -> Droplet:
-
+    
     crop_img = img[:y_base,:]
+    crop_img = cv2.UMat(crop_img)
     # calculate thrresholds
     #thresh_high, thresh_im = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     #thresh_low = 0.5*thresh_high
@@ -49,7 +50,7 @@ def evaluate_droplet(img, y_base) -> Droplet:
 
    # cv2.imshow('Canny',bw_edges)
     #input('')
-    contours, hierarchy = cv2.findContours(bw_edges.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    contours, hierarchy = cv2.findContours(bw_edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
     edge = max(contours, key=cv2.contourArea)
     #edge = contours[0]
     (x0,y0),(MA,ma),phi = cv2.fitEllipse(edge)
