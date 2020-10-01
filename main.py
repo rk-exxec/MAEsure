@@ -1,4 +1,3 @@
-
 #     MAEsure is a program to measure the surface energy of MAEs via contact angle
 #     Copyright (C) 2020  Raphael Kriegl
 
@@ -19,19 +18,15 @@
 import sys
 import os
 import atexit
-from typing import Optional
 import cv2
 import numpy as np
-#import threading
-#from vimba import *
-from pymba import Vimba, Frame
 
-from PySide2 import QtGui
-from PySide2.QtWidgets import QApplication, QMainWindow
-from PySide2.QtCore import QFile, Signal, Slot, Qt, QThread, QObject
+
+from PySide2.QtWidgets import QApplication, QMainWindow, QPushButton
+from PySide2.QtCore import QFile, Signal, QThread
 from PySide2.QtUiTools import QUiLoader
-from PySide2.QtGui import QPixmap
 from ui_main import Ui_main
+from camera_control import CameraControl
 
 
 class VideoThread(QThread):
@@ -97,72 +92,27 @@ class VideoThread(QThread):
     #             except: 
     #                 pass
 
-class CameraControl(QObject):
-    change_pixmap_signal = Signal(np.ndarray)
-    def __init__(self):
-        super(CameraControl, self).__init__()
-        self.cam = ''
-        self.is_running = False
-        self.vimba = Vimba()
-        self.vimba.startup()
-        self.cam = self.vimba.camera(0)
-        #self.cam.close()
-        self.cam.open()
-
-        self.cam.arm('Continuous', self.frame_handler)
-
-    def __del__(self):
-        self.cam.stop_frame_acquisition()
-        self.cam.disarm()
-        self.cam.close()
-        del self.vimba
-
-    def start_stop_preview(self):
-        if self.is_running:
-            self.cam.stop_frame_acquisition()
-        else:
-            self.cam.start_frame_acquisition()
-
-    def frame_handler(self, frame: Frame, delay: Optional[int] = 1) -> None:
-        img = frame.buffer_data_numpy()
-        self.change_pixmap_signal.emit(img)
-
-
 class main(QMainWindow):
     def __init__(self):
         super(main, self).__init__()
         self.ui = Ui_main()
         self.ui.setupUi(self)
+        #self.load_ui()
         atexit.register(self.cleanup)
         #self.camera_handler = Handler()
         #self.camera_handler.change_pixmap_signal.connect(self.update_image)
-        self.camera_ctl = CameraControl()
-        self.camera_ctl.change_pixmap_signal.connect(self.update_image)
-
-        self.ui.Btn_StartStopPreview.clicked.connect(self.prev_start_pushed)
+        #self.camera_ctl = CameraControl()
+        #self.camera_prev.change_pixmap_signal.connect(self.update_image)
+        #btn = self.findChild(QPushButton, 'btn_prev_st')
+        self.ui.btn_prev_st.clicked.connect(self.prev_start_pushed)
         # self.thread.start()
-        #self.load_ui()
+        
 
     def __del__(self):
-        del self.camera_ctl
-    
+        del self.ui.camera_prev
+
     def cleanup(self):
         del self
-
-    @Slot(np.ndarray)
-    def update_image(self, cv_img):
-        """ Updates the image_label with a new opencv image"""
-        qt_img = self.convert_cv_qt(cv_img)
-        self.ui.PreviewWidget.setPixmap(qt_img)
-
-    def convert_cv_qt(self, cv_img):
-        """Convert from an opencv image to QPixmap"""
-        rgb_image = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
-        h, w, ch = rgb_image.shape
-        bytes_per_line = ch * w
-        convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
-        p = convert_to_Qt_format.scaled(480, 360, Qt.KeepAspectRatio)
-        return QPixmap.fromImage(p)
 
     def load_ui(self):
         loader = QUiLoader()
@@ -173,8 +123,12 @@ class main(QMainWindow):
         ui_file.close()
 
     def prev_start_pushed(self):
-        self.camera_ctl.start_stop_preview()
-        self.ui.Btn_StartStopPreview.setText('Stop')
+        if self.ui.btn_prev_st.Text != 'Stop':
+            self.ui.camera_prev.start_preview()
+            self.ui.btn_prev_st.setText('Stop')
+        else:
+            self.ui.camera_prev.stop_preview()
+            self.ui.btn_prev_st.setText('Start')
 
 
 if __name__ == "__main__":
