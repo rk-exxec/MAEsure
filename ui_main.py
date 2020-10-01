@@ -12,6 +12,8 @@ from PySide2.QtCore import *
 from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 
+from camera_control import CameraControl
+
 
 class Ui_main(object):
     def setupUi(self, main):
@@ -23,22 +25,22 @@ class Ui_main(object):
         self.box_preview = QGroupBox(self.centralwidget)
         self.box_preview.setObjectName(u"box_preview")
         self.box_preview.setGeometry(QRect(10, 10, 601, 391))
-        self.Btn_StartStopPreview = QPushButton(self.box_preview)
-        self.Btn_StartStopPreview.setObjectName(u"Btn_StartStopPreview")
-        self.Btn_StartStopPreview.setGeometry(QRect(20, 20, 75, 23))
+        self.btn_prev_st = QPushButton(self.box_preview)
+        self.btn_prev_st.setObjectName(u"btn_prev_st")
+        self.btn_prev_st.setGeometry(QRect(20, 20, 75, 23))
         self.Btn_ResetCameraBtn = QPushButton(self.box_preview)
         self.Btn_ResetCameraBtn.setObjectName(u"Btn_ResetCameraBtn")
         self.Btn_ResetCameraBtn.setGeometry(QRect(20, 50, 75, 23))
-        self.PreviewWidget = QLabel(self.box_preview)
-        self.PreviewWidget.setObjectName(u"PreviewWidget")
-        self.PreviewWidget.setGeometry(QRect(110, 20, 480, 360))
-        self.PreviewWidget.setMinimumSize(QSize(0, 0))
-        self.PreviewWidget.setBaseSize(QSize(640, 480))
-        self.PreviewWidget.setMouseTracking(True)
-        self.PreviewWidget.setFrameShape(QFrame.Panel)
-        self.PreviewWidget.setPixmap(QPixmap(u"../../MATLAB/Contact-Angle-Measurement/untitled1.png"))
-        self.PreviewWidget.setScaledContents(False)
-        self.PreviewWidget.setAlignment(Qt.AlignCenter)
+        self.camera_prev = CameraControl(self.box_preview)
+        self.camera_prev.setObjectName(u"camera_prev")
+        self.camera_prev.setGeometry(QRect(110, 20, 480, 360))
+        self.camera_prev.setMinimumSize(QSize(0, 0))
+        self.camera_prev.setBaseSize(QSize(640, 480))
+        self.camera_prev.setMouseTracking(True)
+        self.camera_prev.setFrameShape(QFrame.Panel)
+        self.camera_prev.setPixmap(QPixmap(u"../../MATLAB/Contact-Angle-Measurement/untitled1.png"))
+        self.camera_prev.setScaledContents(False)
+        self.camera_prev.setAlignment(Qt.AlignCenter)
         self.pushButton = QPushButton(self.box_preview)
         self.pushButton.setObjectName(u"pushButton")
         self.pushButton.setGeometry(QRect(20, 80, 75, 23))
@@ -205,9 +207,9 @@ class Ui_main(object):
     def retranslateUi(self, main):
         main.setWindowTitle(QCoreApplication.translate("main", u"main", None))
         self.box_preview.setTitle(QCoreApplication.translate("main", u"Preview", None))
-        self.Btn_StartStopPreview.setText(QCoreApplication.translate("main", u"Start", None))
+        self.btn_prev_st.setText(QCoreApplication.translate("main", u"Start", None))
         self.Btn_ResetCameraBtn.setText(QCoreApplication.translate("main", u"Reset", None))
-        self.PreviewWidget.setText("")
+        self.camera_prev.setText("")
         self.pushButton.setText(QCoreApplication.translate("main", u"Set ROI", None))
         self.pushButton_2.setText(QCoreApplication.translate("main", u"Reset ROI", None))
         self.label.setText(QCoreApplication.translate("main", u"Angle: 66.6\u00b0", None))
@@ -258,3 +260,4 @@ class Ui_main(object):
         self.pushButton_9.setText(QCoreApplication.translate("main", u"Save As ...", None))
         self.pushButton_10.setText(QCoreApplication.translate("main", u"Load", None))
     # retranslateUi
+
