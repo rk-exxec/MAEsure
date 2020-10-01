@@ -26,7 +26,7 @@
     <property name="title">
      <string>Preview</string>
     </property>
-    <widget class="QPushButton" name="Btn_StartStopPreview">
+    <widget class="QPushButton" name="btn_prev_st">
      <property name="geometry">
       <rect>
        <x>20</x>
@@ -52,7 +52,7 @@
       <string>Reset</string>
      </property>
     </widget>
-    <widget class="QLabel" name="PreviewWidget">
+    <widget class="CameraControl" name="camera_prev">
      <property name="geometry">
       <rect>
        <x>110</x>
@@ -713,6 +713,13 @@
   <widget class="QStatusBar" name="statusbar"/>
  </widget>
  <layoutdefault spacing="6" margin="9"/>
+ <customwidgets>
+  <customwidget>
+   <class>CameraControl</class>
+   <extends>QLabel</extends>
+   <header>camera_control.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
  <designerdata>
