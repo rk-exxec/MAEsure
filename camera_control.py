@@ -72,6 +72,7 @@ class CameraControl(QLabel):
 
     def hide_baseline(self):
         self.baseline.hide()
+
     def mousePressEvent(self,event):
         if event.button() == Qt.LeftButton:
             self.roi_origin = QPoint(event.pos())
@@ -99,8 +100,10 @@ class CameraControl(QLabel):
             self.abort_roi()
             
     def apply_roi(self):
+        x,y,w,h = self.roi_rubber_band.rect().getRect()
         self.roi_rubber_band.hide()
-        self.cam.
+        self.set_roi(x,y,w,h)
+        #self.cam.
         #TODO set camera
 
     def abort_roi(self):
@@ -108,6 +111,22 @@ class CameraControl(QLabel):
 
     def start_roi_sel(self):
         pass
+
+    def reset_roi(self):
+        self.set_roi(0,0, 2064, 1542)
+
+    def set_roi(self, x, y, w, h):
+        self.cam.feature('OffsetX').value = x
+        self.cam.feature('OffsetY').value = y
+        # width and height need be multiple of 8
+        w = 8 * round(w/8)
+        h = 8 * round(h/8)
+        self.cam.feature('Width').value = w
+        self.cam.feature('Height').value = h
+
+    def set_image(self, file):
+        img = QPixmap(file)
+        self.setPixmap(img.scaled(self.size(), Qt.KeepAspectRatio))
 
     @Slot(np.ndarray)
     def update_image(self, cv_img):
