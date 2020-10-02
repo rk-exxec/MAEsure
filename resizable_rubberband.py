@@ -17,17 +17,17 @@
 # This Python file uses the following encoding: utf-8
 
 from PySide2.QtWidgets import QWidget, QHBoxLayout, QSizeGrip, QRubberBand
-from PySide2.QtGui import QPalette, QBrush
-from PySide2.QtCore import Qt
+from PySide2.QtGui import QPainter, QPen
+from PySide2.QtCore import Qt, QPoint
 
 class ResizableRubberBand(QWidget):
     def __init__(self, parent=None):
         super(ResizableRubberBand, self).__init__(parent)
-
-        #self.rubber_band = QRubberBand(QRubberBand.Rectangle, pixmap)
         self.setWindowFlags(Qt.SubWindow)
         self.layout = QHBoxLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)
+        self.setCursor(Qt.SizeAllCursor)
+        self.origin = QPoint()
 
         self.grip1 = QSizeGrip(self)
         self.grip2 = QSizeGrip(self)
@@ -35,12 +35,7 @@ class ResizableRubberBand(QWidget):
         self.layout.addWidget(self.grip2, 0, Qt.AlignRight | Qt.AlignBottom)
         	
         self.rubberband = QRubberBand(QRubberBand.Rectangle, self)
-        try:
-            pal = QPalette()
-            pal.setBrush(QPalette.Highlight, QBrush(Qt.red))
-            self.rubberband.setPalette(pal)
-        except:
-            pass
+
         self.rubberband.move(0, 0)
         self.hide()
         self.rubberband.hide()
@@ -50,6 +45,36 @@ class ResizableRubberBand(QWidget):
     def resizeEvent(self, event):
         self.rubberband.resize(self.size())
 
-    def show(self):
-        self.rubberband.show()
-        super().show()
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        painter = QPainter(self)
+        #painter.beginNativePainting()
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.SmoothPixmapTransform)
+        painter.setPen(QPen(Qt.red, 3))
+        painter.drawRect(self.rubberband.rect())
+        painter.setPen(QPen(Qt.red, 1))
+        x_begin = self.rubberband.x()
+        x_half = self.rubberband.x() + self.rubberband.width()/2
+        x_full = self.rubberband.x() + self.rubberband.width()
+        y_begin = self.rubberband.y()
+        y_half = self.rubberband.y() + self.rubberband.height()/2
+        y_full = self.rubberband.y() + self.rubberband.height()
+        points = [QPoint(x_half, y_begin),QPoint(x_half,y_full),QPoint(x_begin,y_half),QPoint(x_full,y_half)]
+        painter.drawLines(points)
+        #painter.endNativePainting()
+
+    # def moveEvent(self, event: QMoveEvent):
+    #     self.rubberband.move(event.pos())
+
+    def mousePressEvent(self, event):
+        if event.buttons() == Qt.LeftButton:
+            self.origin = event.globalPos() - self.pos()
+
+    def mouseMoveEvent(self, event):
+        if event.buttons() == Qt.LeftButton:
+            self.move(event.globalPos() - self.origin)
+
+    # def show(self):
+    #     self.rubberband.show()
+    #     super().show()

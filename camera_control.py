@@ -21,11 +21,23 @@ import numpy as np
 from pymba import Vimba, Frame
 
 from PySide2 import QtGui
-from PySide2.QtWidgets import QWidget, QLabel
+from PySide2.QtWidgets import QLabel
 from PySide2.QtCore import Signal, Slot, Qt, QPoint, QRect, QSize
 from PySide2.QtGui import QPixmap
 
 from resizable_rubberband import ResizableRubberBand
+from baseline import Baseline
+from evaluate_droplet import evaluate_droplet
+
+
+# TODO 
+#   ROI selection
+#   droplet detection
+#   
+#
+#
+#
+
 
 class CameraControl(QLabel):
     change_pixmap_signal = Signal(np.ndarray)
@@ -112,11 +124,6 @@ class CameraControl(QLabel):
                 self.roi_rubber_band.setGeometry(QRect(self.roi_origin, event.pos()).normalized())
         elif event.buttons() == Qt.RightButton:
             pass
-
-        
-
-    # def mouseReleaseEvent(self, event):
-    #     self.roi_rubber_band.hide()
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Enter:

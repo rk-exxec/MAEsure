@@ -92,7 +92,7 @@
       <set>Qt::AlignCenter</set>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton">
+    <widget class="QPushButton" name="btn_set_roi">
      <property name="geometry">
       <rect>
        <x>20</x>
@@ -105,7 +105,7 @@
       <string>Set ROI</string>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_2">
+    <widget class="QPushButton" name="btn_reset_roi">
      <property name="geometry">
       <rect>
        <x>20</x>
@@ -717,7 +717,7 @@
   <customwidget>
    <class>CameraControl</class>
    <extends>QLabel</extends>
-   <header>camera_control.h</header>
+   <header>camera_control</header>
   </customwidget>
  </customwidgets>
  <resources/>
