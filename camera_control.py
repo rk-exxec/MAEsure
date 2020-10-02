@@ -31,35 +31,56 @@ class CameraControl(QLabel):
     change_pixmap_signal = Signal(np.ndarray)
     def __init__(self, parent=None):
         super(CameraControl, self).__init__(parent)
-        self.setWindowFlags(Qt.SubWindow)
         self.roi_origin = QPoint()
-        self.cam = ''
         self.is_running = False
         self.vimba = Vimba()
         self.vimba.startup()
         self.cam = self.vimba.camera(0)
-        #self.cam.close()
+        try:
+            self.cam.close()
+        except:
+            pass
         self.cam.open()
         self.roi_rubber_band = ResizableRubberBand(self)
-        self.roi_origin = QPoint()
         self.baseline = Baseline(self)
         self.change_pixmap_signal.connect(self.update_image)
-
-        self.cam.arm('Continuous', self.frame_handler)
+        self.setup_camera()
+        self.display_snaphot()
+        #self.set_image('./untitled1.png')
 
     def __del__(self):
-        self.cam.stop_frame_acquisition()
-        self.cam.disarm()
-        self.cam.close()
+        try:
+            self.cam.stop_frame_acquisition()
+            self.cam.disarm()
+            self.cam.close()
+        except:
+            pass
         del self.vimba
 
     def stop_preview(self):
         self.is_running = False
         self.cam.stop_frame_acquisition()
+        self.cam.disarm()
 
     def start_preview(self):
+        self.cam.arm('Continuous', self.frame_handler)
         self.cam.start_frame_acquisition()
         self.is_running = True
+
+    def setup_camera(self):
+        self.cam.feature('ExposureTime').value = 1000.0
+        self.cam.feature('ExposureTime').value = 1000.0
+        self.cam.feature('ReverseY').value = 'False'
+        #self.set_roi(800, 530, 301, 280)
+        #self.cam.arm('Continuous', self.frame_handler)
+    
+    def display_snaphot(self):
+        self.cam.arm('SingleFrame')
+        frame = self.cam.acquire_frame()
+        img = frame.buffer_data_numpy()
+        self.change_pixmap_signal.emit(img)
+        self.update()
+        self.cam.disarm()
 
     def frame_handler(self, frame: Frame, delay: Optional[int] = 1) -> None:
         img = frame.buffer_data_numpy()
