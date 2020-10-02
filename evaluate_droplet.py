@@ -38,7 +38,9 @@ class Droplet():
 def evaluate_droplet(img, y_base) -> Droplet:
     drplt = Droplet()
     crop_img = img[:y_base,:]
-    height, width, channels = img.shape
+    shape = img.shape
+    height = shape[0]
+    width = shape[1]
     img = cv2.UMat(img)
     crop_img = cv2.UMat(crop_img)
     # calculate thrresholds
@@ -50,6 +52,10 @@ def evaluate_droplet(img, y_base) -> Droplet:
    # cv2.imshow('Canny',bw_edges)
     #input('')
     contours, hierarchy = cv2.findContours(bw_edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+
+    if len(contours) == 0:
+        raise ValueError('No contours found!')
+
     edge = max(contours, key=cv2.contourArea)
     #edge = contours[0]
     (x0,y0),(MA,ma),phi = cv2.fitEllipse(edge)
@@ -99,9 +105,9 @@ def evaluate_droplet(img, y_base) -> Droplet:
     img = cv2.line(img, (0,y_int), (width, y_int), (255,0,0), thickness=2, lineType=cv2.LINE_AA)
     img = cv2.putText(img, '<' + str(round(angle_l*180/pi,1)), (5,y_int-5), cv2.FONT_HERSHEY_COMPLEX, .5, (0,0,0))
     img = cv2.putText(img, '<' + str(round(angle_r*180/pi,1)), (width - 80,y_int-5), cv2.FONT_HERSHEY_COMPLEX, .5, (0,0,0))
-    cv2.imshow('Heyho',img)
-    cv2.waitKey(0)
-    return drplt
+    #cv2.imshow('Test',img)
+    #cv2.waitKey(0)
+    return drplt, img
 
 def calc_general_ell_params(x0, y0, pa, pb, phi):
     """
@@ -135,7 +141,7 @@ def calc_intersection_line_ellipse(ellipse_pars, line_pars):
     # f(x) = 0*x + t
     num = 2*a*b*sqrt((b**2 - a**2)*cos(phi)**2 + a**2 - (t-y0)**2) \
         + (b**2 - a**2)*(2*x0*cos(phi)**2 + (y0 - t)*sin(2*phi))
-    den = 2*(b**2*cos(phi)**2 - a**2*sin(phi)**2)
+    den = 2*(b**2*cos(phi)**2 + a**2*sin(phi)**2)
     try:
         intersection = [(2*a**2*x0 + num) / den, (2*a**2*x0 - num) / den]
     except ZeroDivisionError as zde:

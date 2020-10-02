@@ -84,6 +84,10 @@ class CameraControl(QLabel):
 
     def frame_handler(self, frame: Frame, delay: Optional[int] = 1) -> None:
         img = frame.buffer_data_numpy()
+        try:
+            drplt, img = evaluate_droplet(img, self.baseline.get_y_level())
+        except Exception as ex:
+            print(ex)
         # do image detection
         # cv.ellipse(img, (x,y),(a,b),phi, 0 ,2*math.pi, 'm')
         self.change_pixmap_signal.emit(img)
@@ -153,7 +157,7 @@ class CameraControl(QLabel):
     def update_image(self, cv_img):
         """ Updates the image_label with a new opencv image"""
         qt_img = self.convert_cv_qt(cv_img)
-        self.ui.PreviewWidget.setPixmap(qt_img)
+        self.setPixmap(qt_img)
 
     def convert_cv_qt(self, cv_img):
         """Convert from an opencv image to QPixmap"""
@@ -161,5 +165,5 @@ class CameraControl(QLabel):
         h, w, ch = rgb_image.shape
         bytes_per_line = ch * w
         convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
-        p = convert_to_Qt_format.scaled(480, 360, Qt.KeepAspectRatio)
+        p = convert_to_Qt_format.scaled(self.size(), Qt.KeepAspectRatio)
         return QPixmap.fromImage(p)
