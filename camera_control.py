@@ -42,6 +42,7 @@ class CameraControl(QLabel):
         self.cam.open()
         self.roi_rubber_band = ResizableRubberBand(self)
         self.roi_origin = QPoint()
+        self.baseline = Baseline(self)
         self.change_pixmap_signal.connect(self.update_image)
 
         self.cam.arm('Continuous', self.frame_handler)
@@ -66,6 +67,11 @@ class CameraControl(QLabel):
         # cv.ellipse(img, (x,y),(a,b),phi, 0 ,2*math.pi, 'm')
         self.change_pixmap_signal.emit(img)
 
+    def show_baseline(self):
+        self.baseline.show()
+
+    def hide_baseline(self):
+        self.baseline.hide()
     def mousePressEvent(self,event):
         if event.button() == Qt.LeftButton:
             self.roi_origin = QPoint(event.pos())
