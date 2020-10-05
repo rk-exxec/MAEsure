@@ -48,7 +48,7 @@ class ResizableRubberBand(QWidget):
     def paintEvent(self, event):
         super().paintEvent(event)
         painter = QPainter(self)
-        #painter.beginNativePainting()
+        painter.beginNativePainting()
         painter.setRenderHint(QPainter.Antialiasing)
         painter.setRenderHint(QPainter.SmoothPixmapTransform)
         painter.setPen(QPen(Qt.red, 3))
@@ -62,7 +62,9 @@ class ResizableRubberBand(QWidget):
         y_full = self.rubberband.y() + self.rubberband.height()
         points = [QPoint(x_half, y_begin),QPoint(x_half,y_full),QPoint(x_begin,y_half),QPoint(x_full,y_half)]
         painter.drawLines(points)
-        #painter.endNativePainting()
+        painter.endNativePainting()
+        painter.end()
+        
 
     # def moveEvent(self, event: QMoveEvent):
     #     self.rubberband.move(event.pos())

@@ -27,7 +27,7 @@ class Baseline(QWidget):
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.setCursor(Qt.SizeVerCursor)
         self.origin = QPoint(0,0)
-        parent.update()
+        #parent.update()
         self.setGeometry(0, 0, parent.geometry().width(), 20)
         self.show()
 
@@ -38,14 +38,15 @@ class Baseline(QWidget):
     def paintEvent(self, event):
         super().paintEvent(event)
         painter = QPainter(self)
-        #painter.beginNativePainting()
+        painter.beginNativePainting()
         painter.setRenderHint(QPainter.Antialiasing)
         painter.setPen(QPen(Qt.gray, 1))
         x1,y1,x2,y2 = self.rect().getCoords()
         painter.drawRect(self.rect())
         painter.setPen(QPen(Qt.blue, 2))
         painter.drawLine(QPoint(x1, y1+(y2-y1)/2), QPoint(x2, y1+(y2-y1)/2))
-        #painter.endNativePainting()
+        painter.endNativePainting()
+        painter.end()
 
     def showEvent(self, event):
         self.resize(self.parent().geometry().width(), 20)
