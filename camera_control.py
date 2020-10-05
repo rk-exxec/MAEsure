@@ -33,7 +33,7 @@ from evaluate_droplet import evaluate_droplet
 # TODO 
 #   ROI selection
 #   droplet detection
-#   
+#   setText() crash https://stackoverflow.com/questions/64211299/pyside2-qpushbutton-settext-crashes-my-application-after-halting-video-feed 
 #
 #
 #
@@ -44,7 +44,9 @@ class CameraControl(QLabel):
     def __init__(self, parent=None):
         super(CameraControl, self).__init__(parent)
         self.roi_origin = QPoint()
+        self._first_show = True # whether form is shown for the first time
         self.is_running = False
+        self.change_pixmap_signal.connect(self.update_image)
         self.vimba = Vimba()
         self.vimba.startup()
         self.cam = self.vimba.camera(0)
@@ -53,27 +55,28 @@ class CameraControl(QLabel):
         except:
             pass
         self.cam.open()
+        self.setup_camera()
+        self.update()
         self.roi_rubber_band = ResizableRubberBand(self)
         self.baseline = Baseline(self)
-        self.change_pixmap_signal.connect(self.update_image)
-        self.setup_camera()
-        self.display_snaphot()
         #self.set_image('./untitled1.png')
 
     def __del__(self):
         try:
-            self.cam.stop_frame_acquisition()
+            #self.cam.stop_frame_acquisition()
             self.cam.disarm()
             self.cam.close()
         except:
             pass
         del self.vimba
 
+    @Slot()
     def stop_preview(self):
         self.is_running = False
-        self.cam.stop_frame_acquisition()
+        #self.cam.stop_frame_acquisition()
         self.cam.disarm()
 
+    @Slot()
     def start_preview(self):
         self.cam.arm('Continuous', self.frame_handler)
         self.cam.start_frame_acquisition()
@@ -91,15 +94,15 @@ class CameraControl(QLabel):
         frame = self.cam.acquire_frame()
         img = frame.buffer_data_numpy()
         self.change_pixmap_signal.emit(img)
-        self.update()
+        #self.update()
         self.cam.disarm()
 
     def frame_handler(self, frame: Frame, delay: Optional[int] = 1) -> None:
         img = frame.buffer_data_numpy()
-        try:
-            drplt, img = evaluate_droplet(img, self.baseline.get_y_level())
-        except Exception as ex:
-            print(ex)
+        # try:
+        #     drplt, img = evaluate_droplet(img, self.baseline.get_y_level())
+        # except Exception as ex:
+        #     print(ex)
         # do image detection
         # cv.ellipse(img, (x,y),(a,b),phi, 0 ,2*math.pi, 'm')
         self.change_pixmap_signal.emit(img)
@@ -109,6 +112,11 @@ class CameraControl(QLabel):
 
     def hide_baseline(self):
         self.baseline.hide()
+
+    def showEvent(self, event):
+        if self._first_show:
+            self.display_snaphot()
+            self._first_show = False
 
     def mousePressEvent(self,event):
         if event.button() == Qt.LeftButton:

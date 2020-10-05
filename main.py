@@ -18,33 +18,33 @@
 import sys
 import os
 import atexit
-import cv2
-import numpy as np
 
-
-from PySide2.QtWidgets import QApplication, QMainWindow, QPushButton
-from PySide2.QtCore import QFile, Signal, QThread
+from PySide2.QtWidgets import QApplication, QMainWindow
+from PySide2.QtCore import QFile, Signal
 from PySide2.QtUiTools import QUiLoader
 from ui_main import Ui_main
 from camera_control import CameraControl
 
 class main(QMainWindow):
+    start_acquisition_signal = Signal()
+    stop_acquisition_signal = Signal()
     def __init__(self):
         super(main, self).__init__()
-        self.ui = Ui_main()
-        self.ui.setupUi(self)
-        #self.load_ui()
+        loader = QUiLoader()
+        file = QFile("./form.ui")
+        file.open(QFile.ReadOnly)
+        loader.registerCustomWidget(CameraControl)
+        self.ui = loader.load(file, self)
+        file.close()
+        self.ui.show()
+        # self.ui = Ui_main()
+        # self.ui.setupUi(self)
         atexit.register(self.cleanup)
-        #self.camera_handler = Handler()
-        #self.camera_handler.change_pixmap_signal.connect(self.update_image)
-        #self.camera_ctl = CameraControl()
-        #self.camera_prev.change_pixmap_signal.connect(self.update_image)
-        #btn = self.findChild(QPushButton, 'btn_prev_st')
         self.ui.btn_prev_st.clicked.connect(self.prev_start_pushed)
-        self.ui.btn_set_roi.clicked.connect(self.ui.camera_prev.apply_roi)
-        self.ui.btn_reset_roi.clicked.connect(self.ui.camera_prev.reset_roi)
-        # self.thread.start()
-        
+        #self.ui.btn_set_roi.clicked.connect(self.ui.camera_prev.apply_roi)
+        #self.ui.btn_reset_roi.clicked.connect(self.ui.camera_prev.reset_roi)
+        self.start_acquisition_signal.connect(self.ui.camera_prev.start_preview)
+        self.stop_acquisition_signal.connect(self.ui.camera_prev.stop_preview)
 
     def __del__(self):
         del self.ui.camera_prev
@@ -62,10 +62,12 @@ class main(QMainWindow):
 
     def prev_start_pushed(self, event):
         if self.ui.btn_prev_st.text() != 'Stop':
-            self.ui.camera_prev.start_preview()
+            self.start_acquisition_signal.emit()
+            #self.ui.camera_prev.start_preview()
             self.ui.btn_prev_st.setText('Stop')
         else:
-            self.ui.camera_prev.stop_preview()
+            #self.ui.camera_prev.stop_preview()
+            self.stop_acquisition_signal.emit()
             self.ui.btn_prev_st.setText('Start')
 
 
