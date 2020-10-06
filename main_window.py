@@ -37,8 +37,7 @@ class MainWindow(QMainWindow):
         self.ui = loader.load(file)
         file.close()
         self.setCentralWidget(self.ui)
-        resizing!!!
-        self.resize()
+        self.resize(self.ui.size())
         # self.ui = Ui_main()
         # self.ui.setupUi(self)
         atexit.register(self.cleanup)
