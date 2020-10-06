@@ -105,6 +105,10 @@ def evaluate_droplet(img, y_base) -> Droplet:
     img = cv2.line(img, (0,y_int), (width, y_int), (255,0,0), thickness=2, lineType=cv2.LINE_AA)
     img = cv2.putText(img, '<' + str(round(angle_l*180/pi,1)), (5,y_int-5), cv2.FONT_HERSHEY_COMPLEX, .5, (0,0,0))
     img = cv2.putText(img, '<' + str(round(angle_r*180/pi,1)), (width - 80,y_int-5), cv2.FONT_HERSHEY_COMPLEX, .5, (0,0,0))
+    try:
+        img = cv2.UMat.get()
+    except:
+        pass
     #cv2.imshow('Test',img)
     #cv2.waitKey(0)
     return drplt, img

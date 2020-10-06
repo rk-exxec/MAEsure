@@ -14,65 +14,20 @@
 #     You should have received a copy of the GNU General Public License
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-# This Python file uses the following encoding: utf-8
 import sys
-import os
-import atexit
-
-from PySide2.QtWidgets import QApplication, QMainWindow
-from PySide2.QtCore import QFile, Signal
-from PySide2.QtUiTools import QUiLoader
-from ui_main import Ui_main
-from camera_control import CameraControl
-
-class main(QMainWindow):
-    start_acquisition_signal = Signal()
-    stop_acquisition_signal = Signal()
-    def __init__(self):
-        super(main, self).__init__()
-        loader = QUiLoader()
-        file = QFile("./form.ui")
-        file.open(QFile.ReadOnly)
-        loader.registerCustomWidget(CameraControl)
-        self.ui = loader.load(file, self)
-        file.close()
-        self.ui.show()
-        # self.ui = Ui_main()
-        # self.ui.setupUi(self)
-        atexit.register(self.cleanup)
-        self.ui.btn_prev_st.clicked.connect(self.prev_start_pushed)
-        #self.ui.btn_set_roi.clicked.connect(self.ui.camera_prev.apply_roi)
-        #self.ui.btn_reset_roi.clicked.connect(self.ui.camera_prev.reset_roi)
-        self.start_acquisition_signal.connect(self.ui.camera_prev.start_preview)
-        self.stop_acquisition_signal.connect(self.ui.camera_prev.stop_preview)
-
-    def __del__(self):
-        del self.ui.camera_prev
-
-    def cleanup(self):
-        del self
-
-    def load_ui(self):
-        loader = QUiLoader()
-        path = os.path.join(os.path.dirname(__file__), "form.ui")
-        ui_file = QFile(path)
-        ui_file.open(QFile.ReadOnly)
-        loader.load(ui_file, self)
-        ui_file.close()
-
-    def prev_start_pushed(self, event):
-        if self.ui.btn_prev_st.text() != 'Stop':
-            self.start_acquisition_signal.emit()
-            #self.ui.camera_prev.start_preview()
-            self.ui.btn_prev_st.setText('Stop')
-        else:
-            #self.ui.camera_prev.stop_preview()
-            self.stop_acquisition_signal.emit()
-            self.ui.btn_prev_st.setText('Start')
-
+from PySide2.QtGui import QPixmap, Qt
+from PySide2.QtWidgets import QApplication, QSplashScreen
 
 if __name__ == "__main__":
-    app = QApplication([])
-    widget = main()
-    widget.show()
+    app = QApplication(sys.argv)
+    pic = QPixmap('qt_resources/maesure.png')
+    splash = QSplashScreen(pic, Qt.WindowStaysOnTopHint)
+    splash.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
+    splash.setMask(pic.mask())
+    splash.show()
+    app.processEvents()
+    from main_window import MainWindow
+    widget = MainWindow()
+    #widget.show()
+    splash.finish(widget)
     sys.exit(app.exec_())

@@ -28,7 +28,7 @@ class Baseline(QWidget):
         self.setCursor(Qt.SizeVerCursor)
         self.origin = QPoint(0,0)
         #parent.update()
-        self.setGeometry(0, 0, parent.geometry().width(), 20)
+        self.setGeometry(0, parent.geometry().height() - 10, parent.geometry().width(), 20)
         self.show()
 
     def get_y_level(self):

@@ -51,6 +51,7 @@ class CameraControl(QLabel):
         self.vimba.startup()
         self.cam = self.vimba.camera(0)
         try:
+            self.cam.disarm()
             self.cam.close()
         except:
             pass
@@ -86,7 +87,7 @@ class CameraControl(QLabel):
         self.cam.feature('ExposureTime').value = 1000.0
         self.cam.feature('ExposureTime').value = 1000.0
         self.cam.feature('ReverseY').value = 'False'
-        #self.set_roi(800, 530, 301, 280)
+        self.set_roi(800, 530, 340, 285)
         #self.cam.arm('Continuous', self.frame_handler)
     
     def display_snaphot(self):
@@ -99,12 +100,12 @@ class CameraControl(QLabel):
 
     def frame_handler(self, frame: Frame, delay: Optional[int] = 1) -> None:
         img = frame.buffer_data_numpy()
-        # try:
-        #     drplt, img = evaluate_droplet(img, self.baseline.get_y_level())
-        # except Exception as ex:
-        #     print(ex)
-        # do image detection
-        # cv.ellipse(img, (x,y),(a,b),phi, 0 ,2*math.pi, 'm')
+        try:
+            drplt, img = evaluate_droplet(img, self.baseline.get_y_level())
+        except Exception as ex:
+            print(ex)
+        #do image detection
+        #cv.ellipse(img, (x,y),(a,b),phi, 0 ,2*math.pi, 'm')
         self.change_pixmap_signal.emit(img)
 
     def show_baseline(self):
@@ -156,13 +157,15 @@ class CameraControl(QLabel):
         self.set_roi(0,0, 2064, 1542)
 
     def set_roi(self, x, y, w, h):
-        self.cam.feature('OffsetX').value = x
-        self.cam.feature('OffsetY').value = y
-        # width and height need be multiple of 8
-        w = 8 * round(w/8)
-        h = 8 * round(h/8)
+        # x, y, width and height need be multiple of 8
+        x = int(8 * round(x/8))
+        y = int(8 * round(y/8))
+        w = int(8 * round(w/8))
+        h = int(8 * round(h/8))  
         self.cam.feature('Width').value = w
         self.cam.feature('Height').value = h
+        self.cam.feature('OffsetX').value = x
+        self.cam.feature('OffsetY').value = y 
 
     def set_image(self, file):
         img = QPixmap(file)
