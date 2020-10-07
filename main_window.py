@@ -30,6 +30,8 @@ class MainWindow(QMainWindow):
     stop_acquisition_signal = Signal()
     def __init__(self):
         super(MainWindow, self).__init__()
+        #cctl = CameraControl() # test for syntax errors
+        #del cctl
         loader = QUiLoader(self)
         file = QFile("./form.ui")
         file.open(QFile.ReadOnly)
@@ -41,11 +43,11 @@ class MainWindow(QMainWindow):
         # self.ui = Ui_main()
         # self.ui.setupUi(self)
         atexit.register(self.cleanup)
-        #self.ui.btn_prev_st.clicked.connect(self.prev_start_pushed)
-        #self.ui.btn_set_roi.clicked.connect(self.ui.camera_prev.apply_roi)
-        #self.ui.btn_reset_roi.clicked.connect(self.ui.camera_prev.reset_roi)
-        #self.start_acquisition_signal.connect(self.ui.camera_prev.start_preview)
-        #self.stop_acquisition_signal.connect(self.ui.camera_prev.stop_preview)
+        self.ui.btn_prev_st.clicked.connect(self.prev_start_pushed)
+        self.ui.btn_set_roi.clicked.connect(self.ui.camera_prev.apply_roi)
+        self.ui.btn_reset_roi.clicked.connect(self.ui.camera_prev.reset_roi)
+        self.start_acquisition_signal.connect(self.ui.camera_prev.start_preview)
+        self.stop_acquisition_signal.connect(self.ui.camera_prev.stop_preview)
         self.show()
         
 
