@@ -24,6 +24,8 @@ from PySide2.QtUiTools import QUiLoader
 #from ui_main import Ui_main
 
 from camera_control import CameraControl
+from magnet_control import MagnetControl
+from pump_control import PumpControl
 
 class MainWindow(QMainWindow):
     start_acquisition_signal = Signal()

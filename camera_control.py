@@ -15,16 +15,13 @@
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # This Python file uses the following encoding: utf-8
-from typing import Optional
 import cv2
 import numpy as np
-#from pymba import Vimba, Frame
 
 from PySide2 import QtGui
 from PySide2.QtWidgets import QLabel
 from PySide2.QtCore import Signal, Slot, Qt, QPoint, QRect, QSize
 from PySide2.QtGui import QPixmap
-#from pymba.vimba_exception import VimbaException
 from vimba import Vimba, Frame, Camera
 from vimba.frame import FrameStatus
 
@@ -36,7 +33,6 @@ from evaluate_droplet import evaluate_droplet
 # TODO 
 #   ROI selection
 #   droplet detection
-#   setText() crash https://stackoverflow.com/questions/64211299/pyside2-qpushbutton-settext-crashes-my-application-after-halting-video-feed 
 #
 #
 #
