@@ -27,7 +27,6 @@ class Baseline(QWidget):
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.setCursor(Qt.SizeVerCursor)
         self.origin = QPoint(0,0)
-        #parent.update()
         self.setGeometry(0, parent.geometry().height() - 10, parent.geometry().width(), 20)
         self.show()
 
