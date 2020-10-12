@@ -32,10 +32,10 @@ from baseline import Baseline
 from evaluate_droplet import evaluate_droplet
 
 
-# TODO 
+# TODO camera control
 #   droplet detection
 #   pause running while setting roi
-#
+#   
 #
 
 
@@ -110,6 +110,7 @@ class CameraControl(QLabel):
         with self._vimba:
             cams = self._vimba.get_all_cameras()
             self._cam = cams[0]
+            # FIXME camera reset not working
             with self._cam:
                 self._cam.AcquisitionStatusSelector.set('AcquisitionActive')
                 if self._cam.AcquisitionStatus.get():
