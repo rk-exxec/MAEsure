@@ -10,10 +10,22 @@
     <height>662</height>
    </rect>
   </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
   <property name="windowTitle">
    <string>main</string>
   </property>
   <widget class="QWidget" name="centralwidget">
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
    <widget class="QGroupBox" name="box_preview">
     <property name="geometry">
      <rect>
@@ -83,7 +95,7 @@
       <string/>
      </property>
      <property name="pixmap">
-      <pixmap>../../MATLAB/Contact-Angle-Measurement/untitled1.png</pixmap>
+      <pixmap>untitled1.png</pixmap>
      </property>
      <property name="scaledContents">
       <bool>false</bool>
@@ -144,7 +156,7 @@
     <property name="title">
      <string>Data View</string>
     </property>
-    <widget class="QTableWidget" name="tableWidget">
+    <widget class="DataControl" name="dataControl">
      <property name="geometry">
       <rect>
        <x>10</x>
@@ -155,7 +167,7 @@
      </property>
     </widget>
    </widget>
-   <widget class="QGroupBox" name="groupBox_2">
+   <widget class="QGroupBox" name="magnetControl">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -167,12 +179,12 @@
     <property name="title">
      <string>Magnet / Motor Control</string>
     </property>
-    <widget class="QPushButton" name="pushButton_3">
+    <widget class="QPushButton" name="jogUpBtn">
      <property name="geometry">
       <rect>
-       <x>20</x>
+       <x>10</x>
        <y>30</y>
-       <width>75</width>
+       <width>71</width>
        <height>23</height>
       </rect>
      </property>
@@ -181,15 +193,15 @@
      </property>
      <property name="icon">
       <iconset>
-       <normaloff>up.svg</normaloff>up.svg</iconset>
+       <normaloff>qt_resources/up.svg</normaloff>qt_resources/up.svg</iconset>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_4">
+    <widget class="QPushButton" name="jogDownBtn">
      <property name="geometry">
       <rect>
-       <x>20</x>
+       <x>10</x>
        <y>60</y>
-       <width>75</width>
+       <width>71</width>
        <height>23</height>
       </rect>
      </property>
@@ -198,26 +210,10 @@
      </property>
      <property name="icon">
       <iconset>
-       <normaloff>down.svg</normaloff>down.svg</iconset>
+       <normaloff>qt_resources/down.svg</normaloff>qt_resources/down.svg</iconset>
      </property>
     </widget>
-    <widget class="QLineEdit" name="lineEdit">
-     <property name="geometry">
-      <rect>
-       <x>120</x>
-       <y>60</y>
-       <width>41</width>
-       <height>23</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string/>
-     </property>
-     <property name="placeholderText">
-      <string>Pos</string>
-     </property>
-    </widget>
-    <widget class="QPushButton" name="pushButton_5">
+    <widget class="QPushButton" name="goBtn">
      <property name="geometry">
       <rect>
        <x>230</x>
@@ -243,7 +239,7 @@
       <string>Manual Positioning</string>
      </property>
     </widget>
-    <widget class="QComboBox" name="comboBox">
+    <widget class="QComboBox" name="unitComboBox">
      <property name="geometry">
       <rect>
        <x>170</x>
@@ -268,7 +264,7 @@
       </property>
      </item>
     </widget>
-    <widget class="QSlider" name="horizontalSlider">
+    <widget class="QSlider" name="posSlider">
      <property name="geometry">
       <rect>
        <x>120</x>
@@ -293,12 +289,12 @@
       <number>1000</number>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_6">
+    <widget class="QPushButton" name="stopButton">
      <property name="geometry">
       <rect>
-       <x>20</x>
+       <x>10</x>
        <y>90</y>
-       <width>75</width>
+       <width>71</width>
        <height>23</height>
       </rect>
      </property>
@@ -309,22 +305,22 @@
     <widget class="QPushButton" name="pushButton_11">
      <property name="geometry">
       <rect>
-       <x>20</x>
+       <x>210</x>
        <y>130</y>
-       <width>81</width>
+       <width>71</width>
        <height>23</height>
       </rect>
      </property>
      <property name="text">
-      <string>Load Calib File</string>
+      <string>Load Cal File</string>
      </property>
     </widget>
     <widget class="QPushButton" name="pushButton_12">
      <property name="geometry">
       <rect>
-       <x>20</x>
-       <y>160</y>
-       <width>81</width>
+       <x>130</x>
+       <y>130</y>
+       <width>71</width>
        <height>23</height>
       </rect>
      </property>
@@ -335,18 +331,63 @@
     <widget class="QPushButton" name="pushButton_13">
      <property name="geometry">
       <rect>
-       <x>110</x>
+       <x>210</x>
        <y>160</y>
-       <width>81</width>
+       <width>71</width>
        <height>23</height>
       </rect>
      </property>
      <property name="text">
-      <string>Save Calib File</string>
+      <string>Save Cal File</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="referenceBtn">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>130</y>
+       <width>71</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Reference</string>
+     </property>
+    </widget>
+    <widget class="LightWidget" name="widget" native="true">
+     <property name="geometry">
+      <rect>
+       <x>90</x>
+       <y>130</y>
+       <width>21</width>
+       <height>21</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QDoubleSpinBox" name="posSpinBox">
+     <property name="geometry">
+      <rect>
+       <x>120</x>
+       <y>60</y>
+       <width>41</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="buttonSymbols">
+      <enum>QAbstractSpinBox::NoButtons</enum>
+     </property>
+     <property name="accelerated">
+      <bool>false</bool>
+     </property>
+     <property name="decimals">
+      <number>0</number>
+     </property>
+     <property name="maximum">
+      <double>50000.000000000000000</double>
      </property>
     </widget>
    </widget>
-   <widget class="QGroupBox" name="groupBox_3">
+   <widget class="QGroupBox" name="measurementControl">
     <property name="geometry">
      <rect>
       <x>490</x>
@@ -542,7 +583,7 @@
     <widget class="QGroupBox" name="groupBox_4">
      <property name="geometry">
       <rect>
-       <x>120</x>
+       <x>180</x>
        <y>10</y>
        <width>161</width>
        <height>71</height>
@@ -660,7 +701,7 @@
      </property>
     </widget>
    </widget>
-   <widget class="QGroupBox" name="groupBox_5">
+   <widget class="QGroupBox" name="fileControl">
     <property name="geometry">
      <rect>
       <x>990</x>
@@ -670,7 +711,7 @@
      </rect>
     </property>
     <property name="title">
-     <string>Data Control</string>
+     <string>File</string>
     </property>
     <widget class="QPushButton" name="pushButton_9">
      <property name="geometry">
@@ -685,7 +726,7 @@
       <string>Save As ...</string>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_10">
+    <widget class="QPushButton" name="loadFileBtn">
      <property name="geometry">
       <rect>
        <x>20</x>
@@ -725,7 +766,7 @@
      </property>
     </widget>
    </widget>
-   <widget class="QGroupBox" name="groupBox_6">
+   <widget class="QGroupBox" name="pumpControl">
     <property name="geometry">
      <rect>
       <x>310</x>
@@ -845,6 +886,17 @@
    <class>CameraControl</class>
    <extends>QLabel</extends>
    <header>camera_control</header>
+  </customwidget>
+  <customwidget>
+   <class>DataControl</class>
+   <extends>QTableWidget</extends>
+   <header>data_control</header>
+  </customwidget>
+  <customwidget>
+   <class>LightWidget</class>
+   <extends>QWidget</extends>
+   <header>light_widget</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources/>
