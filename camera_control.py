@@ -16,6 +16,7 @@
 
 # This Python file uses the following encoding: utf-8
 from threading import Thread, Event
+import time
 import cv2
 import numpy as np
 
@@ -23,7 +24,7 @@ from PySide2 import QtGui
 from PySide2.QtWidgets import QLabel
 from PySide2.QtCore import Signal, Slot, Qt, QPoint, QRect, QSize
 from PySide2.QtGui import QPixmap
-from vimba import Vimba, Frame, Camera
+from vimba import Vimba, Frame, Camera, LOG_CONFIG_TRACE_FILE_ONLY
 from vimba.frame import FrameStatus
 
 from resizable_rubberband import ResizableRubberBand
@@ -32,7 +33,6 @@ from evaluate_droplet import evaluate_droplet
 
 
 # TODO 
-#   ROI selection
 #   droplet detection
 #   pause running while setting roi
 #
@@ -53,6 +53,7 @@ class CameraControl(QLabel):
         self._cam : Camera = None
         self._cam_id: str = ''
         self._vimba: Vimba = Vimba.get_instance()
+        #self._vimba.enable_log(LOG_CONFIG_TRACE_FILE_ONLY)
         self._init_camera()
         self._setup_camera()
         self.update()
@@ -65,6 +66,10 @@ class CameraControl(QLabel):
         self._frame_producer_thread.join()
         del self._cam
         del self._vimba
+
+    def closeEvent(self, event: QtGui.QCloseEvent):
+        self._stream_killswitch.set()
+        self._frame_producer_thread.join()
 
     @Slot()
     def stop_preview(self):
@@ -105,6 +110,18 @@ class CameraControl(QLabel):
         with self._vimba:
             cams = self._vimba.get_all_cameras()
             self._cam = cams[0]
+            with self._cam:
+                self._cam.AcquisitionStatusSelector.set('AcquisitionActive')
+                if self._cam.AcquisitionStatus.get():
+                    self._cam.AcquisitionStop.run()
+                    self._cam.DeviceReset.run()
+                else: return
+            num_cams = 0
+            while num_cams == 0:
+                cams = self._vimba.get_all_cameras()
+                num_cams = len(cams)
+            self._cam = cams[0]
+            
 
     def _reset_camera(self):
         with self._cam:
