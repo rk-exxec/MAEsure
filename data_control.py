@@ -14,5 +14,11 @@
 #     You should have received a copy of the GNU General Public License
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-class DataControl:
-    pass
+from PySide2.QtWidgets import QTableWidget
+from PySide2.QtCore import Signal, Slot, Qt
+
+
+
+class DataControl(QTableWidget):
+    def __init__(self, parent=None) -> None:
+        super(DataControl, self).__init__(parent)

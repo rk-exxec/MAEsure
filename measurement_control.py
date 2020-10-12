@@ -18,6 +18,8 @@
 #   - werte für magnetschritte und so parse als kommaseparierte liste oder ranges mit start:stop:step oder kombination für ausreißerwerte
 #       -> als custom lineedit?
 
+from PySide2.QtCore import Signal, Slot, Qt
 
 class MeasurementControl:
-    pass
+    def __init__(self, parent=None) -> None:
+        pass

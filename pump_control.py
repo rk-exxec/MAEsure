@@ -14,5 +14,8 @@
 #     You should have received a copy of the GNU General Public License
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from PySide2.QtCore import Signal, Slot, Qt
+
 class PumpControl:
-    pass
+    def __init__(self, parent=None) -> None:
+        pass
