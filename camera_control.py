@@ -110,19 +110,12 @@ class CameraControl(QLabel):
         with self._vimba:
             cams = self._vimba.get_all_cameras()
             self._cam = cams[0]
-            # FIXME camera reset not working
             with self._cam:
                 self._cam.AcquisitionStatusSelector.set('AcquisitionActive')
                 if self._cam.AcquisitionStatus.get():
                     self._cam.AcquisitionStop.run()
-                    self._cam.DeviceReset.run()
-                else: return
-            num_cams = 0
-            while num_cams == 0:
-                cams = self._vimba.get_all_cameras()
-                num_cams = len(cams)
-            self._cam = cams[0]
-            
+                    # fetch broken frame
+                    self._cam.get_frame()
 
     def _reset_camera(self):
         with self._cam:
