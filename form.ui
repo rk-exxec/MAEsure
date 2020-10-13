@@ -167,7 +167,7 @@
      </property>
     </widget>
    </widget>
-   <widget class="QGroupBox" name="magnetControl">
+   <widget class="MagnetControl" name="magnetControl">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -289,7 +289,7 @@
       <number>1000</number>
      </property>
     </widget>
-    <widget class="QPushButton" name="stopButton">
+    <widget class="QPushButton" name="stopBtn">
      <property name="geometry">
       <rect>
        <x>10</x>
@@ -886,6 +886,12 @@
    <class>CameraControl</class>
    <extends>QLabel</extends>
    <header>camera_control</header>
+  </customwidget>
+  <customwidget>
+   <class>MagnetControl</class>
+   <extends>QGroupBox</extends>
+   <header>magnet_control</header>
+   <container>1</container>
   </customwidget>
   <customwidget>
    <class>DataControl</class>
