@@ -102,8 +102,6 @@ class CameraControl(QLabel):
                 #print(ex)
                 pass
             self.change_pixmap_signal.emit(img)        
-            #self.change_frametime_signal.emit()
-            #print(frame.get_timestamp())
         cam.queue_frame(frame)
 
     def _init_camera(self):
