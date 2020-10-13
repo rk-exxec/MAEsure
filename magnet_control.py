@@ -15,45 +15,52 @@
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from PySide2.QtCore import Signal, Slot, Qt
+from PySide2.QtWidgets import QMessageBox, QPushButton
 
-from serial.tools import list_ports
 from lt_control.lt_control import LT
 
-# TODO
+# TODO magnet control
 # calib
 # lamp shows reference status
+# vllt doch als custom widget, problem war ja falsche form.ui datei
 
 class MagnetControl:
     def __init__(self, parent=None) -> None:
         #self.portsComboBox: QComboBox = None
-        self._lt_ctl = LT(self.find_com_port())
+        self._lt_ctl = LT()
+        self.parent = parent
         self._shown = False
         self._mov_dist: float = 0
         self._mov_unit: str = 'steps'
-
+        self._invalid = False
 
     def __del__(self):
-        self._lt_ctl.close()
+        #self._lt_ctl.close()
         del self._lt_ctl
 
-    def find_com_port(self) -> str:
-        lst = list_ports.comports()
-        for port in lst:
-            if port.manufacturer == 'Nanotec':
-                return port.device
-
-    def showEvent(self, event):
-        if not self._shown:
-            self.post_init()
-            self._shown = True
+    def do_timeout_dialog(self) -> bool:
+        msgBox = QMessageBox()
+        msgBox.setText("The connection timed out")
+        msgBox.setInformativeText("Could not connect ot the stepper driver!")
+        msgBox.setStandardButtons(QMessageBox.Retry | QMessageBox.Abort | QMessageBox.Close)
+        msgBox.setDefaultButton(QMessageBox.Retry)
+        ret = msgBox.exec_()
+        if ret == QMessageBox.Retry:
+            return True
+        elif ret == QMessageBox.Abort:
+            return False
+        elif ret == QMessageBox.Close:
+            return False
 
     @Slot()
     def jog_up_start(self):
-        self._lt_ctl.move_inf_start(0)
+        with self._lt_ctl:
+            self._lt_ctl.move_inf_start(0)
 
     @Slot()
     def jog_down_start(self):
-        self._lt_ctl.move_inf_start(1)
+        with self._lt_ctl:
+            self._lt_ctl.move_inf_start(1)
         
     def set_mov_dist(self, value: float):
         try:
@@ -66,27 +73,43 @@ class MagnetControl:
             self._mov_unit = text.strip()
         except Exception as ex:
             print(ex) 
+
+    def get_position(self):
+        with self._lt_ctl:
+            if self._mov_unit == 'steps':
+                return self._lt_ctl.get_position()
+            else:
+                return self._lt_ctl.steps_to_mm(self._lt_ctl.get_position())
         
     @Slot()
-    def move_pos(self):
+    def move_pos(self, sender: QPushButton):
         # FIXME movement not correct!
-        if self._mov_unit == 'mm':
-            self._lt_ctl.move_absolute_mm(self._mov_dist)
-        elif self._mov_unit == 'steps':
-            self._lt_ctl.move_absolute(int(self._mov_dist))
-        elif self._mov_unit == 'mT':
-            print('Not implemented!')
+        sender.setEnabled(False)
+        with self._lt_ctl:
+            if self._mov_unit == 'mm':
+                self._lt_ctl.move_absolute_mm(self._mov_dist)
+            elif self._mov_unit == 'steps':
+                self._lt_ctl.move_absolute(int(self._mov_dist))
+            elif self._mov_unit == 'mT':
+                print('Not implemented!')
+        sender.setEnabled(True)
+
 
     @Slot()
     def motor_stop(self):
-        self._lt_ctl.stop()
+        with self._lt_ctl:
+            self._lt_ctl.stop()
 
     @Slot()
-    def reference(self):
-        self._lt_ctl.do_referencing()
+    def reference(self, sender: QPushButton):
+        sender.setEnabled(False)
+        with self._lt_ctl:
+            self._lt_ctl.do_referencing()
+        sender.setEnabled(True)
 
-    def populate_int_selector(self):
-        pass
+    def is_driver_ready(self) -> bool:
+        with self._lt_ctl:
+            return self._lt_ctl.test_connection()
 
     @Slot()
     def connect(self):

@@ -17,6 +17,7 @@
 # This Python file uses the following encoding: utf-8
 import os
 import atexit
+from PySide2.QtGui import QShowEvent
 
 from PySide2.QtWidgets import QComboBox, QMainWindow
 from PySide2.QtCore import QFile, Signal, Slot
@@ -37,6 +38,7 @@ class MainWindow(QMainWindow):
         super(MainWindow, self).__init__()
         #cctl = CameraControl() # test for syntax errors
         #del cctl
+        self._first_show = True
         loader = QUiLoader(self)
         file = QFile("./form.ui")
         file.open(QFile.ReadOnly)
@@ -50,7 +52,7 @@ class MainWindow(QMainWindow):
         # self.ui = Ui_main()
         # self.ui.setupUi(self)
         atexit.register(self.cleanup)
-        self.magnet_ctl = MagnetControl()
+        self.magnet_ctl = MagnetControl(self)
         self.meas_ctl = MeasurementControl()
         self.pump_ctl = PumpControl()
 
@@ -76,13 +78,23 @@ class MainWindow(QMainWindow):
         # Magnet
         self.ui.jogUpBtn.pressed.connect(self.magnet_ctl.jog_up_start)
         self.ui.jogDownBtn.pressed.connect(self.magnet_ctl.jog_down_start)
-        self.ui.jogUpBtn.released.connect(self.magnet_ctl.motor_stop)
-        self.ui.jogDownBtn.released.connect(self.magnet_ctl.motor_stop)
-        self.ui.referenceBtn.clicked.connect(self.magnet_ctl.reference)
-        self.ui.goBtn.clicked.connect(self.magnet_ctl.move_pos)
+        self.ui.jogUpBtn.released.connect(self.mag_stop)
+        self.ui.jogDownBtn.released.connect(self.mag_stop)
+        self.ui.referenceBtn.clicked.connect(self.mag_reference())
+        self.ui.goBtn.clicked.connect(lambda x: self.magnet_ctl.move_pos(self.ui.goBtn))
         self.ui.posSpinBox.valueChanged.connect(self.spin_box_val_changed) #lambda pos: self.magnet_ctl.set_mov_dist(int(pos)) or self.ui.posSlider.setValue(int(pos))
         self.ui.unitComboBox.currentTextChanged.connect(self.mag_mov_unit_changed)
         self.ui.posSlider.sliderMoved.connect(self.slider_moved) # lambda pos: self.ui.posLineEdit.setText(str(pos)) or self.ui.posSpinBox.setValue(float(pos))
+
+    def showEvent(self, event: QShowEvent):
+        if self._first_show:
+            self.update_pos()
+            self._first_show = False
+
+    def update_pos(self):
+        # update spin box with current pos    
+        self.ui.posSpinBox.setValue(float(self.magnet_ctl.get_position()))
+        
 
     def load_ui(self):
         loader = QUiLoader()
@@ -91,6 +103,16 @@ class MainWindow(QMainWindow):
         ui_file.open(QFile.ReadOnly)
         loader.load(ui_file, self)
         ui_file.close()
+
+    @Slot()
+    def mag_reference(self):
+        self.magnet_ctl.reference(self.ui.referenceBtn)
+        self.update_pos()
+
+    @Slot()
+    def mag_stop(self):
+        self.magnet_ctl.motor_stop()
+        self.update_pos()
     
     @Slot(str)
     def mag_mov_unit_changed(self, unit: str):
