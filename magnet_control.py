@@ -44,6 +44,10 @@ class CustomCallbackTimer(QTimer):
 # lamp shows reference status
 
 class MagnetControl(QGroupBox):
+    """A widget to control the motor via lt_control  
+
+    Use instead of QGroupBox
+    """
     def __init__(self, parent=None) -> None:
         #self.portsComboBox: QComboBox = None
         super(MagnetControl, self).__init__(parent)
@@ -76,16 +80,29 @@ class MagnetControl(QGroupBox):
     def showEvent(self, event: QShowEvent):
         if not self._shown:
             self.connect_signals()
+            self.update_motor_status()
             self.update_pos()
             self._shown = True
 
     def update_pos(self):
         # update spin box with current pos    
         self.ui.posSpinBox.setValue(float(self.get_position()))
+
+    def update_motor_status(self):
+        with self._lt_ctl:
+            try:
+                if not self._lt_ctl.is_referenced():
+                    self.ui.lamp.set_yellow()
+                    self.lock_abs_pos_buttons()
+                else:
+                    self.ui.lamp.set_green()
+                    self.unlock_movement_buttons()
+            except TimeoutError as te:
+                self.ui.lamp.set_red()
     
     @Slot(str)
     def mag_mov_unit_changed(self, unit: str):
-        self.set_mov_unit(unit)
+        self._mov_unit = unit.strip()
         if unit == 'mm':
             self.ui.posSlider.setMaximum(3906) #max mm are 39.0625
             self.ui.posSlider.setTickInterval(100)
@@ -100,10 +117,10 @@ class MagnetControl(QGroupBox):
     @Slot(float)
     def spin_box_val_changed(self, value: float):
         if self.ui.unitComboBox.currentText() == 'steps':
-            self.set_mov_dist(int(value))
+            self._mov_dist = int(value)
             self.ui.posSlider.setValue(int(value))
         elif self.ui.unitComboBox.currentText() == 'mm':
-            self.set_mov_dist(value)
+            self._mov_dist = value
             self.ui.posSlider.setValue(int(value*100))
 
     @Slot(int)
@@ -126,18 +143,6 @@ class MagnetControl(QGroupBox):
             return False
         elif ret == QMessageBox.Close:
             return False
-        
-    def set_mov_dist(self, value: float):
-        try:
-            self._mov_dist = value   
-        except Exception as ex:
-            print(ex)
-
-    def set_mov_unit(self, text: str):
-        try:
-            self._mov_unit = text.strip()
-        except Exception as ex:
-            print(ex) 
 
     def get_position(self):
         with self._lt_ctl:
@@ -170,14 +175,35 @@ class MagnetControl(QGroupBox):
         self.lock_movement_buttons()
         self.wait_movement_thread.start()
 
+    @Slot()
+    def motor_stop(self):
+        with self._lt_ctl:
+            self._lt_ctl.stop()
+        if self.update_pos_timer.isActive():
+            self.update_pos_timer.stop()
+        self.update_pos()
+        self.update_motor_status()
+
     def wait_movement(self):
         with self._lt_ctl:
             self._lt_ctl.wait_movement()
 
     def finished_moving(self):
         # callback for when the motor stops moving (only absolute and relative, not jogging)
+        self.update_motor_status()
         self.update_pos()
         self.unlock_movement_buttons()
+
+    @Slot()
+    def reference(self):
+        with self._lt_ctl:
+            self._lt_ctl.do_referencing()
+        self.lock_movement_buttons()
+        self.wait_movement_thread.start()
+
+    def is_driver_ready(self) -> bool:
+        with self._lt_ctl:
+            return self._lt_ctl.test_connection()
 
     def lock_movement_buttons(self):
         self.ui.jogUpBtn.setEnabled(False)
@@ -190,6 +216,9 @@ class MagnetControl(QGroupBox):
         self.ui.unitComboBox.setEnabled(False)
         self.ui.posSlider.setEnabled(False)
 
+    def lock_abs_pos_buttons(self):
+        self.ui.goBtn.setEnabled(False)
+
     def unlock_movement_buttons(self):
         self.ui.jogUpBtn.setEnabled(True)
         self.ui.jogDownBtn.setEnabled(True)
@@ -200,25 +229,3 @@ class MagnetControl(QGroupBox):
         self.ui.posSpinBox.setEnabled(True)
         self.ui.unitComboBox.setEnabled(True)
         self.ui.posSlider.setEnabled(True)
-
-    @Slot()
-    def motor_stop(self):
-        with self._lt_ctl:
-            self._lt_ctl.stop()
-        if self.update_pos_timer.isActive():
-            self.update_pos_timer.stop()
-        self.update_pos()
-
-    @Slot()
-    def reference(self):
-        with self._lt_ctl:
-            self._lt_ctl.do_referencing()
-        self.update_pos()
-
-    def is_driver_ready(self) -> bool:
-        with self._lt_ctl:
-            return self._lt_ctl.test_connection()
-
-    @Slot()
-    def connect(self):
-        pass

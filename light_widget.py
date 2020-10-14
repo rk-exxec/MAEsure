@@ -20,42 +20,43 @@ from PySide2.QtCore import Signal, Slot, Qt
 from PySide2.QtGui import QPaintEvent, QPainter
  
 class LightColor(Enum):
-    DISCONNECTED = auto() #Qt.red
-    CONNECTED = auto() #Qt.green
+    RED = auto() #Qt.red
+    GREEN = auto() #Qt.green
     ERROR = auto() #Qt.darkRed
-    CONNECTING = auto() #Qt.yellow
+    YELLOW = auto() #Qt.yellow
+    OFF = auto()
 
 class LightWidget(QWidget):
     def __init__(self, parent=None):
         super(LightWidget, self).__init__(parent)
-        self._color = LightColor.DISCONNECTED
+        self._color = LightColor.OFF
 
-    def set_disconnected(self):
-        self._color = LightColor.DISCONNECTED
+    def set_red(self):
+        self._color = LightColor.RED
 
-    def set_connected(self):
-        self._color = LightColor.CONNECTED
+    def set_green(self):
+        self._color = LightColor.GREEN
 
     def set_error(self):
         self._color = LightColor.ERROR
 
-    def set_connecting(self):
-        self._color = LightColor.CONNECTING
+    def set_yellow(self):
+        self._color = LightColor.YELLOW
 
     def paintEvent(self, event: QPaintEvent):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
-        if self._color == LightColor.DISCONNECTED:
+        if self._color == LightColor.RED:
             painter.setBrush(Qt.red)
-        elif self._color == LightColor.CONNECTED:
+        elif self._color == LightColor.GREEN:
             painter.setBrush(Qt.green)
         elif self._color == LightColor.ERROR:
             painter.setBrush(Qt.darkRed)
-        elif self._color == LightColor.CONNECTING:
+        elif self._color == LightColor.YELLOW:
             painter.setBrush(Qt.yellow)
         else:
             painter.setBrush(Qt.gray)
-        painter.drawEllipse(0,0,self.width(), self.height())
+        painter.drawEllipse(2,2,self.width()-4, self.height()-4)
         painter.end()
 
 

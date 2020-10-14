@@ -354,7 +354,7 @@
       <string>Reference</string>
      </property>
     </widget>
-    <widget class="LightWidget" name="widget" native="true">
+    <widget class="LightWidget" name="lamp" native="true">
      <property name="geometry">
       <rect>
        <x>90</x>
