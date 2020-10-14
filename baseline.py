@@ -31,7 +31,8 @@ class Baseline(QWidget):
         self.show()
 
     def get_y_level(self):
-        x1,y1,x2,y2 = self.rect().getCoords()
+        x1,y1 = self.mapToParent(self.pos()).toTuple()
+        y2 = self.height()
         return int(y1+(y2-y1)/2)
 
     def paintEvent(self, event):
