@@ -19,21 +19,22 @@ from threading import Thread, Event
 import time
 import cv2
 import numpy as np
+import pydevd
 
 from PySide2 import QtGui
 from PySide2.QtWidgets import QLabel
 from PySide2.QtCore import Signal, Slot, Qt, QPoint, QRect, QSize
-from PySide2.QtGui import QPixmap
+from PySide2.QtGui import QPainter, QPen, QPixmap, QTransform
 from vimba import Vimba, Frame, Camera, LOG_CONFIG_TRACE_FILE_ONLY
 from vimba.frame import FrameStatus
 
 from resizable_rubberband import ResizableRubberBand
 from baseline import Baseline
-from evaluate_droplet import evaluate_droplet
+from evaluate_droplet import Droplet, evaluate_droplet
 
 
 # TODO camera control
-#   droplet detection
+#   draw ellipse etc over image
 #   pause running while setting roi
 #   
 #
@@ -49,6 +50,7 @@ class CameraControl(QLabel):
         self._first_show = True # whether form is shown for the first time
         self._is_running = False
         self._original_image_size = 0
+        self._droplet = Droplet()
         self.change_pixmap_signal.connect(self.update_image)
         self._cam : Camera = None
         self._cam_id: str = ''
@@ -94,12 +96,14 @@ class CameraControl(QLabel):
                     self._cam.stop_streaming()
 
     def _frame_handler(self, cam: Camera, frame: Frame) -> None:
+        pydevd.settrace(suspend=False)
         if frame.get_status() != FrameStatus.Incomplete:
             img = frame.as_opencv_image()
             try:
                 drplt, img = evaluate_droplet(img, self.get_baseline_y())
-            except Exception as ex:
-                #print(ex)
+                self._droplet = drplt
+            except ValueError as ex:
+                print(ex.with_traceback(None))
                 pass
             self.change_pixmap_signal.emit(img)        
         cam.queue_frame(frame)
@@ -147,6 +151,25 @@ class CameraControl(QLabel):
         if self._first_show:
             self.display_snapshot()
             self._first_show = False
+
+    # TODO needs scaling from image coordinates to Widget coords
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        if self._droplet.is_valid:
+            painter = QPainter(self)
+            painter.setRenderHint(QPainter.Antialiasing)
+            painter.setPen(QPen(Qt.red,1))
+            painter.drawLine(*self._droplet.line_l)
+            painter.drawLine(*self._droplet.line_r)
+            painter.drawLine(*self._droplet.int_l, *self._droplet.int_r)
+            transform = QTransform()
+            transform.translate(*self._droplet.center)
+            transform.rotate(self._droplet.tilt_deg)
+            #transform.scale(0.5, 1.0)
+            painter.setTransform(transform)
+ 
+            painter.drawEllipse(QPoint(0,0),self._droplet.maj, self._droplet.min)
+            
 
     def mousePressEvent(self,event):
         if event.button() == Qt.LeftButton:
@@ -227,9 +250,9 @@ class CameraControl(QLabel):
         """ Updates the image_label with a new opencv image"""
         #print(np.shape(cv_img))
         try:
-            self._original_image_size = np.shape(cv_img)
             qt_img = self._convert_cv_qt(cv_img)
             self.setPixmap(qt_img)
+            self._original_image_size = np.shape(cv_img)
         except Exception:
             pass
 

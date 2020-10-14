@@ -21,18 +21,22 @@ import cv2
 
 class Droplet():
     def __init__(self):
+        self.is_valid = False
         self.angle_l = 0
         self.angle_r = 0
         self.center = (0,0)
         self.maj = 0
         self.min = 0
-        self.phi = 0
+        self.phi = 0.0
+        self.tilt_deg = 0
         self.foc_pt1 = (0,0)
         self.foc_pt2 = (0,0)
         self.tan_l_m = 0
         self.int_l = (0,0)
+        self.line_l = (0,0,0,0)
         self.tan_r_m = 0
         self.int_r = (0,0)
+        self.line_r = (0,0,0,0)
         self.base_diam = 0
 
 def evaluate_droplet(img, y_base) -> Droplet:
@@ -41,8 +45,8 @@ def evaluate_droplet(img, y_base) -> Droplet:
     shape = img.shape
     height = shape[0]
     width = shape[1]
-    img = cv2.UMat(img)
-    crop_img = cv2.UMat(crop_img)
+    #img = cv2.UMat(img)
+    #crop_img = cv2.UMat(crop_img)
     # calculate thrresholds
     #thresh_high, thresh_im = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     #thresh_low = 0.5*thresh_high
@@ -75,10 +79,10 @@ def evaluate_droplet(img, y_base) -> Droplet:
 
     # calc slope and angle of tangent
     m_t_l = calc_slope_of_ellipse((x0,y0,a,b,phi), x_int_l, y_base)
-    angle_l = atan(1/m_t_l) + pi/2
+    angle_l = atan2(1,m_t_l) + pi/2
  
     m_t_r = calc_slope_of_ellipse((x0,y0,a,b,phi), x_int_r, y_base)
-    angle_r = atan(-1/m_t_r) + pi/2
+    angle_r = atan2(-1,m_t_r) + pi/2
 
     drplt.angle_l = angle_l
     drplt.angle_r = angle_r
@@ -86,29 +90,33 @@ def evaluate_droplet(img, y_base) -> Droplet:
     drplt.min = ma
     drplt.center = (x0, y0)
     drplt.phi = phi
+    drplt.tilt_deg = phi * 180/pi
     drplt.tan_l_m = m_t_l
     drplt.tan_r_m = m_t_r
+    drplt.line_l = (int(round(x_int_l - (int(round(y_base))/m_t_l))), 0, int(round(x_int_l + ((height - int(round(y_base)))/m_t_l))), int(round(height)))
+    drplt.line_r = (int(round(x_int_r - (int(round(y_base))/m_t_r))), 0, int(round(x_int_r + ((height - int(round(y_base)))/m_t_r))), int(round(height)))
     drplt.int_l = (x_int_l, y_base)
     drplt.int_r = (x_int_r, y_base)
     drplt.foc_pt1 = (x0 + foc_len*cos(phi), y0 + foc_len*sin(phi))
     drplt.foc_pt2 = (x0 - foc_len*cos(phi), y0 - foc_len*sin(phi))
     drplt.base_diam = x_int_r - x_int_l
+    drplt.is_valid = True
 
     # TODO
     # test cv2 ellipse plot, line plot etc
-    img = cv2.ellipse(img, (int(round(x0)),int(round(y0))), (int(round(a)),int(round(b))), int(round(phi*180/pi)), 0, 360, (255,0,255), thickness=1, lineType=cv2.LINE_AA)
-    y_int = int(round(y_base))
-    img = cv2.line(img, (int(round(x_int_l - (y_int/m_t_l))), 0), (int(round(x_int_l + ((height - y_int)/m_t_l))), int(round(height))), (255,0,255), thickness=1, lineType=cv2.LINE_AA)
-    img = cv2.line(img, (int(round(x_int_r - (y_int/m_t_r))), 0), (int(round(x_int_r + ((height - y_int)/m_t_r))), int(round(height))), (255,0,255), thickness=1, lineType=cv2.LINE_AA)
-    img = cv2.ellipse(img, (int(round(x_int_l)),y_int), (20,20), 0, 0, -int(round(angle_l*180/pi)), (255,0,255), thickness=1, lineType=cv2.LINE_AA)
-    img = cv2.ellipse(img, (int(round(x_int_r)),y_int), (20,20), 0, 180, 180 + int(round(angle_r*180/pi)), (255,0,255), thickness=1, lineType=cv2.LINE_AA)
-    img = cv2.line(img, (0,y_int), (width, y_int), (255,0,0), thickness=2, lineType=cv2.LINE_AA)
-    img = cv2.putText(img, '<' + str(round(angle_l*180/pi,1)), (5,y_int-5), cv2.FONT_HERSHEY_COMPLEX, .5, (0,0,0))
-    img = cv2.putText(img, '<' + str(round(angle_r*180/pi,1)), (width - 80,y_int-5), cv2.FONT_HERSHEY_COMPLEX, .5, (0,0,0))
-    try:
-        img = cv2.UMat.get()
-    except:
-        pass
+    # img = cv2.ellipse(img, (int(round(x0)),int(round(y0))), (int(round(a)),int(round(b))), int(round(phi*180/pi)), 0, 360, (255,0,255), thickness=1, lineType=cv2.LINE_AA)
+    # y_int = int(round(y_base))
+    # img = cv2.line(img, (int(round(x_int_l - (y_int/m_t_l))), 0), (int(round(x_int_l + ((height - y_int)/m_t_l))), int(round(height))), (255,0,255), thickness=1, lineType=cv2.LINE_AA)
+    # img = cv2.line(img, (int(round(x_int_r - (y_int/m_t_r))), 0), (int(round(x_int_r + ((height - y_int)/m_t_r))), int(round(height))), (255,0,255), thickness=1, lineType=cv2.LINE_AA)
+    # img = cv2.ellipse(img, (int(round(x_int_l)),y_int), (20,20), 0, 0, -int(round(angle_l*180/pi)), (255,0,255), thickness=1, lineType=cv2.LINE_AA)
+    # img = cv2.ellipse(img, (int(round(x_int_r)),y_int), (20,20), 0, 180, 180 + int(round(angle_r*180/pi)), (255,0,255), thickness=1, lineType=cv2.LINE_AA)
+    # img = cv2.line(img, (0,y_int), (width, y_int), (255,0,0), thickness=2, lineType=cv2.LINE_AA)
+    # img = cv2.putText(img, '<' + str(round(angle_l*180/pi,1)), (5,y_int-5), cv2.FONT_HERSHEY_COMPLEX, .5, (0,0,0))
+    # img = cv2.putText(img, '<' + str(round(angle_r*180/pi,1)), (width - 80,y_int-5), cv2.FONT_HERSHEY_COMPLEX, .5, (0,0,0))
+    # try:
+    #     img = cv2.UMat.get()
+    # except Exception as ex:
+    #     print(ex)
     #cv2.imshow('Test',img)
     #cv2.waitKey(0)
     return drplt, img
