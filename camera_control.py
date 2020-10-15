@@ -15,6 +15,7 @@
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # This Python file uses the following encoding: utf-8
+from VimbaPython.vimba.shared import filter_affected_features
 from threading import Thread, Event
 import time
 import cv2
@@ -49,7 +50,7 @@ class CameraControl(QLabel):
         self._stream_killswitch: Event = None
         self._first_show = True # whether form is shown for the first time
         self._is_running = False
-        self._original_image_size = 0
+        self._image_size = 0
         self._droplet = Droplet()
         self.change_pixmap_signal.connect(self.update_image)
         self._cam : Camera = None
@@ -61,7 +62,9 @@ class CameraControl(QLabel):
         self.update()
         self._roi_rubber_band = ResizableRubberBand(self)
         self._baseline = Baseline(self)
-        #self.set_image('./untitled1.png')
+        self._use_test_image = True
+        self._test_image: np.ndarray = None
+        
 
     def __del__(self):
         self._stream_killswitch.set()
@@ -72,6 +75,14 @@ class CameraControl(QLabel):
     def closeEvent(self, event: QtGui.QCloseEvent):
         self._stream_killswitch.set()
         self._frame_producer_thread.join()
+
+    def showEvent(self, event):
+        if self._first_show:
+            if self._use_test_image:
+                self._set_image('./untitled1.png')
+            else:
+                self.display_snapshot()
+            self._first_show = False
 
     @Slot()
     def stop_preview(self):
@@ -96,15 +107,15 @@ class CameraControl(QLabel):
                     self._cam.stop_streaming()
 
     def _frame_handler(self, cam: Camera, frame: Frame) -> None:
-        pydevd.settrace(suspend=False)
+        #pydevd.settrace(suspend=False)
         if frame.get_status() != FrameStatus.Incomplete:
-            img = frame.as_opencv_image()
+            img = frame.as_opencv_image() if not self._use_test_image else np.copy(self._test_image)
+            self._droplet = Droplet()
             try:
-                drplt, img = evaluate_droplet(img, self.get_baseline_y())
+                drplt = evaluate_droplet(img, self.get_baseline_y())
                 self._droplet = drplt
-            except ValueError as ex:
+            except Exception as ex:
                 print(ex.with_traceback(None))
-                pass
             self.change_pixmap_signal.emit(img)        
         cam.queue_frame(frame)
 
@@ -144,31 +155,36 @@ class CameraControl(QLabel):
 
     def get_baseline_y(self) -> int:
         y_base = self._baseline.get_y_level()
-        y = self._convert_to_image_coordinates(y=y_base)
+        y = self.mapToImage(y=y_base)
         return y
 
-    def showEvent(self, event):
-        if self._first_show:
-            self.display_snapshot()
-            self._first_show = False
-
-    # TODO needs scaling from image coordinates to Widget coords
+    # FIXME flicker during update!!
     def paintEvent(self, event):
         super().paintEvent(event)
         if self._droplet.is_valid:
             painter = QPainter(self)
-            painter.setRenderHint(QPainter.Antialiasing)
-            painter.setPen(QPen(Qt.red,1))
-            painter.drawLine(*self._droplet.line_l)
-            painter.drawLine(*self._droplet.line_r)
-            painter.drawLine(*self._droplet.int_l, *self._droplet.int_r)
-            transform = QTransform()
-            transform.translate(*self._droplet.center)
-            transform.rotate(self._droplet.tilt_deg)
-            #transform.scale(0.5, 1.0)
-            painter.setTransform(transform)
- 
-            painter.drawEllipse(QPoint(0,0),self._droplet.maj, self._droplet.min)
+            try:
+                # line_l,line_r,int_l,int_r,center,maj,min = self.map_droplet_drawing_vals(self._droplet)
+                painter.setRenderHint(QPainter.Antialiasing)
+                painter.setPen(QPen(Qt.red,1))
+                scale_x, scale_y, offset_x, offset_y = self.getFromImageScaling()
+                transform = QTransform()
+                transform.translate(offset_x, offset_y)
+                transform.scale(scale_x, scale_y)
+                painter.setTransform(transform)
+                painter.drawLine(*self._droplet.line_l)
+                painter.drawLine(*self._droplet.line_r)
+                painter.drawLine(*self._droplet.int_l, *self._droplet.int_r)#*int_l, *int_r)
+                
+                transform.translate(*self._droplet.center)
+                transform.rotate(self._droplet.tilt_deg)
+                painter.setTransform(transform)
+            
+                painter.drawEllipse(QPoint(0,0), self._droplet.maj/2, self._droplet.min/2)
+            except Exception as ex:
+                print(ex)
+                painter.end()
+                
             
 
     def mousePressEvent(self,event):
@@ -196,8 +212,8 @@ class CameraControl(QLabel):
         x,y = self._roi_rubber_band.mapToParent(QPoint(0,0)).toTuple()
         w,h = self._roi_rubber_band.size().toTuple()
         self._roi_rubber_band.hide()
-        x,y = self._convert_to_image_coordinates(x=x, y=y)
-        w,h = self._convert_to_image_coordinates(x=w, y=h)
+        x,y = self.mapToImage(x=x, y=y)
+        w,h = self.mapToImage(x=w, y=h)
         self.set_roi(x,y,w,h)
 
     def _abort_roi(self):
@@ -242,8 +258,10 @@ class CameraControl(QLabel):
         self.display_snapshot()
 
     def _set_image(self, file):
-        img = QPixmap(file)
-        self.setPixmap(img.scaled(self.size(), Qt.KeepAspectRatio))
+        img = cv2.imread(file)
+        if self._use_test_image:
+            self._test_image = img
+        self.change_pixmap_signal.emit(img)
 
     @Slot(np.ndarray)
     def update_image(self, cv_img: np.ndarray):
@@ -252,7 +270,7 @@ class CameraControl(QLabel):
         try:
             qt_img = self._convert_cv_qt(cv_img)
             self.setPixmap(qt_img)
-            self._original_image_size = np.shape(cv_img)
+            self._image_size = np.shape(cv_img)
         except Exception:
             pass
 
@@ -265,23 +283,58 @@ class CameraControl(QLabel):
         p = convert_to_Qt_format.scaled(self.size(), Qt.KeepAspectRatio)
         return QPixmap.fromImage(p)
 
-    def _convert_to_image_coordinates(self, x=-1, y=-1):
+    def map_droplet_drawing_vals(self, droplet: Droplet):
+        tangent_l = tuple(map(lambda x: self.mapFromImage(*x), droplet.line_l))
+        tangent_r = tuple(map(lambda x: self.mapFromImage(*x), droplet.line_r))
+        center = self.mapFromImage(*droplet.center)
+        maj, min = self.mapFromImage(droplet.maj, droplet.min)
+        int_l = self.mapFromImage(*droplet.int_l)
+        int_r = self.mapFromImage(*droplet.int_r)
+        return tangent_l,tangent_r,int_l,int_r,center,maj,min
+
+    def mapToImage(self, x=None, y=None):
         """ Convert QLabel coordinates to image pixel coordinates
         :param x: x coordinate to be transformed
         :param y: y coordinate to be transformed
         :returns: x or y or Tuple (x,y) of the transformed coordinates, depending on what parameters where given
         """
-        pix_rect = self.pixmap().rect()
-        scale_x = self._original_image_size[1] / self.width()
-        scale_y = self._original_image_size[0] / self.height()
-        tr_x = int((x - pix_rect.x()) * scale_x)
-        tr_y = int((y - pix_rect.y()) * scale_y)
-        if x >= 0 and y >= 0:
-            return tr_x, tr_y
-        elif x >= 0:
-            return tr_x
-        elif y >= 0:
-            return tr_y
-            
+        pix_rect = self.pixmap().size()
+        res = []
+        if x is not None:
+            scale_x = self._image_size[1] / pix_rect.width()
+            tr_x = int((x - (abs(pix_rect.width() - self.width())/2)) * scale_x)
+            res.append(tr_x)
+        if y is not None:
+            scale_y = self._image_size[0] / pix_rect.height() 
+            tr_y = int((y - (abs(pix_rect.height() - self.height())/2)) * scale_y)
+            res.append(tr_y)
+        return tuple(res) if len(res)>1 else res[0]
+
+    def mapFromImage(self, x=None, y=None):
+        """ Convert Image pixel coordinates to QLabel coordinates
+        :param x: x coordinate to be transformed
+        :param y: y coordinate to be transformed
+        :returns: x or y or Tuple (x,y) of the transformed coordinates, depending on what parameters where given
+        """
+        pix_rect = self.pixmap().size()
+        res = []
+        if x is not None:
+            scale_x = pix_rect.width() / self._image_size[1]
+            tr_x = int(x  * scale_x) + (abs(pix_rect.width() - self.width())/2)
+            res.append(tr_x)
+        if y is not None:
+            scale_y = pix_rect.height() / self._image_size[0]
+            tr_y = int(y * scale_y) + (abs(pix_rect.height() - self.height())/2)
+            res.append(tr_y)
+        return tuple(res) if len(res)>1 else res[0]
+
+    def getFromImageScaling(self):
+        """ Gets the scale and offset for a Image to QLabel coordinate transform """
+        pix_rect = self.pixmap().size()
+        scale_x = pix_rect.width() / self._image_size[1]
+        offset_x = abs(pix_rect.width() - self.width())/2
+        scale_y = pix_rect.height() / self._image_size[0]
+        offset_y = abs(pix_rect.height() - self.height())/2
+        return scale_x, scale_y, offset_x, offset_y
         
         

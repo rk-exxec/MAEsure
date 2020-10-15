@@ -102,8 +102,6 @@ def evaluate_droplet(img, y_base) -> Droplet:
     drplt.base_diam = x_int_r - x_int_l
     drplt.is_valid = True
 
-    # TODO
-    # test cv2 ellipse plot, line plot etc
     # img = cv2.ellipse(img, (int(round(x0)),int(round(y0))), (int(round(a)),int(round(b))), int(round(phi*180/pi)), 0, 360, (255,0,255), thickness=1, lineType=cv2.LINE_AA)
     # y_int = int(round(y_base))
     # img = cv2.line(img, (int(round(x_int_l - (y_int/m_t_l))), 0), (int(round(x_int_l + ((height - y_int)/m_t_l))), int(round(height))), (255,0,255), thickness=1, lineType=cv2.LINE_AA)
@@ -119,7 +117,7 @@ def evaluate_droplet(img, y_base) -> Droplet:
     #     print(ex)
     #cv2.imshow('Test',img)
     #cv2.waitKey(0)
-    return drplt, img
+    return drplt#, img
 
 def calc_general_ell_params(x0, y0, pa, pb, phi):
     """
