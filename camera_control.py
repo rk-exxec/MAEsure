@@ -25,7 +25,7 @@ import pydevd
 from PySide2 import QtGui
 from PySide2.QtWidgets import QLabel
 from PySide2.QtCore import Signal, Slot, Qt, QPoint, QRect, QSize
-from PySide2.QtGui import QPainter, QPen, QPixmap, QTransform
+from PySide2.QtGui import QBrush, QPaintEvent, QPainter, QPen, QPixmap, QTransform
 from vimba import Vimba, Frame, Camera, LOG_CONFIG_TRACE_FILE_ONLY
 from vimba.frame import FrameStatus
 
@@ -35,10 +35,9 @@ from evaluate_droplet import Droplet, evaluate_droplet
 
 
 # TODO camera control
-#   draw ellipse etc over image
 #   pause running while setting roi
+#   escape not removing rubberband
 #   
-#
 
 
 class CameraControl(QLabel):
@@ -48,6 +47,7 @@ class CameraControl(QLabel):
         self.roi_origin = QPoint()
         self._frame_producer_thread: Thread = None
         self._stream_killswitch: Event = None
+        self._double_buffer: QPixmap = None
         self._first_show = True # whether form is shown for the first time
         self._is_running = False
         self._image_size = 0
@@ -158,34 +158,47 @@ class CameraControl(QLabel):
         y = self.mapToImage(y=y_base)
         return y
 
-    # FIXME flicker during update!!
-    def paintEvent(self, event):
-        super().paintEvent(event)
+    def paintEvent(self, event: QPaintEvent):
+        # FIXME white border around pixmap!!
+        # completely overwrite super paintEvent to use double buffering
+        painter = QPainter(self)
+        #painter.setRenderHint(QPainter.Antialiasing)
+        self.drawFrame(painter)
+        # using a pixmap and separate painter for content do avoid flicker
+        if self._double_buffer is None:
+            self._double_buffer = QPixmap(self.width(), self.height())
+        self._double_buffer.fill(Qt.black)
+        db_painter = QPainter(self._double_buffer)
+        db_painter.setRenderHint(QPainter.Antialiasing)
+        # calculate offset and scale of droplet image pixmap
+        scale_x, scale_y, offset_x, offset_y = self.getFromImageScaling()
+        db_painter.setBackground(QBrush(Qt.black))
+        db_painter.setPen(QPen(Qt.black,0))
+        db_painter.drawPixmap(offset_x, offset_y, self.pixmap())
+        # draw drolet outline and tangent only if evaluate_droplet was successful
         if self._droplet.is_valid:
-            painter = QPainter(self)
-            try:
-                # line_l,line_r,int_l,int_r,center,maj,min = self.map_droplet_drawing_vals(self._droplet)
-                painter.setRenderHint(QPainter.Antialiasing)
-                painter.setPen(QPen(Qt.red,1))
-                scale_x, scale_y, offset_x, offset_y = self.getFromImageScaling()
+            try:           
+                db_painter.setPen(QPen(Qt.magenta,2))
+                # transforming true image coordinates to scaled pixmap coordinates
                 transform = QTransform()
                 transform.translate(offset_x, offset_y)
-                transform.scale(scale_x, scale_y)
-                painter.setTransform(transform)
-                painter.drawLine(*self._droplet.line_l)
-                painter.drawLine(*self._droplet.line_r)
-                painter.drawLine(*self._droplet.int_l, *self._droplet.int_r)#*int_l, *int_r)
-                
+                transform.scale(scale_x, scale_y)              
+                db_painter.setTransform(transform)
+                db_painter.drawLine(*self._droplet.line_l)
+                db_painter.drawLine(*self._droplet.line_r)
+                db_painter.drawLine(*self._droplet.int_l, *self._droplet.int_r)  
+                # draw ellipse around origin, then move and rotate    
                 transform.translate(*self._droplet.center)
                 transform.rotate(self._droplet.tilt_deg)
-                painter.setTransform(transform)
-            
-                painter.drawEllipse(QPoint(0,0), self._droplet.maj/2, self._droplet.min/2)
+                db_painter.setTransform(transform)
+                db_painter.drawEllipse(QPoint(0,0), self._droplet.maj/2, self._droplet.min/2)   
             except Exception as ex:
                 print(ex)
-                painter.end()
-                
-            
+
+        # painting the buffer pixmap to screen
+        painter.drawPixmap(0, 0, self._double_buffer)
+        db_painter.end()
+        painter.end()
 
     def mousePressEvent(self,event):
         if event.button() == Qt.LeftButton:
