@@ -41,7 +41,6 @@ class CustomCallbackTimer(QTimer):
 # TODO magnet control
 # TODO better cleanup (deleteLater())
 # calib
-# lamp shows reference status
 
 class MagnetControl(QGroupBox):
     """A widget to control the motor via lt_control  
@@ -190,8 +189,8 @@ class MagnetControl(QGroupBox):
 
     def finished_moving(self):
         # callback for when the motor stops moving (only absolute and relative, not jogging)
-        self.update_motor_status()
         self.update_pos()
+        self.update_motor_status()
         self.unlock_movement_buttons()
 
     @Slot()

@@ -38,7 +38,8 @@ class Droplet():
         self.int_r = (0,0)
         self.line_r = (0,0,0,0)
         self.base_diam = 0
-
+        
+# FIXME ellipse sometimes 90° tilted or axes swapped whe only small num of points to fit
 def evaluate_droplet(img, y_base) -> Droplet:
     drplt = Droplet()
     crop_img = img[:y_base,:]

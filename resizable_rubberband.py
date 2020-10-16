@@ -23,7 +23,7 @@ from PySide2.QtCore import Qt, QPoint
 class ResizableRubberBand(QWidget):
     def __init__(self, parent=None):
         super(ResizableRubberBand, self).__init__(parent)
-        self.setWindowFlags(Qt.SubWindow)
+        #self.setWindowFlags(Qt.SubWindow)
         self.layout = QHBoxLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.setCursor(Qt.SizeAllCursor)

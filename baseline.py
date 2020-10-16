@@ -19,10 +19,11 @@ from PySide2.QtWidgets import QWidget, QHBoxLayout
 from PySide2.QtGui import QPainter, QPen
 from PySide2.QtCore import Qt, QPoint
 
+# TODO baseline set max and min according to image
 class Baseline(QWidget):
     def __init__(self, parent=None):
         super(Baseline, self).__init__(parent)
-        self.setWindowFlags(Qt.SubWindow)
+        #self.setWindowFlags(Qt.SubWindow)
         self.layout = QHBoxLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.setCursor(Qt.SizeVerCursor)
@@ -38,14 +39,14 @@ class Baseline(QWidget):
     def paintEvent(self, event):
         super().paintEvent(event)
         painter = QPainter(self)
-        painter.beginNativePainting()
+        #painter.beginNativePainting()
         painter.setRenderHint(QPainter.Antialiasing)
         painter.setPen(QPen(Qt.gray, 1))
         x1,y1,x2,y2 = self.rect().getCoords()
         painter.drawRect(self.rect())
         painter.setPen(QPen(Qt.blue, 2))
         painter.drawLine(QPoint(x1, y1+(y2-y1)/2), QPoint(x2, y1+(y2-y1)/2))
-        painter.endNativePainting()
+        #painter.endNativePainting()
         painter.end()
 
     def showEvent(self, event):
