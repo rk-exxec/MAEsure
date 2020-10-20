@@ -16,7 +16,7 @@
 
 # Droplet eval function
 
-from math import cos, sin, atan, pi, sqrt, tan, atan2
+from math import copysign, cos, sin, atan, pi, sqrt, tan, atan2, radians, degrees
 import cv2
 
 class Droplet():
@@ -39,7 +39,7 @@ class Droplet():
         self.line_r = (0,0,0,0)
         self.base_diam = 0
         
-# FIXME ellipse sometimes 90° tilted or axes swapped whe only small num of points to fit
+# FIXME tangent slope not correct when ellipse tall and few points to fit!!
 def evaluate_droplet(img, y_base) -> Droplet:
     drplt = Droplet()
     crop_img = img[:y_base,:]
@@ -63,11 +63,11 @@ def evaluate_droplet(img, y_base) -> Droplet:
 
     edge = max(contours, key=cv2.contourArea)
     #edge = contours[0]
-    (x0,y0),(MA,ma),phi = cv2.fitEllipse(edge)
-    phi = phi * pi / 180 # to radians
-    #(a,b,x0,y0,phi) = fit_ellipse(pxls_x,pxls_y)
-    a = MA/2
-    b = ma/2
+    (x0,y0),(maj_ax,min_ax),phi_deg = cv2.fitEllipseAMS(edge)
+
+    phi = radians(phi_deg) # to radians
+    a = maj_ax/2
+    b = min_ax/2
 
     intersection = calc_intersection_line_ellipse((x0,y0,a,b,phi),(0,y_base))
     if intersection is None:
@@ -87,11 +87,11 @@ def evaluate_droplet(img, y_base) -> Droplet:
 
     drplt.angle_l = angle_l
     drplt.angle_r = angle_r
-    drplt.maj = MA
-    drplt.min = ma
+    drplt.maj = maj_ax
+    drplt.min = min_ax
     drplt.center = (x0, y0)
     drplt.phi = phi
-    drplt.tilt_deg = phi * 180/pi
+    drplt.tilt_deg = phi_deg
     drplt.tan_l_m = m_t_l
     drplt.tan_r_m = m_t_r
     drplt.line_l = (int(round(x_int_l - (int(round(y_base))/m_t_l))), 0, int(round(x_int_l + ((height - int(round(y_base)))/m_t_l))), int(round(height)))
@@ -102,7 +102,10 @@ def evaluate_droplet(img, y_base) -> Droplet:
     drplt.foc_pt2 = (x0 - foc_len*cos(phi), y0 - foc_len*sin(phi))
     drplt.base_diam = x_int_r - x_int_l
     drplt.is_valid = True
-
+    # for dot in edge:
+    #     img = cv2.circle(img, tuple(dot[0]), 2, (0,255,0),1)
+    img = cv2.drawContours(img,contours,-1,(100,100,255),2)
+    img = cv2.drawContours(img,edge,-1,(255,0,0),2)
     # img = cv2.ellipse(img, (int(round(x0)),int(round(y0))), (int(round(a)),int(round(b))), int(round(phi*180/pi)), 0, 360, (255,0,255), thickness=1, lineType=cv2.LINE_AA)
     # y_int = int(round(y_base))
     # img = cv2.line(img, (int(round(x_int_l - (y_int/m_t_l))), 0), (int(round(x_int_l + ((height - y_int)/m_t_l))), int(round(height))), (255,0,255), thickness=1, lineType=cv2.LINE_AA)
@@ -120,23 +123,23 @@ def evaluate_droplet(img, y_base) -> Droplet:
     #cv2.waitKey(0)
     return drplt#, img
 
-def calc_general_ell_params(x0, y0, pa, pb, phi):
-    """
-    calculates general ellipse params from major, minor axis and rotation  
-    :param x0: x-coord of ellise center  
-    :param y0: y-coord of ellipse center  
-    :param pa: semi-major axis (0.5 major axis)  
-    :param pb: semi-minor axis (0.5 minor axis)  
-    :param phi: tilt of major axis relative to x axis  
-    :returns: coefficients a,b,c,d,e,f for the general ellipse equation ax^2 + bxy + cy^2 + dx + ey + f = 0
-    """
-    a = pa**2 * sin(phi)**2 + pb**2*cos(phi)**2
-    b = 2*(pb**2 - pa**2)*sin(phi)*cos(phi)
-    c = pa**2 * cos(phi)**2 + pb**2*sin(phi)**2
-    d = -2*a*x0 - b*y0
-    e = -b*x0 - 2*c*y0
-    f = a*x0**2 + b*x0*y0 + c*y0**2 - pa**2*pb**2
-    return a, b, c, d, e, f
+# def calc_general_ell_params(x0, y0, pa, pb, phi):
+#     """
+#     calculates general ellipse params from major, minor axis and rotation  
+#     :param x0: x-coord of ellise center  
+#     :param y0: y-coord of ellipse center  
+#     :param pa: semi-major axis (0.5 major axis)  
+#     :param pb: semi-minor axis (0.5 minor axis)  
+#     :param phi: tilt of major axis relative to x axis  
+#     :returns: coefficients a,b,c,d,e,f for the general ellipse equation ax^2 + bxy + cy^2 + dx + ey + f = 0
+#     """
+#     a = pa**2 * sin(phi)**2 + pb**2*cos(phi)**2
+#     b = 2*(pb**2 - pa**2)*sin(phi)*cos(phi)
+#     c = pa**2 * cos(phi)**2 + pb**2*sin(phi)**2
+#     d = -2*a*x0 - b*y0
+#     e = -b*x0 - 2*c*y0
+#     f = a*x0**2 + b*x0*y0 + c*y0**2 - pa**2*pb**2
+#     return a, b, c, d, e, f
 
 def calc_intersection_line_ellipse(ellipse_pars, line_pars):
     """
@@ -145,16 +148,32 @@ def calc_intersection_line_ellipse(ellipse_pars, line_pars):
     :param line_pars: tuple of (m,t): m is the slope and t is intercept of the intersecting line  
     :returns: x-coordinate(s) of intesection as list or float or none if none found
     """
-    (x0, y0, a, b, phi) = ellipse_pars
+    # (x0, y0, a, b, phi) = ellipse_pars
+    # (m, t) = line_pars
+    # # # solutions for problem e(x) == f(x), where e(x) is the canonical eqn for a general ellipse and f(x) is the eqn of the intersecting line
+    # # # e(x,y) = ((((x-x0)*cos(phi) + (y-y0)*sin(phi))**2) / a**2) + ((((x-x0)*sin(phi) - (y-y0)*cos(phi))**2) / b**2) == 1
+    # # # f(x) = 0*x + t
+    # num = 2*a*b*sqrt((b**2 - a**2)*cos(phi)**2 + a**2 - (t-y0)**2) \
+    #     + (b**2 - a**2)*(2*x0*cos(phi)**2 + (y0 - t)*sin(2*phi))
+    # den = 2*(b**2*cos(phi)**2 + a**2*sin(phi)**2)
+    # try:
+    #     intersection = [(2*a**2*x0 + num) / den, (2*a**2*x0 - num) / den]
+    # except ZeroDivisionError as zde:
+    #     print('No intersections found')
+    #     return None
+    # except Exception as ex:
+    #     raise ex
+    ## -->> http://quickcalcbasic.com/ellipse%20line%20intersection.pdf
+    (x0, y0, h, v, phi) = ellipse_pars
     (m, t) = line_pars
-    # solutions for problem e(x) == f(x), where e(x) is the canonical eqn for a general ellipse and f(x) is the eqn of the intersecting line
-    # e(x,y) = ((((x-x0)*cos(phi) + (y-y0)*sin(phi))**2) / a**2) + ((((x-x0)*sin(phi) - (y-y0)*cos(phi))**2) / b**2) == 1
-    # f(x) = 0*x + t
-    num = 2*a*b*sqrt((b**2 - a**2)*cos(phi)**2 + a**2 - (t-y0)**2) \
-        + (b**2 - a**2)*(2*x0*cos(phi)**2 + (y0 - t)*sin(2*phi))
-    den = 2*(b**2*cos(phi)**2 + a**2*sin(phi)**2)
+    y = t - y0
     try:
-        intersection = [(2*a**2*x0 + num) / den, (2*a**2*x0 - num) / den]
+        a = v**2 * cos(phi)**2 + h**2 * sin(phi)**2
+        b = 2*y*cos(phi)*sin(phi) * (v**2 - h**2)
+        c = y**2 * (v**2 * sin(phi)**2 + h**2 * cos(phi)**2) - (h**2 * v**2)
+        x1 = int((-b - sqrt(b**2 - 4*a*c))/(2*a) + x0)
+        x2 = int((-b + sqrt(b**2 - 4*a*c))/(2*a) + x0)
+        intersection = [x1,x2]
     except ZeroDivisionError as zde:
         print('No intersections found')
         return None
