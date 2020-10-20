@@ -33,15 +33,19 @@ class LightWidget(QWidget):
 
     def set_red(self):
         self._color = LightColor.RED
+        self.update()
 
     def set_green(self):
         self._color = LightColor.GREEN
+        self.update()
 
     def set_error(self):
         self._color = LightColor.ERROR
+        self.update()
 
     def set_yellow(self):
         self._color = LightColor.YELLOW
+        self.update()
 
     def paintEvent(self, event: QPaintEvent):
         painter = QPainter(self)
