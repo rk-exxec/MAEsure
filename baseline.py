@@ -19,7 +19,6 @@ from PySide2.QtWidgets import QWidget, QHBoxLayout
 from PySide2.QtGui import QPainter, QPen
 from PySide2.QtCore import Qt, QPoint
 
-# TODO baseline set max and min according to image
 class Baseline(QWidget):
     def __init__(self, parent=None):
         super(Baseline, self).__init__(parent)
@@ -28,13 +27,43 @@ class Baseline(QWidget):
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.setCursor(Qt.SizeVerCursor)
         self.origin = QPoint(0,0)
-        self.setGeometry(0, parent.geometry().height() - 10, parent.geometry().width(), 20)
+        self._first_show = True
+        self._y_level = 0
+        self._max_level: int = 10000
+        self._min_level: int = 0
         self.show()
 
-    def get_y_level(self):
-        x1,y1 = self.mapToParent(self.pos()).toTuple()
-        y2 = self.height()
-        return int(y1+(y2-y1)/2)
+    @property
+    def y_level(self) -> int:
+        # y1 = self.mapToParent(self.pos()).y()
+        # y2 = self.height()
+        return self._y_level
+
+    @y_level.setter
+    def y_level(self, level):
+        self._y_level = level
+        if level > self._min_level and level < self._max_level:
+            self.move(QPoint(self.x(), level - self.height()/2))
+        elif level < self._min_level:
+            self.move(QPoint(self.x(), self._min_level))
+        elif level > self._max_level:
+            self.move(QPoint(self.x(), self._max_level))
+
+    @property
+    def max_level(self):
+        return self._max_level + self.height()/2
+
+    @max_level.setter
+    def max_level(self, level):
+        self._max_level = level - self.height()/2
+
+    @property
+    def min_level(self):
+        return self._min_level + self.height()/2
+
+    @min_level.setter
+    def min_level(self, level):
+        self._min_level = level - self.height()/2
 
     def paintEvent(self, event):
         super().paintEvent(event)
@@ -50,7 +79,10 @@ class Baseline(QWidget):
         painter.end()
 
     def showEvent(self, event):
-        self.resize(self.parent().geometry().width(), 20)
+        if self._first_show:
+            self.setGeometry(0, self.parent().geometry().height() - 10, self.parent().geometry().width(), 20)
+            self.max_level = self.parent().geometry().height() - self.height()
+            self._first_show = False
 
     def mousePressEvent(self, event):
         if event.buttons() == Qt.LeftButton:
@@ -62,6 +94,5 @@ class Baseline(QWidget):
 
     def mouseMoveEvent(self, event):
         if event.buttons() == Qt.LeftButton:
-            new_y = event.globalPos().y() - self.origin.y()
-            if new_y > 0 and new_y < (self.parent().geometry().height() - self.height()):
-                self.move(QPoint(self.x(), new_y))
+            #new_y = event.globalPos().y() - self.origin.y()
+            self.y_level = event.globalPos().y() - self.origin.y() + self.height()/2

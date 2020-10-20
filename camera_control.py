@@ -51,6 +51,7 @@ class CameraControl(QLabel):
         self._first_show = True # whether form is shown for the first time
         self._is_running = False
         self._image_size = 0
+        self._image_size_invalid = True
         self._droplet = Droplet()
         self.change_pixmap_signal.connect(self.update_image)
         self._cam : Camera = None
@@ -82,6 +83,7 @@ class CameraControl(QLabel):
                 self._set_image('./untitled1.png')
             else:
                 self.display_snapshot()
+            self._baseline.y_level= self.mapFromImage(y=250)
             self._first_show = False
 
     @Slot()
@@ -154,10 +156,15 @@ class CameraControl(QLabel):
         self._baseline.hide()
 
     def get_baseline_y(self) -> int:
-        y_base = self._baseline.get_y_level()
+        y_base = self._baseline.y_level
         y = self.mapToImage(y=y_base)
         return y
 
+    def set_new_baseline_constraints(self):
+        pix_size = self.pixmap().size()
+        offset_y = int(abs(pix_size.height() - self.height())/2)
+        self._baseline.max_level = pix_size.height() + offset_y
+        self._baseline.min_level = offset_y
     def paintEvent(self, event: QPaintEvent):
         # FIXME white border around pixmap!!
         # completely overwrite super paintEvent to use double buffering
@@ -171,7 +178,7 @@ class CameraControl(QLabel):
         db_painter = QPainter(self._double_buffer)
         db_painter.setRenderHint(QPainter.Antialiasing)
         # calculate offset and scale of droplet image pixmap
-        scale_x, scale_y, offset_x, offset_y = self.getFromImageScaling()
+        scale_x, scale_y, offset_x, offset_y = self.get_from_image_transform()
         db_painter.setBackground(QBrush(Qt.black))
         db_painter.setPen(QPen(Qt.black,0))
         db_painter.drawPixmap(offset_x, offset_y, self.pixmap())
@@ -252,6 +259,7 @@ class CameraControl(QLabel):
                         self._cam.Width.set(w)
                         self._cam.Height.set(h)
                         
+        self._image_size_invalid = True           
         self.display_snapshot()
 
     def set_roi(self, x, y, w, h):
@@ -268,6 +276,7 @@ class CameraControl(QLabel):
                 self._cam.Height.set(h)
                 self._cam.OffsetX.set(x)
                 self._cam.OffsetY.set(y)
+        self._image_size_invalid = True
         self.display_snapshot()
 
     def _set_image(self, file):
@@ -283,7 +292,10 @@ class CameraControl(QLabel):
         try:
             qt_img = self._convert_cv_qt(cv_img)
             self.setPixmap(qt_img)
-            self._image_size = np.shape(cv_img)
+            if self._image_size_invalid:
+                self._image_size = np.shape(cv_img)
+                self.set_new_baseline_constraints()
+                self._image_size_invalid = False
         except Exception:
             pass
 
@@ -305,48 +317,46 @@ class CameraControl(QLabel):
         int_r = self.mapFromImage(*droplet.int_r)
         return tangent_l,tangent_r,int_l,int_r,center,maj,min
 
-    def mapToImage(self, x=None, y=None):
+    def mapToImage(self, x=None, y=None) -> Union[Tuple[int,int],int]:
         """ Convert QLabel coordinates to image pixel coordinates
         :param x: x coordinate to be transformed
         :param y: y coordinate to be transformed
         :returns: x or y or Tuple (x,y) of the transformed coordinates, depending on what parameters where given
         """
         pix_rect = self.pixmap().size()
-        res = []
+        res: List[int] = []
         if x is not None:
             scale_x = self._image_size[1] / pix_rect.width()
-            tr_x = int((x - (abs(pix_rect.width() - self.width())/2)) * scale_x)
+            tr_x = int(round(x - (abs(pix_rect.width() - self.width())/2) * scale_x))
             res.append(tr_x)
         if y is not None:
             scale_y = self._image_size[0] / pix_rect.height() 
-            tr_y = int((y - (abs(pix_rect.height() - self.height())/2)) * scale_y)
+            tr_y = int(round((y - (abs(pix_rect.height() - self.height())/2)) * scale_y))
             res.append(tr_y)
         return tuple(res) if len(res)>1 else res[0]
 
-    def mapFromImage(self, x=None, y=None):
+    def mapFromImage(self, x=None, y=None) -> Union[Tuple[int,int],int]:
         """ Convert Image pixel coordinates to QLabel coordinates
         :param x: x coordinate to be transformed
         :param y: y coordinate to be transformed
         :returns: x or y or Tuple (x,y) of the transformed coordinates, depending on what parameters where given
         """
-        pix_rect = self.pixmap().size()
-        res = []
+        scale_x, scale_y, offset_x, offset_y = self.get_from_image_transform()
+        res: List[int] = []
         if x is not None:
-            scale_x = pix_rect.width() / self._image_size[1]
-            tr_x = int(x  * scale_x) + (abs(pix_rect.width() - self.width())/2)
+            tr_x = int(round((x  * scale_x) + offset_x))
             res.append(tr_x)
         if y is not None:
-            scale_y = pix_rect.height() / self._image_size[0]
-            tr_y = int(y * scale_y) + (abs(pix_rect.height() - self.height())/2)
+            tr_y = int(round((y * scale_y) + offset_y))
             res.append(tr_y)
         return tuple(res) if len(res)>1 else res[0]
 
-    def getFromImageScaling(self):
+    def get_from_image_transform(self):
         """ Gets the scale and offset for a Image to QLabel coordinate transform """
         pix_rect = self.pixmap().size()
-        scale_x = pix_rect.width() / self._image_size[1]
+        scale_x = float(pix_rect.width() / self._image_size[1])
         offset_x = abs(pix_rect.width() - self.width())/2
-        scale_y = pix_rect.height() / self._image_size[0]
+        scale_y = float(pix_rect.height() / self._image_size[0])
         offset_y = abs(pix_rect.height() - self.height())/2
         return scale_x, scale_y, offset_x, offset_y
         
