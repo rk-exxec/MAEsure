@@ -1,1 +1,1 @@
-pyside2-uic *.ui > .py
+pyside2-uic -o form.py form.ui
