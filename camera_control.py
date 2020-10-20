@@ -15,6 +15,7 @@
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # This Python file uses the following encoding: utf-8
+from typing import List, Tuple, Union
 from VimbaPython.vimba.shared import filter_affected_features
 from threading import Thread, Event
 import time
@@ -35,9 +36,10 @@ from evaluate_droplet import Droplet, evaluate_droplet
 
 
 # TODO camera control
-#   pause running while setting roi
+#   pause running while setting roi - needs testing
 #   escape not removing rubberband
-#   
+
+# TODO cleanup functions
 
 
 class CameraControl(QLabel):
@@ -108,7 +110,7 @@ class CameraControl(QLabel):
                     self._cam.stop_streaming()
 
     def _frame_handler(self, cam: Camera, frame: Frame) -> None:
-        #pydevd.settrace(suspend=False)
+        pydevd.settrace(suspend=False)
         if frame.get_status() != FrameStatus.Incomplete:
             img = frame.as_opencv_image() if not self._use_test_image else np.copy(self._test_image)
             self._droplet = Droplet()
@@ -143,6 +145,7 @@ class CameraControl(QLabel):
                 self._cam.ReverseY.set(True)
     
     def display_snapshot(self):
+        if self._is_running: return
         with self._vimba:
             with self._cam:
                 frame: Frame = self._cam.get_frame()
@@ -164,9 +167,10 @@ class CameraControl(QLabel):
         offset_y = int(abs(pix_size.height() - self.height())/2)
         self._baseline.max_level = pix_size.height() + offset_y
         self._baseline.min_level = offset_y
+
     def paintEvent(self, event: QPaintEvent):
         # FIXME white border around pixmap!!
-        # completely overwrite super paintEvent to use double buffering
+        # completely override super.paintEvent() to use double buffering
         painter = QPainter(self)
         #painter.setRenderHint(QPainter.Antialiasing)
         self.drawFrame(painter)
@@ -238,11 +242,10 @@ class CameraControl(QLabel):
     def _abort_roi(self):
         self._roi_rubber_band.hide()
 
-    def _start_roi_sel(self):
-        pass
-
     def reset_roi(self):
         #self.set_roi(0,0, 2064, 1544)
+        was_running = self._is_running
+        self.stop_preview()
         with self._vimba:
             with self._cam:
                 h = self._cam.SensorHeight.get()
@@ -257,9 +260,10 @@ class CameraControl(QLabel):
                         self._cam.OffsetY.set(0)
                         self._cam.Width.set(w)
                         self._cam.Height.set(h)
-                        
         self._image_size_invalid = True           
         self.display_snapshot()
+        if was_running: self.start_preview()
+        
 
     def set_roi(self, x, y, w, h):
         # x, y, width and height need be multiple of 8
@@ -269,6 +273,8 @@ class CameraControl(QLabel):
         h = int(8 * round(h/8))
         if h > 1542:
             h = 1542
+        was_running = self._is_running
+        self.stop_preview()
         with self._vimba:
             with self._cam:
                 self._cam.Width.set(w)
@@ -277,6 +283,7 @@ class CameraControl(QLabel):
                 self._cam.OffsetY.set(y)
         self._image_size_invalid = True
         self.display_snapshot()
+        if was_running: self.start_preview()
 
     def _set_image(self, file):
         img = cv2.imread(file)
