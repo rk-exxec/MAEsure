@@ -16,10 +16,15 @@
 
 from PySide2.QtCore import QTimer, Signal, Slot, Qt, QThread
 from PySide2.QtGui import QShowEvent
-from PySide2.QtWidgets import QGroupBox, QMessageBox, QPushButton
+from PySide2.QtWidgets import QGroupBox, QMainWindow, QMessageBox, QPushButton
 
 from light_widget import LightWidget
 from lt_control.lt_control import LT
+
+# import for type hinting not evaluated at runtime to avoid cyclic imports
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ui_form import Ui_main
 
 class WaitMovementThread(QThread):
     def __init__(self, target, slotOnFinished=None):
@@ -38,9 +43,8 @@ class CustomCallbackTimer(QTimer):
         self.setSingleShot(False)
         self.timeout.connect(target)
 
-# TODO magnet control
-# TODO better cleanup (deleteLater())
-# calib
+# TODO implement as standalone for Heiko Unold
+# TODO calib
 
 class MagnetControl(QGroupBox):
     """A widget to control the motor via lt_control  
@@ -48,11 +52,10 @@ class MagnetControl(QGroupBox):
     Use instead of QGroupBox
     """
     def __init__(self, parent=None) -> None:
-        #self.portsComboBox: QComboBox = None
         super(MagnetControl, self).__init__(parent)
         self._lt_ctl = LT()
         self.workerThread = QThread(self)
-        self.ui = self.window()
+        self.ui: Ui_main = self.window().ui
         self._shown = False
         self._mov_dist: float = 0
         self._mov_unit: str = 'steps'
@@ -67,20 +70,23 @@ class MagnetControl(QGroupBox):
     def connect_signals(self):
         self.ui.jogUpBtn.pressed.connect(self.jog_up_start)
         self.ui.jogDownBtn.pressed.connect(self.jog_down_start)
-        self.ui.jogUpBtn.released.connect(self.motor_stop)
-        self.ui.jogDownBtn.released.connect(self.motor_stop)
+        self.ui.jogUpBtn.released.connect(self.motor_stop_soft)
+        self.ui.jogDownBtn.released.connect(self.motor_stop_soft)
         self.ui.referenceBtn.clicked.connect(self.reference)
         self.ui.goBtn.clicked.connect(self.move_pos)
         self.ui.stopBtn.clicked.connect(self.motor_stop)
         self.ui.posSpinBox.valueChanged.connect(self.spin_box_val_changed) #lambda pos: self.magnet_ctl.set_mov_dist(int(pos)) or self.ui.posSlider.setValue(int(pos))
         self.ui.unitComboBox.currentTextChanged.connect(self.mag_mov_unit_changed)
         self.ui.posSlider.sliderMoved.connect(self.slider_moved) # lambda pos: self.ui.posLineEdit.setText(str(pos)) or self.ui.posSpinBox.setValue(float(pos))
+        self.ui.softRampChk.stateChanged.connect(self.change_ramp_type)
 
     def showEvent(self, event: QShowEvent):
         if not self._shown:
             self.connect_signals()
             self.update_motor_status()
             self.update_pos()
+            with self._lt_ctl:
+                self._lt_ctl.set_soft_ramp()
             self._shown = True
 
     def update_pos(self):
@@ -128,6 +134,18 @@ class MagnetControl(QGroupBox):
             self.ui.posSpinBox.setValue(float(value))
         elif self.ui.unitComboBox.currentText() == 'mm':
             self.ui.posSpinBox.setValue(float(value/100))
+
+    @Slot(int)
+    def change_ramp_type(self, state: Qt.CheckState):
+        if state == Qt.Checked:
+            with self._lt_ctl:
+                self._lt_ctl.set_soft_ramp()
+        elif state == Qt.Unchecked:
+            with self._lt_ctl:
+                self._lt_ctl.set_quick_ramp()
+        else:
+            pass
+
 
     def do_timeout_dialog(self) -> bool:
         msgBox = QMessageBox()
@@ -183,6 +201,15 @@ class MagnetControl(QGroupBox):
         self.update_pos()
         self.update_motor_status()
 
+    @Slot()
+    def motor_stop_soft(self):
+        with self._lt_ctl:
+            self._lt_ctl.stop_soft()
+        if self.update_pos_timer.isActive():
+            self.update_pos_timer.stop()
+        self.lock_movement_buttons()
+        self.wait_movement_thread.start()
+
     def wait_movement(self):
         with self._lt_ctl:
             self._lt_ctl.wait_movement()
@@ -195,6 +222,7 @@ class MagnetControl(QGroupBox):
 
     @Slot()
     def reference(self):
+        self.ui.lamp.set_yellow()
         with self._lt_ctl:
             self._lt_ctl.do_referencing()
         self.lock_movement_buttons()
