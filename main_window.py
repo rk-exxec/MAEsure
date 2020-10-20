@@ -22,7 +22,7 @@ from PySide2.QtGui import QShowEvent
 from PySide2.QtWidgets import QComboBox, QMainWindow
 from PySide2.QtCore import QFile, Signal, Slot
 from PySide2.QtUiTools import QUiLoader
-#from ui_main import Ui_main
+from ui_form import Ui_main
 
 from camera_control import CameraControl
 from magnet_control import MagnetControl
@@ -38,12 +38,12 @@ class MainWindow(QMainWindow):
         super(MainWindow, self).__init__()
         #cctl = CameraControl() # test for syntax errors
         #del cctl
-        self.ui = None
-        self._first_show = True
-        self.load_ui()
-        self.resize(self.ui.size())
-        # self.ui = Ui_main()
-        # self.ui.setupUi(self)
+        #self.ui = None
+        #self._first_show = True
+        #self.load_ui()
+        #self.resize(self.ui.size())
+        self.ui = Ui_main()
+        self.ui.setupUi(self)
         atexit.register(self.cleanup)
         #self.magnet_ctl = MagnetControl(self)
         self.meas_ctl = MeasurementControl()
@@ -58,7 +58,6 @@ class MainWindow(QMainWindow):
         del self.ui.camera_prev
 
     def closeEvent(self, event):
-        #FIXME creates exception on close, do otherwise with proper cleanup (deleteLater())
         self.stop_acquisition_signal.emit()
 
     def cleanup(self):

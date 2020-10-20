@@ -15,14 +15,17 @@
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import sys
+import os
+import pydevd
 from PySide2.QtGui import QPixmap, Qt
 from PySide2.QtWidgets import QApplication, QSplashScreen
 
 if __name__ == "__main__":
+    os.system('pyside2-uic -o ui_form.py qt_resources/form.ui')
     app = QApplication(sys.argv)
     pic = QPixmap('qt_resources/maesure.png')
-    splash = QSplashScreen(pic, Qt.WindowStaysOnTopHint)
-    splash.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
+    splash = QSplashScreen(pic)#, Qt.WindowStaysOnTopHint)
+    #splash.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
     splash.setMask(pic.mask())
     splash.show()
     app.processEvents()
