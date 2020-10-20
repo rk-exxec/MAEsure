@@ -14,9 +14,10 @@
 #     You should have received a copy of the GNU General Public License
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-# TODO
+# TODO meas ctl
 #   - werte für magnetschritte und so parse als kommaseparierte liste oder ranges mit start:stop:step oder kombination für ausreißerwerte
 #       -> als custom lineedit?
+#   - form braucht noch edit feld für anfangs und endwerte der parameter nicht nur intervall
 
 from PySide2.QtCore import Signal, Slot, Qt
 
