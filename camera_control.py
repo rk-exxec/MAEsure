@@ -45,8 +45,8 @@ class CameraControl(QLabel):
     def __init__(self, parent=None):
         super(CameraControl, self).__init__(parent)
         self.roi_origin = QPoint()
-        self._frame_producer_thread: Thread = None
         self._stream_killswitch: Event = None
+        self._frame_producer_thread: Thread = None
         self._double_buffer: QPixmap = None
         self._first_show = True # whether form is shown for the first time
         self._is_running = False
@@ -68,14 +68,12 @@ class CameraControl(QLabel):
         
 
     def __del__(self):
-        self._stream_killswitch.set()
-        self._frame_producer_thread.join()
+        self.stop_preview()
         del self._cam
         del self._vimba
 
     def closeEvent(self, event: QtGui.QCloseEvent):
-        self._stream_killswitch.set()
-        self._frame_producer_thread.join()
+        self.stop_preview()
 
     def showEvent(self, event):
         if self._first_show:
@@ -88,9 +86,10 @@ class CameraControl(QLabel):
 
     @Slot()
     def stop_preview(self):
-        self._stream_killswitch.set() # set the event the producer is waiting on
-        self._frame_producer_thread.join() # wait for the thread to actually be done
-        self._is_running = False
+        if self._is_running:
+            self._stream_killswitch.set() # set the event the producer is waiting on
+            self._frame_producer_thread.join() # wait for the thread to actually be done
+            self._is_running = False
 
     @Slot()
     def start_preview(self):
