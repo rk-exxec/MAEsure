@@ -16,7 +16,7 @@
 
 from PySide2.QtCore import QTimer, Signal, Slot, Qt, QThread
 from PySide2.QtGui import QShowEvent
-from PySide2.QtWidgets import QGroupBox, QMainWindow, QMessageBox, QPushButton
+from PySide2.QtWidgets import QGroupBox, QLabel, QMainWindow, QMessageBox, QPushButton
 
 from light_widget import LightWidget
 from lt_control.lt_control import LT
@@ -85,25 +85,36 @@ class MagnetControl(QGroupBox):
             self.connect_signals()
             self.update_motor_status()
             self.update_pos()
+            # FIXME  this still thows error when connection not possible
+            # maybe dont reraise in lt_control if already was raised once
+            # reset that status on reconnect try 
             with self._lt_ctl:
                 self._lt_ctl.set_soft_ramp()
             self._shown = True
 
     def update_pos(self):
-        # update spin box with current pos    
-        self.ui.posSpinBox.setValue(float(self.get_position()))
+        # update spin box with current pos
+        try:
+            pos = float(self.get_position())
+        except TimeoutError as toe:
+            pos = 45100
+        self.ui.posSpinBox.setValue(pos)
 
     def update_motor_status(self):
         with self._lt_ctl:
             try:
                 if not self._lt_ctl.is_referenced():
                     self.ui.lamp.set_yellow()
+                    self.set_status_message('Referencing needed!')
                     self.lock_abs_pos_buttons()
                 else:
                     self.ui.lamp.set_green()
+                    self.set_status_message('')
                     self.unlock_movement_buttons()
             except TimeoutError as te:
                 self.ui.lamp.set_red()
+                self.set_status_message('Connection Timeout!')
+                self.lock_movement_buttons()
     
     @Slot(str)
     def mag_mov_unit_changed(self, unit: str):
@@ -233,6 +244,7 @@ class MagnetControl(QGroupBox):
             return self._lt_ctl.test_connection()
 
     def lock_movement_buttons(self):
+        # FIXME  also lock soft ramp checkbox
         self.ui.jogUpBtn.setEnabled(False)
         self.ui.jogDownBtn.setEnabled(False)
         self.ui.jogUpBtn.setEnabled(False)
@@ -256,3 +268,6 @@ class MagnetControl(QGroupBox):
         self.ui.posSpinBox.setEnabled(True)
         self.ui.unitComboBox.setEnabled(True)
         self.ui.posSlider.setEnabled(True)
+
+    def set_status_message(self, text: str = ''):
+        self.ui.statusLabel.setText(text)
