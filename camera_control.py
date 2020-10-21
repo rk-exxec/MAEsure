@@ -54,6 +54,7 @@ class CameraControl(QLabel):
         self._is_running = False
         self._image_size = 0
         self._image_size_invalid = True
+        self._pixmap: QPixmap = QPixmap(480, 360)
         self._droplet = Droplet()
         self.change_pixmap_signal.connect(self.update_image)
         self._cam : Camera = None
@@ -186,6 +187,8 @@ class CameraControl(QLabel):
         db_painter.setPen(QPen(Qt.black,0))
         db_painter.drawPixmap(offset_x, offset_y, self.pixmap())
         # draw drolet outline and tangent only if evaluate_droplet was successful
+        db_painter.drawPixmap(offset_x, offset_y, self._pixmap)
+        # draw droplet outline and tangent only if evaluate_droplet was successful
         if self._droplet.is_valid:
             try:           
                 db_painter.setPen(QPen(Qt.magenta,2))
@@ -297,11 +300,12 @@ class CameraControl(QLabel):
         #print(np.shape(cv_img))
         try:
             qt_img = self._convert_cv_qt(cv_img)
-            self.setPixmap(qt_img)
+            self._pixmap = qt_img
             if self._image_size_invalid:
                 self._image_size = np.shape(cv_img)
                 self.set_new_baseline_constraints()
                 self._image_size_invalid = False
+            self.update()
         except Exception:
             pass
 
@@ -329,7 +333,7 @@ class CameraControl(QLabel):
         :param y: y coordinate to be transformed
         :returns: x or y or Tuple (x,y) of the transformed coordinates, depending on what parameters where given
         """
-        pix_rect = self.pixmap().size()
+        pix_rect = self._pixmap.size()
         res: List[int] = []
         if x is not None:
             scale_x = self._image_size[1] / pix_rect.width()
@@ -359,7 +363,7 @@ class CameraControl(QLabel):
 
     def get_from_image_transform(self):
         """ Gets the scale and offset for a Image to QLabel coordinate transform """
-        pix_rect = self.pixmap().size()
+        pix_rect = self._pixmap.size()
         scale_x = float(pix_rect.width() / self._image_size[1])
         offset_x = abs(pix_rect.width() - self.width())/2
         scale_y = float(pix_rect.height() / self._image_size[0])
