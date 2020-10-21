@@ -1,1 +1,1 @@
-pyside2-uic -o form.py form.ui
+pyside2-uic -o ui_form.py qt_resources/form.ui
