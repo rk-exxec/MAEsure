@@ -16,10 +16,11 @@
 
 
 from PySide2.QtWidgets import QWidget, QHBoxLayout
-from PySide2.QtGui import QPainter, QPen
-from PySide2.QtCore import Qt, QPoint
-
-class Baseline(QWidget):
+from PySide2.QtGui import QBrush, QPainter, QPainterPath, QPen
+from PySide2.QtCore import QRectF, Qt, QPoint
+COLOR = Qt.green
+# FIXME baseline min maxlevel broken again
+class Baseline(QWidget):  
     def __init__(self, parent=None):
         super(Baseline, self).__init__(parent)
         #self.setWindowFlags(Qt.SubWindow)
@@ -69,12 +70,25 @@ class Baseline(QWidget):
         super().paintEvent(event)
         painter = QPainter(self)
         #painter.beginNativePainting()
-        painter.setRenderHint(QPainter.Antialiasing)
-        painter.setPen(QPen(Qt.gray, 1))
+        #painter.setRenderHint(QPainter.Antialiasing)
         x1,y1,x2,y2 = self.rect().getCoords()
-        painter.drawRect(self.rect())
-        painter.setPen(QPen(Qt.blue, 2))
+        #painter.setPen(QPen(Qt.gray, 1))
+        #painter.drawRect(self.rect())
+        painter.setPen(QPen(COLOR, 1))
         painter.drawLine(QPoint(x1, y1+(y2-y1)/2), QPoint(x2, y1+(y2-y1)/2))
+        path = QPainterPath()
+        path.moveTo(x1, y1)
+        path.lineTo(x1, y1 + y2)
+        path.lineTo(10, y1 + y2/2)
+        path.lineTo(x1, y1)
+        painter.fillPath(path, QBrush(COLOR))
+        path = QPainterPath()
+        path.moveTo(x1 + x2, y1)
+        path.lineTo(x1 + x2, y1 + y2)
+        path.lineTo(x2 - 10, y1 + y2/2)
+        path.lineTo(x1 + x2, y1)
+        painter.fillPath(path, QBrush(COLOR))
+
         #painter.endNativePainting()
         painter.end()
 
