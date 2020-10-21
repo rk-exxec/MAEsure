@@ -16,7 +16,6 @@
 
 # This Python file uses the following encoding: utf-8
 from typing import List, Tuple, Union
-from VimbaPython.vimba.shared import filter_affected_features
 from threading import Thread, Event
 import time
 import cv2
@@ -41,6 +40,7 @@ from evaluate_droplet import Droplet, evaluate_droplet
 
 # TODO cleanup functions
 
+# TODO try again with opengl
 
 class CameraControl(QLabel):
     change_pixmap_signal = Signal(np.ndarray)
@@ -89,6 +89,7 @@ class CameraControl(QLabel):
 
     @Slot()
     def stop_preview(self):
+        # TODO on stop remove lines
         if self._is_running:
             self._stream_killswitch.set() # set the event the producer is waiting on
             self._frame_producer_thread.join() # wait for the thread to actually be done
@@ -111,6 +112,7 @@ class CameraControl(QLabel):
                     self._cam.stop_streaming()
 
     def _frame_handler(self, cam: Camera, frame: Frame) -> None:
+        # TODO calculate FPS with ringbuffer?
         pydevd.settrace(suspend=False)
         if frame.get_status() != FrameStatus.Incomplete:
             img = frame.as_opencv_image() if not self._use_test_image else np.copy(self._test_image)
@@ -120,6 +122,7 @@ class CameraControl(QLabel):
                 self._droplet = drplt
             except Exception as ex:
                 print(ex.with_traceback(None))
+                pass
             self.change_pixmap_signal.emit(img)        
         cam.queue_frame(frame)
 
