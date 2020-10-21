@@ -26,7 +26,7 @@ import pydevd
 from PySide2 import QtGui
 from PySide2.QtWidgets import QLabel
 from PySide2.QtCore import Signal, Slot, Qt, QPoint, QRect, QSize
-from PySide2.QtGui import QBrush, QPaintEvent, QPainter, QPen, QPixmap, QTransform
+from PySide2.QtGui import QBrush, QImage, QPaintEvent, QPainter, QPen, QPixmap, QTransform
 from vimba import Vimba, Frame, Camera, LOG_CONFIG_TRACE_FILE_ONLY
 from vimba.frame import FrameStatus
 
@@ -49,7 +49,7 @@ class CameraControl(QLabel):
         self.roi_origin = QPoint()
         self._stream_killswitch: Event = None
         self._frame_producer_thread: Thread = None
-        self._double_buffer: QPixmap = None
+        self._double_buffer: QImage = None
         self._first_show = True # whether form is shown for the first time
         self._is_running = False
         self._image_size = 0
@@ -96,10 +96,10 @@ class CameraControl(QLabel):
 
     @Slot()
     def start_preview(self):
+        self._is_running = True
         self._stream_killswitch = Event() # the event that will be used to stop the streaming
         self._frame_producer_thread = Thread(target=self._frame_producer) # create the thread object to run the frame producer
         self._frame_producer_thread.start() # actually start the thread to execute the method given as target
-        self.is_running = True
 
     def _frame_producer(self):
         with self._vimba:
@@ -170,23 +170,18 @@ class CameraControl(QLabel):
         self._baseline.min_level = offset_y
 
     def paintEvent(self, event: QPaintEvent):
-        # FIXME white border around pixmap!!
         # completely override super.paintEvent() to use double buffering
         painter = QPainter(self)
-        #painter.setRenderHint(QPainter.Antialiasing)
         self.drawFrame(painter)
-        # using a pixmap and separate painter for content do avoid flicker
         if self._double_buffer is None:
-            self._double_buffer = QPixmap(self.width(), self.height())
+            self._double_buffer = QImage(self.width(), self.height(), QImage.Format_RGB888)
         self._double_buffer.fill(Qt.black)
-        db_painter = QPainter(self._double_buffer)
-        db_painter.setRenderHint(QPainter.Antialiasing)
         # calculate offset and scale of droplet image pixmap
         scale_x, scale_y, offset_x, offset_y = self.get_from_image_transform()
+        db_painter = QPainter(self._double_buffer)
+        db_painter.setRenderHints(QPainter.Antialiasing | QPainter.NonCosmeticDefaultPen)
         db_painter.setBackground(QBrush(Qt.black))
         db_painter.setPen(QPen(Qt.black,0))
-        db_painter.drawPixmap(offset_x, offset_y, self.pixmap())
-        # draw drolet outline and tangent only if evaluate_droplet was successful
         db_painter.drawPixmap(offset_x, offset_y, self._pixmap)
         # draw droplet outline and tangent only if evaluate_droplet was successful
         if self._droplet.is_valid:
@@ -207,10 +202,9 @@ class CameraControl(QLabel):
                 db_painter.drawEllipse(QPoint(0,0), self._droplet.maj/2, self._droplet.min/2)   
             except Exception as ex:
                 print(ex)
-
-        # painting the buffer pixmap to screen
-        painter.drawPixmap(0, 0, self._double_buffer)
         db_painter.end()
+        # painting the buffer pixmap to screen
+        painter.drawImage(0, 0, self._double_buffer)
         painter.end()
 
     def mousePressEvent(self,event):
@@ -292,6 +286,7 @@ class CameraControl(QLabel):
         img = cv2.imread(file)
         if self._use_test_image:
             self._test_image = img
+        self._image_size_invalid = True
         self.change_pixmap_signal.emit(img)
 
     @Slot(np.ndarray)
@@ -315,7 +310,7 @@ class CameraControl(QLabel):
         h, w, ch = rgb_image.shape
         bytes_per_line = ch * w
         convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
-        p = convert_to_Qt_format.scaled(self.size(), Qt.KeepAspectRatio)
+        p = convert_to_Qt_format.scaled(self.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
         return QPixmap.fromImage(p)
 
     def map_droplet_drawing_vals(self, droplet: Droplet):
