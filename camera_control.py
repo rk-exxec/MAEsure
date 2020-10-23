@@ -167,8 +167,8 @@ class CameraControl(QLabel):
         return y
 
     def set_new_baseline_constraints(self):
-        pix_size = self.pixmap().size()
-        offset_y = int(abs(pix_size.height() - self.height())/2)
+        pix_size = self._pixmap.size()
+        offset_y = int(round(abs(pix_size.height() - self.height())/2))
         self._baseline.max_level = pix_size.height() + offset_y
         self._baseline.min_level = offset_y
 

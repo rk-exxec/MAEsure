@@ -18,8 +18,9 @@
 from PySide2.QtWidgets import QWidget, QHBoxLayout
 from PySide2.QtGui import QBrush, QPainter, QPainterPath, QPen
 from PySide2.QtCore import QRectF, Qt, QPoint
+
 COLOR = Qt.green
-# FIXME baseline min maxlevel broken again
+
 class Baseline(QWidget):  
     def __init__(self, parent=None):
         super(Baseline, self).__init__(parent)
@@ -43,8 +44,9 @@ class Baseline(QWidget):
     @y_level.setter
     def y_level(self, level):
         self._y_level = level
+        level -= self.height()/2
         if level > self._min_level and level < self._max_level:
-            self.move(QPoint(self.x(), level - self.height()/2))
+            self.move(QPoint(self.x(), level))
         elif level < self._min_level:
             self.move(QPoint(self.x(), self._min_level))
         elif level > self._max_level:
@@ -83,10 +85,10 @@ class Baseline(QWidget):
         path.lineTo(x1, y1)
         painter.fillPath(path, QBrush(COLOR))
         path = QPainterPath()
-        path.moveTo(x1 + x2, y1)
-        path.lineTo(x1 + x2, y1 + y2)
-        path.lineTo(x2 - 10, y1 + y2/2)
-        path.lineTo(x1 + x2, y1)
+        path.moveTo(x2+1, y1)
+        path.lineTo(x2+1, y1 + y2)
+        path.lineTo(x2 - 9, y1 + y2/2)
+        path.lineTo(x2+1, y1)
         painter.fillPath(path, QBrush(COLOR))
 
         #painter.endNativePainting()
