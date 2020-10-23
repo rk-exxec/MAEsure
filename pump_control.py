@@ -14,8 +14,55 @@
 #     You should have received a copy of the GNU General Public License
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from PySide2.QtCore import Signal, Slot, Qt
+import functools
+from PySide2.QtWidgets import QGroupBox
+import serial
+import time
+from decimal import Decimal
+import threading
+import signal
+import sys
 
-class PumpControl:
+from serial.tools.list_ports_windows import comports
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ui_form import Ui_main
+# TODO Pump control https://www.hugo-sachs.de/media/manuals/Product%20Manuals/702220,%202225%20Microliter%20Manual.pdf
+# TODO see about serial port timout handling, lock self up til reset?
+class PumpControl(QGroupBox):
     def __init__(self, parent=None) -> None:
-        pass
+        super(PumpControl, self).__init__(parent)
+        self.ui: Ui_main = self.window().ui
+        self._serial_port = serial.Serial()
+        try:
+            self._serial_port.port = self.find_com_port()
+        except ConnectionError as ce:
+            self._serial_port.port = 'COM6'
+
+        self._serial_port.baudrate = 9600
+        self._serial_port.timeout = 0.2
+        self._context_depth = 0
+
+    def __enter__(self):
+        try:
+            if self._context_depth == 0 and self._serial_port.port is not None:
+                self._serial_port.open()
+        except Exception as ex:
+            raise  
+        self._context_depth += 1
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self._context_depth -= 1
+        if self._context_depth == 0:
+            self._serial_port.close()
+
+    @staticmethod
+    def find_com_port() -> str:
+        lst = comports()
+        for port in lst:
+            if port.manufacturer == 'Nanotec':
+                return port.device
+        else:
+            raise ConnectionError('No Pump found!')
