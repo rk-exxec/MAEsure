@@ -38,7 +38,7 @@
     <property name="title">
      <string>Preview</string>
     </property>
-    <widget class="QPushButton" name="btn_prev_st">
+    <widget class="QPushButton" name="startCamBtn">
      <property name="geometry">
       <rect>
        <x>20</x>
@@ -51,7 +51,7 @@
       <string>Start</string>
      </property>
     </widget>
-    <widget class="QPushButton" name="Btn_ResetCameraBtn">
+    <widget class="QPushButton" name="resetCamBtn">
      <property name="geometry">
       <rect>
        <x>20</x>
@@ -91,23 +91,17 @@
      <property name="autoFillBackground">
       <bool>true</bool>
      </property>
-     <property name="frameShape">
-      <enum>QFrame::Panel</enum>
-     </property>
-     <property name="text">
+     <property name="text" stdset="0">
       <string/>
      </property>
-     <property name="pixmap">
+     <property name="pixmap" stdset="0">
       <pixmap>untitled1.png</pixmap>
      </property>
-     <property name="scaledContents">
+     <property name="scaledContents" stdset="0">
       <bool>false</bool>
      </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
     </widget>
-    <widget class="QPushButton" name="btn_set_roi">
+    <widget class="QPushButton" name="setROIBtn">
      <property name="geometry">
       <rect>
        <x>20</x>
@@ -120,7 +114,7 @@
       <string>Set ROI</string>
      </property>
     </widget>
-    <widget class="QPushButton" name="btn_reset_roi">
+    <widget class="QPushButton" name="resetROIBtn">
      <property name="geometry">
       <rect>
        <x>20</x>
@@ -258,8 +252,8 @@
     <widget class="LightWidget" name="lamp" native="true">
      <property name="geometry">
       <rect>
-       <x>90</x>
-       <y>130</y>
+       <x>120</x>
+       <y>160</y>
        <width>21</width>
        <height>21</height>
       </rect>
@@ -378,6 +372,19 @@
        </property>
       </item>
      </widget>
+    </widget>
+    <widget class="QLabel" name="statusLabel">
+     <property name="geometry">
+      <rect>
+       <x>150</x>
+       <y>160</y>
+       <width>131</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
     </widget>
    </widget>
    <widget class="QGroupBox" name="measurementControl">
@@ -759,7 +766,7 @@
      </property>
     </widget>
    </widget>
-   <widget class="QGroupBox" name="pumpControl">
+   <widget class="PumpControl" name="pumpControl">
     <property name="geometry">
      <rect>
       <x>310</x>
@@ -876,11 +883,6 @@
  <layoutdefault spacing="6" margin="9"/>
  <customwidgets>
   <customwidget>
-   <class>CameraControl</class>
-   <extends>QLabel</extends>
-   <header>camera_control</header>
-  </customwidget>
-  <customwidget>
    <class>MagnetControl</class>
    <extends>QGroupBox</extends>
    <header>magnet_control</header>
@@ -895,6 +897,17 @@
    <class>LightWidget</class>
    <extends>QWidget</extends>
    <header>light_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>CameraControl</class>
+   <extends>QOpenGLWidget</extends>
+   <header>camera_control</header>
+  </customwidget>
+  <customwidget>
+   <class>PumpControl</class>
+   <extends>QGroupBox</extends>
+   <header>pump_control</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

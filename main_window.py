@@ -32,8 +32,6 @@ from measurement_control import MeasurementControl
 from light_widget import LightWidget
 
 class MainWindow(QMainWindow):
-    start_acquisition_signal = Signal()
-    stop_acquisition_signal = Signal()
     def __init__(self):
         super(MainWindow, self).__init__()
         #cctl = CameraControl() # test for syntax errors
@@ -47,9 +45,6 @@ class MainWindow(QMainWindow):
         atexit.register(self.cleanup)
         #self.magnet_ctl = MagnetControl(self)
         self.meas_ctl = MeasurementControl()
-        self.pump_ctl = PumpControl()
-
-        self.connect_signals()
         
         self.show()
         
@@ -58,7 +53,7 @@ class MainWindow(QMainWindow):
         del self.ui.camera_prev
 
     def closeEvent(self, event):
-        self.stop_acquisition_signal.emit()
+        self.ui.camera_prev.closeEvent(event)
 
     def cleanup(self):
         del self
@@ -75,21 +70,4 @@ class MainWindow(QMainWindow):
         file.close()
         self.setCentralWidget(self.ui)
 
-    def connect_signals(self):
-        # Camera
-        self.ui.btn_prev_st.clicked.connect(self.prev_start_pushed)
-        self.ui.btn_set_roi.clicked.connect(self.ui.camera_prev.apply_roi)
-        self.ui.btn_reset_roi.clicked.connect(self.ui.camera_prev.reset_roi)
-        self.start_acquisition_signal.connect(self.ui.camera_prev.start_preview)
-        self.stop_acquisition_signal.connect(self.ui.camera_prev.stop_preview)        
 
-    @Slot()
-    def prev_start_pushed(self, event):
-        if self.ui.btn_prev_st.text() != 'Stop':
-            self.start_acquisition_signal.emit()
-            #self.ui.camera_prev.start_preview()
-            self.ui.btn_prev_st.setText('Stop')
-        else:
-            #self.ui.camera_prev.stop_preview()
-            self.stop_acquisition_signal.emit()
-            self.ui.btn_prev_st.setText('Start')
