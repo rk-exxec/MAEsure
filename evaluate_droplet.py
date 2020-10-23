@@ -18,7 +18,7 @@
 
 from math import asin, copysign, cos, sin, atan, pi, sqrt, tan, atan2, radians, degrees
 import cv2
-DEBUG = 1
+DEBUG = 2
 USE_GPU = True
 class Droplet():
     def __init__(self):
@@ -64,7 +64,7 @@ def evaluate_droplet(img, y_base) -> Droplet:
 
     edge = max(contours, key=cv2.contourArea)
     #edge = contours[0]
-    (x0,y0),(maj_ax,min_ax),phi_deg = cv2.fitEllipse(edge)
+    (x0,y0), (maj_ax,min_ax), phi_deg = cv2.fitEllipse(edge)
 
     phi = radians(phi_deg) # to radians
     a = maj_ax/2
@@ -112,6 +112,7 @@ def evaluate_droplet(img, y_base) -> Droplet:
         img = cv2.drawContours(img,edge,-1,(255,0,0),2)
     if DEBUG > 1:
         img = cv2.ellipse(img, (int(round(x0)),int(round(y0))), (int(round(a)),int(round(b))), int(round(phi*180/pi)), 0, 360, (255,0,255), thickness=1, lineType=cv2.LINE_AA)
+        img = cv2.ellipse(img, (int(round(x0)),int(round(y0))), (int(round(a)),int(round(b))), 0, 0, 360, (0,0,255), thickness=1, lineType=cv2.LINE_AA)
         y_int = int(round(y_base))
         img = cv2.line(img, (int(round(x_int_l - (y_int/m_t_l))), 0), (int(round(x_int_l + ((height - y_int)/m_t_l))), int(round(height))), (255,0,255), thickness=1, lineType=cv2.LINE_AA)
         img = cv2.line(img, (int(round(x_int_r - (y_int/m_t_r))), 0), (int(round(x_int_r + ((height - y_int)/m_t_r))), int(round(height))), (255,0,255), thickness=1, lineType=cv2.LINE_AA)
@@ -140,11 +141,11 @@ def calc_intersection_line_ellipse(ellipse_pars, line_pars):
         c = y**2 * (v**2 * sin(phi)**2 + h**2 * cos(phi)**2) - (h**2 * v**2)
         det = b**2 - 4*a*c
         if det > 0:
-            x1 = int(round((-b - sqrt(det))/(2*a) + x0))
-            x2 = int(round((-b + sqrt(det))/(2*a) + x0))
+            x1: float = (-b - sqrt(det))/(2*a) + x0
+            x2: float = (-b + sqrt(det))/(2*a) + x0
             return x1,x2
         elif det == 0:
-            x = int(round(-b / (2*a)))
+            x: float = -b / (2*a)
             return x
         else:
             return None
@@ -159,10 +160,14 @@ def calc_slope_of_ellipse(ellipse_pars, x, y):
     :returns: the slope of the tangent 
     """
     (x0, y0, a, b, phi) = ellipse_pars
+    if b > a:
+        a,b = b,a
+    else:
+        phi -= pi/4
     # transform to non-rotated ellipse
     x_rot = (x - x0)*cos(phi) + (y - y0)*sin(phi)
     y_rot = (x - x0)*sin(phi) + (y - y0)*cos(phi)
-    m_rot = (x_rot/y_rot) * ((b**2)/(a**2)) # slope of tangent to unrotated ellipse
+    m_rot = (b**2 * x_rot)/(a**2 * y_rot) # slope of tangent to unrotated ellipse
     #rotate tangent line back to angle of the rotated ellipse
     m_tan = tan(atan2(m_rot,1) + phi)
 
@@ -171,6 +176,8 @@ def calc_slope_of_ellipse(ellipse_pars, x, y):
 if __name__ == "__main__":
     im = cv2.imread('untitled1.png')
     # any value below 250 is just the droplet without the substrate
-    drp = evaluate_droplet(im, 47)
+#     This is the result when I choose the surface to be at y=62:  
+# [![Completely wrong][2]][2]
+    drp = evaluate_droplet(im, 250)
     cv2.imshow('Test',im)
     cv2.waitKey(0)
