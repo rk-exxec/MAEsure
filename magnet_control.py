@@ -14,6 +14,7 @@
 #     You should have received a copy of the GNU General Public License
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import functools
 from PySide2.QtCore import QTimer, Signal, Slot, Qt, QThread
 from PySide2.QtGui import QShowEvent
 from PySide2.QtWidgets import QGroupBox, QLabel, QMainWindow, QMessageBox, QPushButton
@@ -45,6 +46,8 @@ class CustomCallbackTimer(QTimer):
 
 # TODO implement as standalone for Heiko Unold
 # TODO calib
+# TODO retry failed serial port in timer and update motor status once connected again
+# TODO test new decorator
 
 class MagnetControl(QGroupBox):
     """A widget to control the motor via lt_control  
@@ -80,26 +83,36 @@ class MagnetControl(QGroupBox):
         self.ui.posSlider.sliderMoved.connect(self.slider_moved) # lambda pos: self.ui.posLineEdit.setText(str(pos)) or self.ui.posSpinBox.setValue(float(pos))
         self.ui.softRampChk.stateChanged.connect(self.change_ramp_type)
 
+    def OnlyIfPortActive(func):
+        def null(*args, **kwargs):
+            pass
+
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            if args[0]._lt_ctl.has_connection_error():
+                return null(*args, **kwargs)
+            else:
+                return func(*args, **kwargs)
+        return wrapper 
+
     def showEvent(self, event: QShowEvent):
         if not self._shown:
             self.connect_signals()
             self.update_motor_status()
             self.update_pos()
-            # FIXME  this still thows error when connection not possible
-            # maybe dont reraise in lt_control if already was raised once
-            # reset that status on reconnect try 
-            with self._lt_ctl:
-                self._lt_ctl.set_soft_ramp()
+            self.change_ramp_type(self.ui.softRampChk.isChecked())
             self._shown = True
 
+    @OnlyIfPortActive
     def update_pos(self):
         # update spin box with current pos
         try:
             pos = float(self.get_position())
-        except TimeoutError as toe:
+        except Exception as toe:
             pos = 45100
         self.ui.posSpinBox.setValue(pos)
 
+    @OnlyIfPortActive
     def update_motor_status(self):
         with self._lt_ctl:
             try:
@@ -111,10 +124,12 @@ class MagnetControl(QGroupBox):
                     self.ui.lamp.set_green()
                     self.set_status_message('')
                     self.unlock_movement_buttons()
+                return True
             except TimeoutError as te:
                 self.ui.lamp.set_red()
                 self.set_status_message('Connection Timeout!')
                 self.lock_movement_buttons()
+                return False
     
     @Slot(str)
     def mag_mov_unit_changed(self, unit: str):
@@ -147,6 +162,7 @@ class MagnetControl(QGroupBox):
             self.ui.posSpinBox.setValue(float(value/100))
 
     @Slot(int)
+    @OnlyIfPortActive
     def change_ramp_type(self, state: Qt.CheckState):
         if state == Qt.Checked:
             with self._lt_ctl:
@@ -244,7 +260,6 @@ class MagnetControl(QGroupBox):
             return self._lt_ctl.test_connection()
 
     def lock_movement_buttons(self):
-        # FIXME  also lock soft ramp checkbox
         self.ui.jogUpBtn.setEnabled(False)
         self.ui.jogDownBtn.setEnabled(False)
         self.ui.jogUpBtn.setEnabled(False)
@@ -254,6 +269,7 @@ class MagnetControl(QGroupBox):
         self.ui.posSpinBox.setEnabled(False)
         self.ui.unitComboBox.setEnabled(False)
         self.ui.posSlider.setEnabled(False)
+        self.ui.softRampChk.setEnabled(False)
 
     def lock_abs_pos_buttons(self):
         self.ui.goBtn.setEnabled(False)
@@ -268,6 +284,7 @@ class MagnetControl(QGroupBox):
         self.ui.posSpinBox.setEnabled(True)
         self.ui.unitComboBox.setEnabled(True)
         self.ui.posSlider.setEnabled(True)
+        self.ui.softRampChk.setEnabled(True)
 
     def set_status_message(self, text: str = ''):
         self.ui.statusLabel.setText(text)
