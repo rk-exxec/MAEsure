@@ -15,6 +15,7 @@
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # This Python file uses the following encoding: utf-8
+from camera import AbstractCamera, TestCamera, VimbaCamera
 from typing import List, Tuple, Union
 from threading import Thread, Event
 import time
@@ -42,118 +43,56 @@ from evaluate_droplet import Droplet, evaluate_droplet
 
 # TODO try again with opengl
 
+USE_TEST_IMAGE = True
+
 class CameraControl(QLabel):
-    change_pixmap_signal = Signal(np.ndarray)
+    #change_pixmap_signal = Signal(np.ndarray)
     def __init__(self, parent=None):
         super(CameraControl, self).__init__(parent)
+        self.ui = self.window().ui
         self.roi_origin = QPoint()
-        self._stream_killswitch: Event = None
-        self._frame_producer_thread: Thread = None
         self._double_buffer: QImage = None
         self._first_show = True # whether form is shown for the first time
-        self._is_running = False
         self._image_size = 0
         self._image_size_invalid = True
+        self.cam: AbstractCamera = TestCamera() if USE_TEST_IMAGE else VimbaCamera()
         self._pixmap: QPixmap = QPixmap(480, 360)
         self._droplet = Droplet()
-        self.change_pixmap_signal.connect(self.update_image)
-        self._cam : Camera = None
-        self._cam_id: str = ''
-        self._vimba: Vimba = Vimba.get_instance()
-        #self._vimba.enable_log(LOG_CONFIG_TRACE_FILE_ONLY)
-        self._init_camera()
-        self._setup_camera()
+        self.cam.new_image_available.connect(self.update_image)
         self.update()
         self._roi_rubber_band = ResizableRubberBand(self)
         self._baseline = Baseline(self)
-        self._use_test_image = True
-        self._test_image: np.ndarray = None
         
-
+        
     def __del__(self):
-        self.stop_preview()
-        del self._cam
-        del self._vimba
-
-    def closeEvent(self, event: QtGui.QCloseEvent):
-        self.stop_preview()
+        # self.cam.stop_streaming()
+        del self.cam
 
     def showEvent(self, event):
         if self._first_show:
-            if self._use_test_image:
-                self._set_image('./untitled1.png')
-            else:
-                self.display_snapshot()
+            self.connect_signals()
+            self.cam.snapshot()
             self._baseline.y_level= self.mapFromImage(y=250)
             self._first_show = False
 
+    def closeEvent(self, event: QtGui.QCloseEvent):
+        self.cam.stop_streaming()
+
+    def connect_signals(self):
+        # Camera
+        self.ui.startCamBtn.clicked.connect(self.prev_start_pushed)
+        self.ui.setROIBtn.clicked.connect(self.apply_roi)
+        self.ui.resetROIBtn.clicked.connect(self.cam.reset_roi)
+   
     @Slot()
-    def stop_preview(self):
-        # TODO on stop remove lines
-        if self._is_running:
-            self._stream_killswitch.set() # set the event the producer is waiting on
-            self._frame_producer_thread.join() # wait for the thread to actually be done
-            self._is_running = False
-
-    @Slot()
-    def start_preview(self):
-        self._is_running = True
-        self._stream_killswitch = Event() # the event that will be used to stop the streaming
-        self._frame_producer_thread = Thread(target=self._frame_producer) # create the thread object to run the frame producer
-        self._frame_producer_thread.start() # actually start the thread to execute the method given as target
-
-    def _frame_producer(self):
-        with self._vimba:
-            with self._cam:
-                try:
-                    self._cam.start_streaming(handler=self._frame_handler, buffer_count=10)
-                    self._stream_killswitch.wait()
-                finally:
-                    self._cam.stop_streaming()
-
-    def _frame_handler(self, cam: Camera, frame: Frame) -> None:
-        # TODO calculate FPS with ringbuffer?
-        pydevd.settrace(suspend=False)
-        if frame.get_status() != FrameStatus.Incomplete:
-            img = frame.as_opencv_image() if not self._use_test_image else np.copy(self._test_image)
-            self._droplet = Droplet()
-            try:
-                drplt = evaluate_droplet(img, self.get_baseline_y())
-                self._droplet = drplt
-            except Exception as ex:
-                print(ex.with_traceback(None))
-                pass
-            self.change_pixmap_signal.emit(img)        
-        cam.queue_frame(frame)
-
-    def _init_camera(self):
-        with self._vimba:
-            cams = self._vimba.get_all_cameras()
-            self._cam = cams[0]
-            with self._cam:
-                self._cam.AcquisitionStatusSelector.set('AcquisitionActive')
-                if self._cam.AcquisitionStatus.get():
-                    self._cam.AcquisitionStop.run()
-                    # fetch broken frame
-                    self._cam.get_frame()
-
-    def _reset_camera(self):
-        with self._cam:
-            self._cam.DeviceReset.run()
-
-    def _setup_camera(self):
-        #self.reset_camera()
-        with self._vimba:
-            with self._cam:
-                self._cam.ExposureTime.set(1000.0)
-                self._cam.ReverseY.set(True)
-    
-    def display_snapshot(self):
-        if self._is_running: return
-        with self._vimba:
-            with self._cam:
-                frame: Frame = self._cam.get_frame()
-                self.change_pixmap_signal.emit(frame.as_opencv_image())
+    def prev_start_pushed(self, event):
+        if self.ui.startCamBtn.text() != 'Stop':
+            self.cam.start_streaming()
+            self.ui.startCamBtn.setText('Stop')
+        else:
+            self.cam.stop_streaming()
+            self.ui.startCamBtn.setText('Start')
+            self.cam.snapshot()
 
     def show_baseline(self):
         self._baseline.show()
@@ -242,57 +181,8 @@ class CameraControl(QLabel):
     def _abort_roi(self):
         self._roi_rubber_band.hide()
 
-    def reset_roi(self):
-        #self.set_roi(0,0, 2064, 1544)
-        was_running = self._is_running
-        self.stop_preview()
-        with self._vimba:
-            with self._cam:
-                h = self._cam.SensorHeight.get()
-                w = self._cam.SensorWidth.get()
-                w = int(8 * round(w/8))
-                h = int(8 * round(h/8))
-                if h > 1542:
-                    h = 1542
-                with self._vimba:
-                    with self._cam:
-                        self._cam.OffsetX.set(0)
-                        self._cam.OffsetY.set(0)
-                        self._cam.Width.set(w)
-                        self._cam.Height.set(h)
-        self._image_size_invalid = True           
-        self.display_snapshot()
-        if was_running: self.start_preview()
-        
-
-    def set_roi(self, x, y, w, h):
-        # x, y, width and height need be multiple of 8
-        x = int(8 * round(x/8))
-        y = int(8 * round(y/8))
-        w = int(8 * round(w/8))
-        h = int(8 * round(h/8))
-        if h > 1542:
-            h = 1542
-        was_running = self._is_running
-        self.stop_preview()
-        with self._vimba:
-            with self._cam:
-                self._cam.Width.set(w)
-                self._cam.Height.set(h)
-                self._cam.OffsetX.set(x)
-                self._cam.OffsetY.set(y)
-        self._image_size_invalid = True
-        self.display_snapshot()
-        if was_running: self.start_preview()
-
-    def _set_image(self, file):
-        img = cv2.imread(file)
-        if self._use_test_image:
-            self._test_image = img
-        self._image_size_invalid = True
-        self.change_pixmap_signal.emit(img)
-
     @Slot(np.ndarray)
+    # TODO enable oneshot evaluation of droplet somehow
     def update_image(self, cv_img: np.ndarray):
         """ Updates the image_label with a new opencv image"""
         #print(np.shape(cv_img))
@@ -303,6 +193,14 @@ class CameraControl(QLabel):
                 self._image_size = np.shape(cv_img)
                 self.set_new_baseline_constraints()
                 self._image_size_invalid = False
+            self._droplet = Droplet()
+            if self.cam.is_running:
+                try:
+                    drplt = evaluate_droplet(cv_img, self.get_baseline_y())
+                    self._droplet = drplt
+                except Exception as ex:
+                    print(ex.with_traceback(None))
+                    pass
             self.update()
         except Exception:
             pass
