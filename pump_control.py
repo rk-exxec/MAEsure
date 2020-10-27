@@ -18,16 +18,13 @@ import functools
 from PySide2.QtWidgets import QGroupBox
 import serial
 import time
-from decimal import Decimal
-import threading
-import signal
-import sys
 
 from serial.tools.list_ports_windows import comports
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ValuesView
 if TYPE_CHECKING:
     from ui_form import Ui_main
+
 # TODO Pump control https://www.hugo-sachs.de/media/manuals/Product%20Manuals/702220,%202225%20Microliter%20Manual.pdf
 # TODO see about serial port timout handling, lock self up til reset?
 class PumpControl(QGroupBox):
@@ -42,6 +39,9 @@ class PumpControl(QGroupBox):
 
         self._serial_port.baudrate = 9600
         self._serial_port.timeout = 0.2
+        self._serial_port.bytesize = 8
+        self._serial_port.stopbits = 2
+        self._serial_port.parity = 'N'
         self._context_depth = 0
 
     def __enter__(self):
@@ -57,6 +57,29 @@ class PumpControl(QGroupBox):
         self._context_depth -= 1
         if self._context_depth == 0:
             self._serial_port.close()
+
+    def query_num(self, query: str):
+        # TODO query dict with response lengths
+        # TODO possible to only send CR to get status?
+        # TODO use pumpy?
+        queries = ['DIA', 'RAT', 'RAT W', 'VOL', 'VOL W', 'VER', 'TAR', 'TAR W', 'FRC']
+        if not query in queries:
+            raise ValueError('Unknown query command')
+        resp_length = queries[query]
+        if self._serial_port.is_open:
+            msg: str = query + '\r'
+            self._serial_port.write(msg.encode())
+            # TODO this does not get the PROMPT bc that starts with CRLF?
+            ans = self._serial_port.read(resp_length).decode('utf-8')
+
+            if len(ans) == 0:
+                raise TimeoutError('Port Timeout!')
+            else:
+                return ans.strip()
+        else: return 0
+
+    def is_port_alive(self):
+        pass
 
     @staticmethod
     def find_com_port() -> str:
