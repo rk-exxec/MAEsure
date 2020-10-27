@@ -120,15 +120,19 @@ class CameraControl(QLabel):
         self._double_buffer.fill(Qt.black)
         # calculate offset and scale of droplet image pixmap
         scale_x, scale_y, offset_x, offset_y = self.get_from_image_transform()
+        
         db_painter = QPainter(self._double_buffer)
         db_painter.setRenderHints(QPainter.Antialiasing | QPainter.NonCosmeticDefaultPen)
         db_painter.setBackground(QBrush(Qt.black))
         db_painter.setPen(QPen(Qt.black,0))
         db_painter.drawPixmap(offset_x, offset_y, self._pixmap)
+        db_painter.setPen(QPen(Qt.magenta,2))
+        if self.cam.is_running:
+            fps_text = 'FPS: ' + str(self.cam.get_framerate())
+            db_painter.drawText(2, 10, fps_text)
         # draw droplet outline and tangent only if evaluate_droplet was successful
         if self._droplet.is_valid:
-            try:           
-                db_painter.setPen(QPen(Qt.magenta,2))
+            try:
                 # transforming true image coordinates to scaled pixmap coordinates
                 transform = QTransform()
                 transform.translate(offset_x, offset_y)

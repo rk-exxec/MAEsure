@@ -23,6 +23,35 @@ import numpy as np
 from vimba import Vimba, Frame, Camera, LOG_CONFIG_TRACE_FILE_ONLY
 from vimba.frame import FrameStatus
 
+class FrameRateCounter:
+    def __init__(self, length=5):
+        self.length = length
+        self.buffer = [50.0]*length
+        self.counter = 0
+        self.last_timestamp = 0
+
+    def _rotate(self):
+        if self.counter == (self.length - 1):
+            self.counter = 0
+        else:
+            self.counter += 1
+
+    def _put(self, value):
+        self.buffer[self.counter] = value
+        self._rotate()
+
+    @staticmethod
+    def _calc_frametime(timestamp_new, timestamp_old):
+        return (timestamp_new - timestamp_old)*1e-9
+
+    @property
+    def average_fps(self) -> float:
+        return sum(self.buffer) / self.length
+
+    def add_new_timesstamp(self, timestamp):
+        self._put(1 / self._calc_frametime(timestamp, self.last_timestamp))
+        self.last_timestamp = timestamp
+
 
 class AbstractCamera(QObject):
     new_image_available = Signal(np.ndarray)
@@ -39,28 +68,32 @@ class AbstractCamera(QObject):
         self._is_running = bool
 
     def snapshot(self):
-        pass
+        raise NotImplementedError
 
     def start_streaming(self):
-        pass
+        raise NotImplementedError
 
     def stop_streaming(self):
-        pass
+        raise NotImplementedError
 
     def set_roi(self):
-        pass
+        raise NotImplementedError
 
     def reset_roi(self):
-        pass
+        raise NotImplementedError
+
+    def get_framerate(self):
+        pass #raise NotImplementedError
 
 class VimbaCamera(AbstractCamera):
     def __init__(self):
-        super().__init__()
+        super(VimbaCamera, self).__init__()
         self._stream_killswitch: Event = None
         self._frame_producer_thread: Thread = None
         self._cam : Camera = None
         self._cam_id: str = ''
         self._vimba: Vimba = Vimba.get_instance()
+        self._frc = FrameRateCounter(5)
         #self._vimba.enable_log(LOG_CONFIG_TRACE_FILE_ONLY)
         self._init_camera()
         self._setup_camera()
@@ -75,7 +108,7 @@ class VimbaCamera(AbstractCamera):
         with self._vimba:
             with self._cam:
                 frame: Frame = self._cam.get_frame()
-                self.change_pixmap_signal.emit(frame.as_opencv_image())
+                self.new_image_available.emit(frame.as_opencv_image())
 
     def stop_streaming(self):
         if self.is_running:
@@ -141,11 +174,11 @@ class VimbaCamera(AbstractCamera):
                     self._cam.stop_streaming()
 
     def _frame_handler(self, cam: Camera, frame: Frame) -> None:
-        # TODO calculate FPS with ringbuffer?
         pydevd.settrace(suspend=False)
+        self._frc.add_new_timesstamp(frame.get_timestamp())
         if frame.get_status() != FrameStatus.Incomplete:
             img = frame.as_opencv_image()
-            self.change_pixmap_signal.emit(img)        
+            self.new_image_available.emit(img)        
         cam.queue_frame(frame)
 
     def _init_camera(self):
@@ -169,6 +202,12 @@ class VimbaCamera(AbstractCamera):
             with self._cam:
                 self._cam.ExposureTime.set(1000.0)
                 self._cam.ReverseY.set(True)
+
+    def get_framerate(self):
+        with self._vimba:
+            with self._cam:
+                #return round(self._cam.AcquisitionFrameRate.get(),1) 
+                return round(self._frc.average_fps,1)
 
 class TestCamera(AbstractCamera):
     def __init__(self):
@@ -196,6 +235,9 @@ class TestCamera(AbstractCamera):
 
     def reset_roi(self):
         pass
+
+    def get_framerate(self):
+        return 1000 / self._timer.interval()
 
     @Slot()
     def _timer_callback(self):
