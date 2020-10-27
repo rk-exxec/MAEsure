@@ -62,6 +62,7 @@ class CameraControl(QLabel):
         self.update()
         self._roi_rubber_band = ResizableRubberBand(self)
         self._baseline = Baseline(self)
+        self._oneshot_eval = False
         
         
     def __del__(self):
@@ -186,7 +187,6 @@ class CameraControl(QLabel):
         self._roi_rubber_band.hide()
 
     @Slot(np.ndarray)
-    # TODO enable oneshot evaluation of droplet somehow
     def update_image(self, cv_img: np.ndarray):
         """ Updates the image_label with a new opencv image"""
         #print(np.shape(cv_img))
@@ -198,13 +198,16 @@ class CameraControl(QLabel):
                 self.set_new_baseline_constraints()
                 self._image_size_invalid = False
             self._droplet = Droplet()
-            if self.cam.is_running:
+            # evaluate droplet only if camera is running or if a oneshot eval is requested
+            if self.cam.is_running or self._oneshot_eval:
                 try:
                     drplt = evaluate_droplet(cv_img, self.get_baseline_y())
                     self._droplet = drplt
                 except Exception as ex:
                     print(ex.with_traceback(None))
                     pass
+                if self._oneshot_eval: 
+                    self._oneshot_eval = False
             self.update()
         except Exception:
             pass
