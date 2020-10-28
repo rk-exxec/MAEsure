@@ -778,7 +778,7 @@
     <property name="title">
      <string>Pump Control</string>
     </property>
-    <widget class="QPushButton" name="pushButton">
+    <widget class="QPushButton" name="fillBtn">
      <property name="geometry">
       <rect>
        <x>10</x>
@@ -791,7 +791,7 @@
       <string>Fill</string>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_2">
+    <widget class="QPushButton" name="emptyBtn">
      <property name="geometry">
       <rect>
        <x>10</x>
@@ -804,7 +804,7 @@
       <string>Empty</string>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_14">
+    <widget class="QPushButton" name="dispenseBtn">
      <property name="geometry">
       <rect>
        <x>90</x>
@@ -814,20 +814,10 @@
       </rect>
      </property>
      <property name="text">
-      <string>Dispense</string>
+      <string>Infuse</string>
      </property>
     </widget>
-    <widget class="QLineEdit" name="lineEdit_5">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>110</y>
-       <width>41</width>
-       <height>20</height>
-      </rect>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_8">
+    <widget class="QLabel" name="unitLbl1">
      <property name="geometry">
       <rect>
        <x>60</x>
@@ -840,7 +830,7 @@
       <string>µl</string>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_15">
+    <widget class="QPushButton" name="collectBtn">
      <property name="geometry">
       <rect>
        <x>90</x>
@@ -850,7 +840,7 @@
       </rect>
      </property>
      <property name="text">
-      <string>Collect</string>
+      <string>Withdraw</string>
      </property>
     </widget>
     <widget class="Line" name="line">
@@ -864,6 +854,41 @@
      </property>
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+    <widget class="QDoubleSpinBox" name="amountSpinBox">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>110</y>
+       <width>41</width>
+       <height>22</height>
+      </rect>
+     </property>
+     <property name="frame">
+      <bool>true</bool>
+     </property>
+     <property name="buttonSymbols">
+      <enum>QAbstractSpinBox::NoButtons</enum>
+     </property>
+     <property name="maximum">
+      <double>1000.000000000000000</double>
+     </property>
+     <property name="value">
+      <double>2.000000000000000</double>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="stopPumpBtn">
+     <property name="geometry">
+      <rect>
+       <x>90</x>
+       <y>60</y>
+       <width>75</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>STOP</string>
      </property>
     </widget>
    </widget>
