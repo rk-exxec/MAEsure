@@ -17,11 +17,13 @@
 import sys
 import os
 import pydevd
+import logging
 from PySide2.QtGui import QPixmap, Qt
 from PySide2.QtWidgets import QApplication, QSplashScreen
 
 if __name__ == "__main__":
     os.system('pyside2-uic -o ui_form.py qt_resources/form.ui')
+    logging.basicConfig(filename='app.log', filemode='w', encoding='utf-8', level=logging.WARNING)
     app = QApplication(sys.argv)
     pic = QPixmap('qt_resources/maesure.png')
     splash = QSplashScreen(pic)#, Qt.WindowStaysOnTopHint)
