@@ -14,77 +14,64 @@
 #     You should have received a copy of the GNU General Public License
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import functools
+
 from PySide2.QtWidgets import QGroupBox
-import serial
-import time
+import pumpy
 
 from serial.tools.list_ports_windows import comports
 
-from typing import TYPE_CHECKING, ValuesView
+from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from ui_form import Ui_main
 
 # TODO Pump control https://www.hugo-sachs.de/media/manuals/Product%20Manuals/702220,%202225%20Microliter%20Manual.pdf
-# TODO see about serial port timout handling, lock self up til reset?
 class PumpControl(QGroupBox):
     def __init__(self, parent=None) -> None:
         super(PumpControl, self).__init__(parent)
         self.ui: Ui_main = self.window().ui
-        self._serial_port = serial.Serial()
-        try:
-            self._serial_port.port = self.find_com_port()
-        except ConnectionError as ce:
-            self._serial_port.port = 'COM6'
-
-        self._serial_port.baudrate = 9600
-        self._serial_port.timeout = 0.2
-        self._serial_port.bytesize = 8
-        self._serial_port.stopbits = 2
-        self._serial_port.parity = 'N'
+        port = self.find_com_port()
         self._context_depth = 0
+        chain = pumpy.Chain(port)
+        self._pump = pumpy.PHD2000(chain, name='Drplt_Pump')
+        # FIXME syringe properties
+        self._pump.setdiameter(1)
+        self._pump.setflowrate(120) # 2ul / s
 
-    def __enter__(self):
-        try:
-            if self._context_depth == 0 and self._serial_port.port is not None:
-                self._serial_port.open()
-        except Exception as ex:
-            raise  
-        self._context_depth += 1
-        return self
+    def connect_signals(self):
+        self.ui.dispenseBtn.clicked.connect(self.infuse)
+        self.ui.collectBtn.clicked.connect(self.withdraw)
+        self.ui.fillBtn.clicked.connect(self.fill)
+        self.ui.emptyBtn.clicked.connect(self.empty)
+        self.ui.stopPumpBtn.clicked.connect(self.stop)
 
-    def __exit__(self, type, value, traceback):
-        self._context_depth -= 1
-        if self._context_depth == 0:
-            self._serial_port.close()
+    def fill(self):
+        # caution! only use if limitswitches are properly setup to avoid damage to syringe
+        self._pump.settargetvolume(1000)
+        self._pump.withdraw()
 
-    def query_num(self, query: str):
-        # TODO query dict with response lengths
-        # TODO possible to only send CR to get status?
-        # TODO use pumpy?
-        queries = ['DIA', 'RAT', 'RAT W', 'VOL', 'VOL W', 'VER', 'TAR', 'TAR W', 'FRC']
-        if not query in queries:
-            raise ValueError('Unknown query command')
-        resp_length = queries[query]
-        if self._serial_port.is_open:
-            msg: str = query + '\r'
-            self._serial_port.write(msg.encode())
-            # TODO this does not get the PROMPT bc that starts with CRLF?
-            ans = self._serial_port.read(resp_length).decode('utf-8')
+    def empty(self):
+        # caution! only use if limitswitches are properly setup to avoid damage to syringe
+        self._pump.settargetvolume(1000)
+        self._pump.infuse()
 
-            if len(ans) == 0:
-                raise TimeoutError('Port Timeout!')
-            else:
-                return ans.strip()
-        else: return 0
+    def infuse(self):
+        amount = self.ui.amountSpinBox.value()
+        self._pump.settargetvolume(amount)
+        self._pump.infuse()
 
-    def is_port_alive(self):
-        pass
+    def withdraw(self):
+        amount = self.ui.amountSpinBox.value()
+        self._pump.settargetvolume(amount)
+        self._pump.withdraw()
+
+    def stop(self):
+        self._pump.stop()
 
     @staticmethod
     def find_com_port() -> str:
         lst = comports()
         for port in lst:
+            # FIXME apply proper name when pump arrives
             if port.manufacturer == 'Nanotec':
                 return port.device
         else:
