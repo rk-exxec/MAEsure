@@ -18,6 +18,8 @@
 
 from math import asin, copysign, cos, sin, atan, pi, sqrt, tan, atan2, radians, degrees
 import cv2
+import numpy as np
+from skimage.measure import EllipseModel
 DEBUG = 2
 USE_GPU = True
 class Droplet():
@@ -64,11 +66,30 @@ def evaluate_droplet(img, y_base) -> Droplet:
 
     edge = max(contours, key=cv2.contourArea)
     #edge = contours[0]
-    (x0,y0), (maj_ax,min_ax), phi_deg = cv2.fitEllipse(edge)
+    (x0,y0), (maj_ax,min_ax), phi_deg = cv2.fitEllipseDirect(edge)
+    if maj_ax < min_ax:
+        maj_ax, min_ax = min_ax,maj_ax
+        phi_deg = (90 + phi_deg) % 180.0
+    else:
+        phi_deg = phi_deg % 180.0
 
     phi = radians(phi_deg) # to radians
     a = maj_ax/2
     b = min_ax/2
+    # if USE_GPU:
+    #     points = cv2.UMat.get(edge).reshape(-1,2)
+    # else:
+    #     points = edge.reshape(-1,2)
+    # ell = EllipseModel()
+    # ell.estimate(points)
+    # x0, y0, a, b, phi = ell.params
+    # maj_ax = 2*a
+    # min_ax = 2*b
+    # phi_deg = degrees(phi)
+
+    # holy fucking shit, da ist halt echt ein fucking bug im fitAlgo 
+    # https://github.com/opencv/opencv/issues/11088
+    
 
     intersection = calc_intersection_line_ellipse((x0,y0,a,b,phi),(0,y_base))
     if intersection is None:
@@ -81,9 +102,13 @@ def evaluate_droplet(img, y_base) -> Droplet:
 
     # calc slope and angle of tangent
     m_t_l = calc_slope_of_ellipse((x0,y0,a,b,phi), x_int_l, y_base)
-    angle_l = pi - atan2(m_t_l,1)
- 
     m_t_r = calc_slope_of_ellipse((x0,y0,a,b,phi), x_int_r, y_base)
+    lin_int = _intersection(line((x_int_l - y_base/m_t_l, 0), (x_int_l + (height - y_base)/m_t_l, height)), line((x_int_r - y_base/m_t_r, 0), (x_int_r + (height - y_base)/m_t_r, height)))
+    if lin_int and lin_int[1] > y_base and y_base < y0:
+        m_t_l *= -1
+        m_t_r *= -1
+
+    angle_l = pi - atan2(m_t_l,1)
     angle_r = atan2(m_t_r,1) + pi
 
     drplt.angle_l = angle_l
@@ -95,8 +120,8 @@ def evaluate_droplet(img, y_base) -> Droplet:
     drplt.tilt_deg = phi_deg
     drplt.tan_l_m = m_t_l
     drplt.tan_r_m = m_t_r
-    drplt.line_l = (int(round(x_int_l - (int(round(y_base))/m_t_l))), 0, int(round(x_int_l + ((height - int(round(y_base)))/m_t_l))), int(round(height)))
-    drplt.line_r = (int(round(x_int_r - (int(round(y_base))/m_t_r))), 0, int(round(x_int_r + ((height - int(round(y_base)))/m_t_r))), int(round(height)))
+    drplt.line_l = (x_int_l - y_base/m_t_l, 0, x_int_l + (height - y_base)/m_t_l, height)
+    drplt.line_r = (x_int_r - y_base/m_t_r, 0, x_int_r + (height - y_base)/m_t_r, height)
     drplt.int_l = (x_int_l, y_base)
     drplt.int_r = (x_int_r, y_base)
     drplt.foc_pt1 = (x0 + foc_len*cos(phi), y0 + foc_len*sin(phi))
@@ -145,7 +170,7 @@ def calc_intersection_line_ellipse(ellipse_pars, line_pars):
             x2: float = (-b + sqrt(det))/(2*a) + x0
             return x1,x2
         elif det == 0:
-            x: float = -b / (2*a)
+            x: float = (-b / (2*a)) + x0
             return x
         else:
             return None
@@ -160,24 +185,41 @@ def calc_slope_of_ellipse(ellipse_pars, x, y):
     :returns: the slope of the tangent 
     """
     (x0, y0, a, b, phi) = ellipse_pars
-    if b > a:
-        a,b = b,a
-    else:
-        phi -= pi/4
+    # if b > a:
+    #     a,b = b,a
+    # else:
+    #     phi -= pi/4
     # transform to non-rotated ellipse
     x_rot = (x - x0)*cos(phi) + (y - y0)*sin(phi)
     y_rot = (x - x0)*sin(phi) + (y - y0)*cos(phi)
-    m_rot = (b**2 * x_rot)/(a**2 * y_rot) # slope of tangent to unrotated ellipse
+    m_rot = -(b**2 * x_rot)/(a**2 * y_rot) # slope of tangent to unrotated ellipse
     #rotate tangent line back to angle of the rotated ellipse
     m_tan = tan(atan2(m_rot,1) + phi)
 
     return m_tan
+
+def line(p1, p2):
+    A = (p1[1] - p2[1])
+    B = (p2[0] - p1[0])
+    C = (p1[0]*p2[1] - p2[0]*p1[1])
+    return A, B, -C
+
+def _intersection(L1, L2):
+    D  = L1[0] * L2[1] - L1[1] * L2[0]
+    Dx = L1[2] * L2[1] - L1[1] * L2[2]
+    Dy = L1[0] * L2[2] - L1[2] * L2[0]
+    if D != 0:
+        x = Dx / D
+        y = Dy / D
+        return x,y
+    else:
+        return False
 
 if __name__ == "__main__":
     im = cv2.imread('untitled1.png')
     # any value below 250 is just the droplet without the substrate
 #     This is the result when I choose the surface to be at y=62:  
 # [![Completely wrong][2]][2]
-    drp = evaluate_droplet(im, 250)
+    drp = evaluate_droplet(im, 42)
     cv2.imshow('Test',im)
     cv2.waitKey(0)
