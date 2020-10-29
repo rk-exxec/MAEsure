@@ -33,7 +33,7 @@ class WaitMovementThread(QThread):
         self.target = target
         if slotOnFinished:
             self.finished.connect(slotOnFinished)
-    
+
     def run(self, *args, **kwargs):
         self.target(*args, **kwargs)
 
@@ -50,7 +50,7 @@ class CustomCallbackTimer(QTimer):
 # TODO test new decorator
 
 class MagnetControl(QGroupBox):
-    """A widget to control the motor via lt_control  
+    """A widget to control the motor via lt_control
 
     Use instead of QGroupBox
     """
@@ -93,7 +93,7 @@ class MagnetControl(QGroupBox):
                 return null(*args, **kwargs)
             else:
                 return func(*args, **kwargs)
-        return wrapper 
+        return wrapper
 
     def showEvent(self, event: QShowEvent):
         if not self._shown:
@@ -130,7 +130,7 @@ class MagnetControl(QGroupBox):
                 self.set_status_message('Connection Timeout!')
                 self.lock_movement_buttons()
                 return False
-    
+
     @Slot(str)
     def mag_mov_unit_changed(self, unit: str):
         self._mov_unit = unit.strip()
@@ -194,7 +194,7 @@ class MagnetControl(QGroupBox):
                 return self._lt_ctl.get_position()
             else:
                 return self._lt_ctl.steps_to_mm(self._lt_ctl.get_position())
-    
+
     @Slot()
     def jog_up_start(self):
         with self._lt_ctl:
@@ -206,7 +206,7 @@ class MagnetControl(QGroupBox):
         with self._lt_ctl:
             self._lt_ctl.move_inf_start(1)
         self.update_pos_timer.start()
-        
+
     @Slot()
     def move_pos(self):
         with self._lt_ctl:

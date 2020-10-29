@@ -26,7 +26,7 @@ from ui_form import Ui_main
 
 from camera_control import CameraControl
 from magnet_control import MagnetControl
-from pump_control import PumpControl
+#from pump_control import PumpControl
 from data_control import DataControl
 from measurement_control import MeasurementControl
 from light_widget import LightWidget
@@ -45,9 +45,9 @@ class MainWindow(QMainWindow):
         atexit.register(self.cleanup)
         #self.magnet_ctl = MagnetControl(self)
         self.meas_ctl = MeasurementControl()
-        
+
         self.show()
-        
+
 
     def __del__(self):
         del self.ui.camera_prev
@@ -69,5 +69,3 @@ class MainWindow(QMainWindow):
         self.ui = loader.load(file)
         file.close()
         self.setCentralWidget(self.ui)
-
-
