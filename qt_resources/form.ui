@@ -26,13 +26,13 @@
      <verstretch>0</verstretch>
     </sizepolicy>
    </property>
-   <widget class="QGroupBox" name="box_preview">
+   <widget class="CameraControl" name="camera_ctl">
     <property name="geometry">
      <rect>
       <x>10</x>
       <y>10</y>
       <width>601</width>
-      <height>391</height>
+      <height>401</height>
      </rect>
     </property>
     <property name="title">
@@ -64,7 +64,7 @@
       <string>Reset</string>
      </property>
     </widget>
-    <widget class="CameraControl" name="camera_prev">
+    <widget class="CameraPreview" name="camera_prev">
      <property name="geometry">
       <rect>
        <x>110</x>
@@ -140,6 +140,19 @@
       <string>Angle: 66.6°</string>
      </property>
     </widget>
+    <widget class="QLabel" name="frameInfoLbl">
+     <property name="geometry">
+      <rect>
+       <x>110</x>
+       <y>380</y>
+       <width>481</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Stopped</string>
+     </property>
+    </widget>
    </widget>
    <widget class="QGroupBox" name="groupBox">
     <property name="geometry">
@@ -147,7 +160,7 @@
       <x>630</x>
       <y>10</y>
       <width>551</width>
-      <height>391</height>
+      <height>401</height>
      </rect>
     </property>
     <property name="title">
@@ -766,7 +779,7 @@
      </property>
     </widget>
    </widget>
-   <widget class="PumpControl" name="pumpControl">
+   <widget class="QGroupBox" name="pumpControl">
     <property name="geometry">
      <rect>
       <x>310</x>
@@ -926,14 +939,14 @@
   </customwidget>
   <customwidget>
    <class>CameraControl</class>
-   <extends>QOpenGLWidget</extends>
+   <extends>QGroupBox</extends>
    <header>camera_control</header>
+   <container>1</container>
   </customwidget>
   <customwidget>
-   <class>PumpControl</class>
-   <extends>QGroupBox</extends>
-   <header>pump_control</header>
-   <container>1</container>
+   <class>CameraPreview</class>
+   <extends>QOpenGLWidget</extends>
+   <header>camera_preview</header>
   </customwidget>
  </customwidgets>
  <resources/>
