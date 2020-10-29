@@ -15,8 +15,6 @@
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # This Python file uses the following encoding: utf-8
-from camera import AbstractCamera, TestCamera, VimbaCamera
-from typing import List, Tuple, Union
 
 import numpy as np
 import logging
@@ -25,6 +23,13 @@ from PySide2 import QtGui
 from PySide2.QtWidgets import QGroupBox
 from PySide2.QtCore import Signal, Slot
 
+from camera import AbstractCamera, TestCamera, HAS_VIMBA
+if HAS_VIMBA:
+    from camera import VimbaCamera
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ui_form import Ui_main
 
 
 # TODO camera control
@@ -40,6 +45,13 @@ class CameraControl(QGroupBox):
         super(CameraControl, self).__init__(parent)
         self.ui: Ui_main = self.window().ui
         self._first_show = True # whether form is shown for the first time
+        self.cam: AbstractCamera = None
+        if HAS_VIMBA and not USE_TEST_IMAGE:
+            self.cam = VimbaCamera()
+        else:
+            self.cam = TestCamera()
+            if not USE_TEST_IMAGE: logging.error('No camera found! Fallback to test cam!')
+
         self.cam.new_image_available.connect(self.update_image)
         self.update()
         self._oneshot_eval = False
