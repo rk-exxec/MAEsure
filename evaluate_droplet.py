@@ -41,7 +41,7 @@ class Droplet():
         self.int_r = (0,0)
         self.line_r = (0,0,0,0)
         self.base_diam = 0
-        
+
 # BUG tangent slope not correct when ellipse tall and few points to fit!!
 def evaluate_droplet(img, y_base) -> Droplet:
     drplt = Droplet()
@@ -66,30 +66,32 @@ def evaluate_droplet(img, y_base) -> Droplet:
 
     edge = max(contours, key=cv2.contourArea)
     #edge = contours[0]
-    (x0,y0), (maj_ax,min_ax), phi_deg = cv2.fitEllipseDirect(edge)
-    if maj_ax < min_ax:
-        maj_ax, min_ax = min_ax,maj_ax
-        phi_deg = (90 + phi_deg) % 180.0
-    else:
-        phi_deg = phi_deg % 180.0
-
-    phi = radians(phi_deg) # to radians
-    a = maj_ax/2
-    b = min_ax/2
-    # if USE_GPU:
-    #     points = cv2.UMat.get(edge).reshape(-1,2)
+    # (x0,y0), (maj_ax,min_ax), phi_deg = cv2.fitEllipseDirect(edge)
+    # print(str(round(phi_deg,2)), end=' | ')
+    # if maj_ax < min_ax:
+    #     maj_ax, min_ax = min_ax,maj_ax
+    #     phi_deg = (90 + phi_deg) % 180.0
     # else:
-    #     points = edge.reshape(-1,2)
-    # ell = EllipseModel()
-    # ell.estimate(points)
-    # x0, y0, a, b, phi = ell.params
-    # maj_ax = 2*a
-    # min_ax = 2*b
-    # phi_deg = degrees(phi)
+    #     phi_deg = phi_deg % 180.0
+    # print(str(round(phi_deg,2)), end=' | ')
+    # phi = radians(phi_deg) # to radians
+    # a = maj_ax/2
+    # b = min_ax/2
+    # FIXME diesen fit zum laufen bringen https://scikit-image.org/docs/0.15.x/api/skimage.measure.html
+    if USE_GPU:
+        points = cv2.UMat.get(edge).reshape(-1,2)
+    else:
+        points = edge.reshape(-1,2)
+    ell = EllipseModel()
+    if not ell.estimate(points): raise RuntimeError('Couldn''t fit ellipse')
+    x0, y0, a, b, phi = ell.params
+    maj_ax = 2*a
+    min_ax = 2*b
+    phi_deg = degrees(phi)
 
-    # holy fucking shit, da ist halt echt ein fucking bug im fitAlgo 
+    # holy fucking shit, da ist halt echt ein fucking bug im fitAlgo
     # https://github.com/opencv/opencv/issues/11088
-    
+
 
     intersection = calc_intersection_line_ellipse((x0,y0,a,b,phi),(0,y_base))
     if intersection is None:
@@ -103,10 +105,11 @@ def evaluate_droplet(img, y_base) -> Droplet:
     # calc slope and angle of tangent
     m_t_l = calc_slope_of_ellipse((x0,y0,a,b,phi), x_int_l, y_base)
     m_t_r = calc_slope_of_ellipse((x0,y0,a,b,phi), x_int_r, y_base)
-    lin_int = _intersection(line((x_int_l - y_base/m_t_l, 0), (x_int_l + (height - y_base)/m_t_l, height)), line((x_int_r - y_base/m_t_r, 0), (x_int_r + (height - y_base)/m_t_r, height)))
-    if lin_int and lin_int[1] > y_base and y_base < y0:
-        m_t_l *= -1
-        m_t_r *= -1
+    print('')
+    # lin_int = _intersection(line((x_int_l - y_base/m_t_l, 0), (x_int_l + (height - y_base)/m_t_l, height)), line((x_int_r - y_base/m_t_r, 0), (x_int_r + (height - y_base)/m_t_r, height)))
+    # if lin_int and lin_int[1] > y_base and y_base < y0:
+    #     m_t_l *= -1
+    #     m_t_r *= -1
 
     angle_l = pi - atan2(m_t_l,1)
     angle_r = atan2(m_t_r,1) + pi
@@ -151,9 +154,9 @@ def evaluate_droplet(img, y_base) -> Droplet:
 
 def calc_intersection_line_ellipse(ellipse_pars, line_pars):
     """
-    calculates intersection(s) of an ellipse with a horizontal line  
-    :param ellipse_pars: tuple of (x0,y0,a,b,phi): x0,y0 center of ellipse; a,b sem-axis of ellipse; phi tilt rel to x axis  
-    :param line_pars: tuple of (m,t): m is the slope and t is intercept of the intersecting line  
+    calculates intersection(s) of an ellipse with a horizontal line
+    :param ellipse_pars: tuple of (x0,y0,a,b,phi): x0,y0 center of ellipse; a,b sem-axis of ellipse; phi tilt rel to x axis
+    :param line_pars: tuple of (m,t): m is the slope and t is intercept of the intersecting line
     :returns: x-coordinate(s) of intesection as list or float or none if none found
     """
     ## -->> http://quickcalcbasic.com/ellipse%20line%20intersection.pdf
@@ -176,25 +179,37 @@ def calc_intersection_line_ellipse(ellipse_pars, line_pars):
             return None
     except Exception as ex:
         raise ex
- 
+
 def calc_slope_of_ellipse(ellipse_pars, x, y):
     """
     calculates slope of tangent at point x,y, the point needs to be on the ellipse!
-    :param ellipse_params: tuple of (x0,y0,a,b,phi): x0,y0 center of ellipse; a,b sem-axis of ellipse; phi tilt rel to x axis  
-    :param x: x-coord where the slope will be calculated  
-    :returns: the slope of the tangent 
+    :param ellipse_params: tuple of (x0,y0,a,b,phi): x0,y0 center of ellipse; a,b sem-axis of ellipse; phi tilt rel to x axis
+    :param x: x-coord where the slope will be calculated
+    :returns: the slope of the tangent
     """
     (x0, y0, a, b, phi) = ellipse_pars
     # if b > a:
     #     a,b = b,a
     # else:
     #     phi -= pi/4
-    # transform to non-rotated ellipse
+    # transform to non-rotated ellipse centered to origin
     x_rot = (x - x0)*cos(phi) + (y - y0)*sin(phi)
     y_rot = (x - x0)*sin(phi) + (y - y0)*cos(phi)
     m_rot = -(b**2 * x_rot)/(a**2 * y_rot) # slope of tangent to unrotated ellipse
+    # Ax + By = C
+    tan_a = x_rot/a**2
+    tan_b = y_rot/b**2
+    # tan_c = 1
+    # t = sqrt(a**2 * m_rot**2 + b**2) # intercept of tangent
     #rotate tangent line back to angle of the rotated ellipse
-    m_tan = tan(atan2(m_rot,1) + phi)
+    tan_a_r = tan_a*cos(phi) + tan_b*sin(phi)
+    tan_b_r = tan_b*cos(phi) - tan_a*sin(phi)
+    print(str(round(tan_a,6)) + ' | ' + str(round(tan_b,6)), end=' | ')
+    m_tan = - (tan_a_r / tan_b_r)
+
+    # incl_ang_rot = atan2(m_rot,1)
+    # incl_ang = ((incl_ang_rot + phi + pi/2) % pi) - pi/2
+    # m_tan = tan(incl_ang)
 
     return m_tan
 
@@ -218,7 +233,7 @@ def _intersection(L1, L2):
 if __name__ == "__main__":
     im = cv2.imread('untitled1.png')
     # any value below 250 is just the droplet without the substrate
-#     This is the result when I choose the surface to be at y=62:  
+#     This is the result when I choose the surface to be at y=62:
 # [![Completely wrong][2]][2]
     drp = evaluate_droplet(im, 42)
     cv2.imshow('Test',im)
