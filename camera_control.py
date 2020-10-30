@@ -86,6 +86,7 @@ class CameraControl(QGroupBox):
             self.ui.startCamBtn.setText('Start')
             self.cam.snapshot()
             self.ui.frameInfoLbl.setText('Stopped')
+            self.ui.drpltDataLbl.setText(str(self.ui.camera_prev._droplet))
 
     @Slot()
     def apply_roi(self):
@@ -104,3 +105,5 @@ class CameraControl(QGroupBox):
             eval = False
 
         self.ui.camera_prev.update_image(cv_img, eval)
+
+        self.ui.drpltDataLbl.setText(str(self.ui.camera_prev._droplet))

@@ -41,9 +41,9 @@
     <widget class="QPushButton" name="startCamBtn">
      <property name="geometry">
       <rect>
-       <x>20</x>
+       <x>14</x>
        <y>20</y>
-       <width>75</width>
+       <width>81</width>
        <height>23</height>
       </rect>
      </property>
@@ -54,9 +54,9 @@
     <widget class="QPushButton" name="resetCamBtn">
      <property name="geometry">
       <rect>
-       <x>20</x>
+       <x>14</x>
        <y>50</y>
-       <width>75</width>
+       <width>81</width>
        <height>23</height>
       </rect>
      </property>
@@ -104,9 +104,9 @@
     <widget class="QPushButton" name="setROIBtn">
      <property name="geometry">
       <rect>
-       <x>20</x>
+       <x>14</x>
        <y>80</y>
-       <width>75</width>
+       <width>81</width>
        <height>23</height>
       </rect>
      </property>
@@ -117,9 +117,9 @@
     <widget class="QPushButton" name="resetROIBtn">
      <property name="geometry">
       <rect>
-       <x>20</x>
+       <x>14</x>
        <y>110</y>
-       <width>75</width>
+       <width>81</width>
        <height>23</height>
       </rect>
      </property>
@@ -127,17 +127,28 @@
       <string>Reset ROI</string>
      </property>
     </widget>
-    <widget class="QLabel" name="label">
+    <widget class="QLabel" name="drpltDataLbl">
      <property name="geometry">
       <rect>
-       <x>30</x>
+       <x>10</x>
        <y>150</y>
-       <width>61</width>
-       <height>16</height>
+       <width>81</width>
+       <height>241</height>
       </rect>
      </property>
      <property name="text">
-      <string>Angle: 66.6°</string>
+      <string>Angle Left:
+0°
+Angle Right:
+0°
+Surface Diam:
+0 px</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
      </property>
     </widget>
     <widget class="QLabel" name="frameInfoLbl">
