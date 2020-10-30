@@ -27,8 +27,6 @@ from resizable_rubberband import ResizableRubberBand
 from baseline import Baseline
 from evaluate_droplet import Droplet, evaluate_droplet
 
-# FIXME remove FPS counter and put in label in parent, top remove ugly set_fps fcn
-
 class CameraPreview(QOpenGLWidget):
     def __init__(self, parent=None):
         super(CameraPreview, self).__init__(parent)
@@ -103,9 +101,6 @@ class CameraPreview(QOpenGLWidget):
             self.apply_roi()
         elif event.key() == Qt.Key_Escape:
             self._abort_roi()
-
-    def set_fps(self, fps):
-        self._fps = fps
 
     def update_image(self, cv_img: np.ndarray, eval: bool = True):
         """ Updates the image_label with a new opencv image"""
