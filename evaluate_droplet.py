@@ -18,9 +18,15 @@
 
 from math import asin, copysign, cos, sin, atan, pi, sqrt, tan, atan2, radians, degrees
 import cv2
+from numpy.linalg import eig, inv, svd
 import numpy as np
 from skimage.measure import EllipseModel
-DEBUG = 2
+from fit_ellipse import fit_ellipse
+DBG_SHOW_CONTOURS = 0x1
+DBG_DRAW_ELLIPSE = 0x2
+DBG_DRAW_TAN_ANGLE = 0x4
+DEBUG = DBG_SHOW_CONTOURS | DBG_DRAW_ELLIPSE
+
 USE_GPU = True
 class Droplet():
     def __init__(self):
@@ -41,6 +47,20 @@ class Droplet():
         self.int_r = (0,0)
         self.line_r = (0,0,0,0)
         self.base_diam = 0
+
+    def __repr__(self):
+        return 'Droplet({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})'.format(
+            self.is_valid, self.angle_l, self.angle_r, self.center, self.maj, self.min, self.phi, self.tilt_deg, self.foc_pt1, self.foc_pt2,
+            self.tan_l_m, self.int_l, self.line_l, self.tan_r_m, self.int_r, self.line_r, self.base_diam
+            )
+
+    def __str__(self) -> str:
+        if self.is_valid:
+            return 'Angle Left:\n{:.2f}°\nAngle Right:\n{:.2f}°\nSurface Diam:\n{:.2f} px'.format(
+                round(degrees(self.angle_l),2), round(degrees(self.angle_r),2), round(self.base_diam)
+            )
+        else:
+            return 'No droplet!'
 
 # BUG tangent slope not correct when ellipse tall and few points to fit!!
 def evaluate_droplet(img, y_base) -> Droplet:
@@ -65,8 +85,16 @@ def evaluate_droplet(img, y_base) -> Droplet:
         raise ValueError('No contours found!')
 
     edge = max(contours, key=cv2.contourArea)
-    #edge = contours[0]
-    # (x0,y0), (maj_ax,min_ax), phi_deg = cv2.fitEllipseDirect(edge)
+
+    if USE_GPU:
+        # fetch contours from gpu memory
+        # cntrs = [cv2.UMat.get(c) for c in contours]
+        edge = cv2.UMat.get(edge)
+        if DEBUG & DBG_SHOW_CONTOURS:
+            # img = cv2.drawContours(img,cntrs,-1,(100,100,255),2)
+            img = cv2.drawContours(img,edge,-1,(255,0,0),2)
+
+    (x0,y0), (maj_ax,min_ax), phi_deg = cv2.fitEllipseDirect(edge)
     # print(str(round(phi_deg,2)), end=' | ')
     # if maj_ax < min_ax:
     #     maj_ax, min_ax = min_ax,maj_ax
@@ -74,20 +102,30 @@ def evaluate_droplet(img, y_base) -> Droplet:
     # else:
     #     phi_deg = phi_deg % 180.0
     # print(str(round(phi_deg,2)), end=' | ')
-    # phi = radians(phi_deg) # to radians
+    phi = radians(phi_deg) # to radians
+    a = maj_ax/2
+    b = min_ax/2
+    # FIXME diesen fit zum laufen bringen https://scikit-image.org/docs/0.15.x/api/skimage.measure.html
+    points = edge.reshape(-1,2)
+    #points[:,[0,1]] = points[:,[1,0]]
+    # ell = EllipseModel()
+    # if not ell.estimate(points): raise RuntimeError('Couldn\'t fit ellipse')
+    # x0, y0, a, b, phi = ell.params
+
+    # points = points.T
+    # np.set_printoptions(threshold=np.inf)
+    # print(points)
+    # maj_ax, min_ax, x0, y0, phi = fit_ellipse(points[0],points[1])
+
     # a = maj_ax/2
     # b = min_ax/2
-    # FIXME diesen fit zum laufen bringen https://scikit-image.org/docs/0.15.x/api/skimage.measure.html
-    if USE_GPU:
-        points = cv2.UMat.get(edge).reshape(-1,2)
-    else:
-        points = edge.reshape(-1,2)
-    ell = EllipseModel()
-    if not ell.estimate(points): raise RuntimeError('Couldn''t fit ellipse')
-    x0, y0, a, b, phi = ell.params
-    maj_ax = 2*a
-    min_ax = 2*b
-    phi_deg = degrees(phi)
+    # maj_ax = 2*a
+    # min_ax = 2*b
+    # phi_deg = degrees(phi)
+
+    if DEBUG & DBG_DRAW_ELLIPSE:
+        img = cv2.ellipse(img, (int(round(x0)),int(round(y0))), (int(round(a)),int(round(b))), int(round(phi*180/pi)), 0, 360, (255,0,255), thickness=1, lineType=cv2.LINE_AA)
+        #img = cv2.ellipse(img, (int(round(x0)),int(round(y0))), (int(round(a)),int(round(b))), 0, 0, 360, (0,0,255), thickness=1, lineType=cv2.LINE_AA)
 
     # holy fucking shit, da ist halt echt ein fucking bug im fitAlgo
     # https://github.com/opencv/opencv/issues/11088
@@ -105,7 +143,7 @@ def evaluate_droplet(img, y_base) -> Droplet:
     # calc slope and angle of tangent
     m_t_l = calc_slope_of_ellipse((x0,y0,a,b,phi), x_int_l, y_base)
     m_t_r = calc_slope_of_ellipse((x0,y0,a,b,phi), x_int_r, y_base)
-    print('')
+    #print('')
     # lin_int = _intersection(line((x_int_l - y_base/m_t_l, 0), (x_int_l + (height - y_base)/m_t_l, height)), line((x_int_r - y_base/m_t_r, 0), (x_int_r + (height - y_base)/m_t_r, height)))
     # if lin_int and lin_int[1] > y_base and y_base < y0:
     #     m_t_l *= -1
@@ -132,15 +170,7 @@ def evaluate_droplet(img, y_base) -> Droplet:
     drplt.base_diam = x_int_r - x_int_l
     drplt.is_valid = True
 
-    if DEBUG > 0:
-        if USE_GPU:
-            contours = [cv2.UMat.get(c) for c in contours]
-            edge = cv2.UMat.get(edge)
-        img = cv2.drawContours(img,contours,-1,(100,100,255),2)
-        img = cv2.drawContours(img,edge,-1,(255,0,0),2)
-    if DEBUG > 1:
-        img = cv2.ellipse(img, (int(round(x0)),int(round(y0))), (int(round(a)),int(round(b))), int(round(phi*180/pi)), 0, 360, (255,0,255), thickness=1, lineType=cv2.LINE_AA)
-        img = cv2.ellipse(img, (int(round(x0)),int(round(y0))), (int(round(a)),int(round(b))), 0, 0, 360, (0,0,255), thickness=1, lineType=cv2.LINE_AA)
+    if DEBUG & DBG_DRAW_TAN_ANGLE:
         y_int = int(round(y_base))
         img = cv2.line(img, (int(round(x_int_l - (y_int/m_t_l))), 0), (int(round(x_int_l + ((height - y_int)/m_t_l))), int(round(height))), (255,0,255), thickness=1, lineType=cv2.LINE_AA)
         img = cv2.line(img, (int(round(x_int_r - (y_int/m_t_r))), 0), (int(round(x_int_r + ((height - y_int)/m_t_r))), int(round(height))), (255,0,255), thickness=1, lineType=cv2.LINE_AA)
@@ -204,7 +234,7 @@ def calc_slope_of_ellipse(ellipse_pars, x, y):
     #rotate tangent line back to angle of the rotated ellipse
     tan_a_r = tan_a*cos(phi) + tan_b*sin(phi)
     tan_b_r = tan_b*cos(phi) - tan_a*sin(phi)
-    print(str(round(tan_a,6)) + ' | ' + str(round(tan_b,6)), end=' | ')
+    #print(str(round(tan_a,6)) + ' | ' + str(round(tan_b,6)), end=' | ')
     m_tan = - (tan_a_r / tan_b_r)
 
     # incl_ang_rot = atan2(m_rot,1)
@@ -235,6 +265,9 @@ if __name__ == "__main__":
     # any value below 250 is just the droplet without the substrate
 #     This is the result when I choose the surface to be at y=62:
 # [![Completely wrong][2]][2]
-    drp = evaluate_droplet(im, 42)
+    try:
+        drp = evaluate_droplet(im, 250)
+    except Exception:
+        pass
     cv2.imshow('Test',im)
     cv2.waitKey(0)
