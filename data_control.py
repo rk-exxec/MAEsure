@@ -14,6 +14,8 @@
 #     You should have received a copy of the GNU General Public License
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import numpy as np
+import pandas as pd
 from PySide2.QtWidgets import QTableWidget
 from PySide2.QtCore import Signal, Slot, Qt
 
@@ -22,3 +24,7 @@ from PySide2.QtCore import Signal, Slot, Qt
 class DataControl(QTableWidget):
     def __init__(self, parent=None) -> None:
         super(DataControl, self).__init__(parent)
+
+    @Slot(np.ndarray)
+    def new_data_point(self, data:np.ndarray):
+        pass

@@ -17,10 +17,10 @@
 # This Python file uses the following encoding: utf-8
 import os
 import atexit
-from PySide2.QtGui import QShowEvent
+from PySide2.QtGui import QResizeEvent, QShowEvent
 
 from PySide2.QtWidgets import QComboBox, QMainWindow
-from PySide2.QtCore import QFile, Signal, Slot
+from PySide2.QtCore import QFile, Qt, Signal, Slot
 from PySide2.QtUiTools import QUiLoader
 from ui_form import Ui_main
 
@@ -28,7 +28,7 @@ from camera_control import CameraControl
 from magnet_control import MagnetControl
 #from pump_control import PumpControl
 from data_control import DataControl
-from measurement_control import MeasurementControl
+#from measurement_control import MeasurementControl
 from light_widget import LightWidget
 
 class MainWindow(QMainWindow):
@@ -43,14 +43,18 @@ class MainWindow(QMainWindow):
         self.ui = Ui_main()
         self.ui.setupUi(self)
         atexit.register(self.cleanup)
+        self.ui.statusbar.showMessage('Welcome!')
+        self._size = self.size()
         #self.magnet_ctl = MagnetControl(self)
-        self.meas_ctl = MeasurementControl()
+        #self.meas_ctl = MeasurementControl()
 
         self.show()
 
-
     def __del__(self):
         del self.ui.camera_prev
+
+    def resizeEvent(self, event: QResizeEvent):
+        self.setFixedSize(self._size)
 
     def closeEvent(self, event):
         self.ui.camera_prev.closeEvent(event)
