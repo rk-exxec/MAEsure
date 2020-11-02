@@ -21,7 +21,6 @@ import cv2
 from numpy.linalg import eig, inv, svd
 import numpy as np
 from skimage.measure import EllipseModel
-from fit_ellipse import fit_ellipse
 DBG_SHOW_CONTOURS = 0x1
 DBG_DRAW_ELLIPSE = 0x2
 DBG_DRAW_TAN_ANGLE = 0x4
