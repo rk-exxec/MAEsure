@@ -22,7 +22,9 @@
 #   - zeit immer vor magnetfeld gemessen falls beide gewählt!
 #   - wnn nur magnet, droplet nicht nach jedem punkt wieder neu ausgeben?
 
+from evaluate_droplet import Droplet
 import numpy as np
+import time
 
 from PySide2 import QtGui
 from PySide2.QtWidgets import QGroupBox
@@ -33,7 +35,7 @@ if TYPE_CHECKING:
     from ui_form import Ui_main
 
 class MeasurementControl(QGroupBox):
-    new_datapoint_signal = Signal(np.ndarray)
+    new_datapoint_signal = Signal(float, Droplet, int)
     def __init__(self, parent=None) -> None:
         super(MeasurementControl, self).__init__(parent)
         self.ui: Ui_main = self.window().ui
@@ -51,35 +53,42 @@ class MeasurementControl(QGroupBox):
         """ Here the measurement process happens
         This fcn will not return until done or aborted
         """
-        # execute in thread!!!
+        # TODO execute in thread!!!
         # init vars
-        cycle = 0
+        old_t = 0
+        self.read_intervals()
+        self.ui.dataControl.init_data()
+
+
 
         # TODO not nested but flat with one while loop with custom increments and checks
+        # measuring = True
+        # mag = next(self._magnet_interval) if self.ui.sweepMagChk else 0
+        # tim = next(self._time_interval) if self.ui.sweepTimeChk else 0
+        # while measuring:
+        #     #dispense if necessary
+        #     time.sleep(tim)
+
+        #     # take a measurement
+
+        #     if self.ui.sweepTimeChk:
+
+
+
         #repeat measurement after
-        while cycle != self._cycles:
-            # magnet loop
-            for mag in self._magnet_interval:
-                # time loop
-                while cycle != self._cycles:
-                    # dispense droplet
+        for cycle in self._cycles:
+            self.ui.pump_control.infuse()
+            self.ui.dataControl.init_time()
+            for tim in self._time_interval:
+                # FIXME rather use timer and callback fcn?
+                time.sleep(tim - old_t)
+                old_t = tim
+                # get droplet
+                drplt = self.ui.camera_prev._droplet
+                self.new_datapoint_signal.emit(tim, drplt, cycle)
+                #self.ui.dataControl.new_data_point(tim, drplt)
 
-                    for tim in self._time_interval:
-                        pass
-
-                    #retract droplet
-
-                    # break while loop if repetitions are not after time
-                    if self._repeat_after == 0:
-                        cycle += 1
-                    else:
-                        break
-
-            # break while loop if repetitions are only after time
-            if self._repeat_after == 1:
-                cycle += 1
-            else:
-                break
+            self.ui.pump_control.withdraw()
 
     def read_intervals(self):
         self._time_interval = self.parse_intervals(self.ui.timeInt.text())
@@ -89,7 +98,7 @@ class MeasurementControl(QGroupBox):
     # TODO logspace??
     def parse_intervals(self, expr:str):
         """ Parses string of values to float list
-        expr can look like '1.0,2.3,3.8' or '1.1,3:6' or '1.7,4:6:5,-2.8'
+        expr can look like '2', '1.0,2.3,3.8', '1.1,3:6' or '1.7,4:6:5,-2.8'
         with 'x:y:z' the values will be passed to numpy.linspace(x, y, num=z, enpoint=True), optional z = 10
         Values won't be sorted
         """

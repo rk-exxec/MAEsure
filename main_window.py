@@ -26,7 +26,7 @@ from ui_form import Ui_main
 
 from camera_control import CameraControl
 from magnet_control import MagnetControl
-#from pump_control import PumpControl
+# from pump_control import PumpControl
 from data_control import DataControl
 #from measurement_control import MeasurementControl
 from light_widget import LightWidget
