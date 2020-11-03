@@ -17,6 +17,7 @@
 
 from PySide2.QtWidgets import QGroupBox
 import pumpy
+import logging
 
 from serial.tools.list_ports_windows import comports
 
@@ -25,17 +26,22 @@ if TYPE_CHECKING:
     from ui_form import Ui_main
 
 # TODO Pump control https://www.hugo-sachs.de/media/manuals/Product%20Manuals/702220,%202225%20Microliter%20Manual.pdf
+# TODO error handling when no pump available!
 class PumpControl(QGroupBox):
     def __init__(self, parent=None) -> None:
         super(PumpControl, self).__init__(parent)
         self.ui: Ui_main = self.window().ui
         port = self.find_com_port()
         self._context_depth = 0
-        chain = pumpy.Chain(port)
-        self._pump = pumpy.PHD2000(chain, name='Drplt_Pump')
-        # FIXME syringe properties
-        self._pump.setdiameter(1)
-        self._pump.setflowrate(120) # 2ul / s
+        try:
+            chain = pumpy.Chain(port)
+            self._pump = pumpy.PHD2000(chain, name='Drplt_Pump')
+            # FIXME syringe properties
+            self._pump.setdiameter(1)
+            self._pump.setflowrate(120) # 2ul / s
+        except Exception as ex:
+            self._pump = None
+            logging.warning('Pump Error:' + str(ex))
 
     def connect_signals(self):
         self.ui.dispenseBtn.clicked.connect(self.infuse)
@@ -74,5 +80,5 @@ class PumpControl(QGroupBox):
             # FIXME apply proper name when pump arrives
             if port.manufacturer == 'Nanotec':
                 return port.device
-        else:
-            raise ConnectionError('No Pump found!')
+        # else:
+        #     raise ConnectionError('No Pump found!')
