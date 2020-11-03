@@ -91,6 +91,9 @@
      <property name="mouseTracking">
       <bool>true</bool>
      </property>
+     <property name="focusPolicy">
+      <enum>Qt::ClickFocus</enum>
+     </property>
      <property name="autoFillBackground">
       <bool>true</bool>
      </property>
@@ -551,7 +554,7 @@ Surface Diam:
      <widget class="QCheckBox" name="sweepMagChk">
       <property name="geometry">
        <rect>
-        <x>70</x>
+        <x>10</x>
         <y>70</y>
         <width>91</width>
         <height>21</height>
@@ -584,7 +587,7 @@ Surface Diam:
      <widget class="QLineEdit" name="timeInt">
       <property name="geometry">
        <rect>
-        <x>160</x>
+        <x>100</x>
         <y>40</y>
         <width>41</width>
         <height>22</height>
@@ -607,7 +610,7 @@ Surface Diam:
      <widget class="QLabel" name="label_4">
       <property name="geometry">
        <rect>
-        <x>160</x>
+        <x>100</x>
         <y>20</y>
         <width>47</width>
         <height>13</height>
@@ -620,7 +623,7 @@ Surface Diam:
      <widget class="QLabel" name="label_9">
       <property name="geometry">
        <rect>
-        <x>210</x>
+        <x>150</x>
         <y>40</y>
         <width>47</width>
         <height>21</height>
@@ -633,7 +636,7 @@ Surface Diam:
      <widget class="QLineEdit" name="magInt">
       <property name="geometry">
        <rect>
-        <x>160</x>
+        <x>100</x>
         <y>70</y>
         <width>41</width>
         <height>22</height>
@@ -643,7 +646,7 @@ Surface Diam:
      <widget class="QLabel" name="label_10">
       <property name="geometry">
        <rect>
-        <x>210</x>
+        <x>150</x>
         <y>70</y>
         <width>47</width>
         <height>21</height>
@@ -669,7 +672,7 @@ Surface Diam:
      <widget class="QCheckBox" name="sweepTimeChk">
       <property name="geometry">
        <rect>
-        <x>70</x>
+        <x>10</x>
         <y>40</y>
         <width>41</width>
         <height>21</height>
@@ -727,7 +730,7 @@ Surface Diam:
      <widget class="QLabel" name="label_11">
       <property name="geometry">
        <rect>
-        <x>70</x>
+        <x>10</x>
         <y>20</y>
         <width>70</width>
         <height>13</height>
@@ -804,7 +807,7 @@ Surface Diam:
      </property>
     </widget>
    </widget>
-   <widget class="QGroupBox" name="pumpControl">
+   <widget class="PumpControl" name="pump_control">
     <property name="geometry">
      <rect>
       <x>310</x>
@@ -981,6 +984,12 @@ Surface Diam:
    <class>MeasurementControl</class>
    <extends>QGroupBox</extends>
    <header>measurement_control</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>PumpControl</class>
+   <extends>QGroupBox</extends>
+   <header>pump_control</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
