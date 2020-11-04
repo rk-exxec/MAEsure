@@ -593,6 +593,12 @@ Surface Diam:
         <height>22</height>
        </rect>
       </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enter values separated by comma ','.&lt;/p&gt;&lt;p&gt;Values can be either:&lt;/p&gt;&lt;ul style=&quot;margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; -qt-list-indent: 0.5;&quot;&gt;&lt;li style=&quot; margin-top:12px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Numbers&lt;/li&gt;&lt;li style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Linear range: 'x:y' or 'x:y:z' creates a linear range between x and y with 10 or z number of evenly spaced points.&lt;/li&gt;&lt;li style=&quot; margin-top:0px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Logarithmic range: 'x*y' or 'x*y*z' creates a base 10 logarithmic range between x and y with 10 or z number of points.&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;Numbers, linspaces and logspaces will be merged but not sorted!&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="text">
+       <string>0:10</string>
+      </property>
      </widget>
      <widget class="QCheckBox" name="repeatChk">
       <property name="geometry">
@@ -642,6 +648,12 @@ Surface Diam:
         <height>22</height>
        </rect>
       </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enter values separated by comma ','.&lt;/p&gt;&lt;p&gt;Values can be either:&lt;/p&gt;&lt;ul style=&quot;margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; -qt-list-indent: 0.5;&quot;&gt;&lt;li style=&quot; margin-top:12px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Numbers&lt;/li&gt;&lt;li style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Linear range: 'x:y' or 'x:y:z' creates a linear range between x and y with 10 or z number of evenly spaced points.&lt;/li&gt;&lt;li style=&quot; margin-top:0px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Logarithmic range: 'x*y' or 'x*y*z' creates a base 10 logarithmic range between x and y with 10 or z number of points.&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;Numbers, linspaces and logspaces will be merged but not sorted!&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="text">
+       <string>200:50</string>
+      </property>
      </widget>
      <widget class="QLabel" name="label_10">
       <property name="geometry">
@@ -666,7 +678,10 @@ Surface Diam:
        </rect>
       </property>
       <property name="minimum">
-       <number>1</number>
+       <number>0</number>
+      </property>
+      <property name="value">
+       <number>0</number>
       </property>
      </widget>
      <widget class="QCheckBox" name="sweepTimeChk">
