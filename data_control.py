@@ -61,5 +61,4 @@ class DataControl(QTableWidget):
         self.time = time.monotonic()
 
     def init_data(self):
-        self.data = pd.DataFrame()
-        self.data.columns = ['Time', 'Cycle', 'Left_Angle', 'Right_Angle', 'Base_Width', 'Substate_Surface_Energy']
+        self.data = pd.DataFrame(columns=['Time', 'Cycle', 'Left_Angle', 'Right_Angle', 'Base_Width', 'Substate_Surface_Energy'])
