@@ -106,7 +106,6 @@ class CameraPreview(QOpenGLWidget):
         """ Updates the image_label with a new opencv image"""
         #print(np.shape(cv_img))
         try:
-            self._droplet = Droplet()
             # evaluate droplet only if camera is running or if a oneshot eval is requested
             if eval:
                 try:
