@@ -69,6 +69,7 @@ class MeasurementControl(QGroupBox):
         self._stop_meas_event.clear()
         self.read_intervals()
         self.ui.dataControl.init_data()
+        self._meas_thread = Thread(target=self.measure)
         self._meas_thread.start()
 
     @Slot()
@@ -95,11 +96,11 @@ class MeasurementControl(QGroupBox):
         #repeat measurement after
         for cycle in range(self._cycles):
             #self.ui.pump_control.infuse()
-            self.ui.dataControl.init_time()
+            #self.ui.dataControl.init_time()
             for tim in self._time_interval:
                 # FIXME rather use timer and callback fcn?
                 thread_state = self._stop_meas_event.wait(tim - old_t)
-                if not thread_state: break
+                if thread_state: break
                 old_t = tim
                 # get droplet
                 drplt = self.ui.camera_prev._droplet
@@ -109,6 +110,8 @@ class MeasurementControl(QGroupBox):
             #self.ui.pump_control.withdraw()
             if self._stop_meas_event.is_set():
                 break
+
+        self.ui.dataControl.save_data()
 
     def read_intervals(self):
         try:
