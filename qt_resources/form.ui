@@ -772,7 +772,7 @@ Surface Diam:
     <widget class="QPushButton" name="saveFileAsBtn">
      <property name="geometry">
       <rect>
-       <x>20</x>
+       <x>10</x>
        <y>60</y>
        <width>75</width>
        <height>23</height>
@@ -785,7 +785,7 @@ Surface Diam:
     <widget class="QPushButton" name="loadFileBtn">
      <property name="geometry">
       <rect>
-       <x>20</x>
+       <x>10</x>
        <y>90</y>
        <width>75</width>
        <height>23</height>
@@ -824,9 +824,9 @@ Surface Diam:
     <widget class="QLineEdit" name="fileNameEdit">
      <property name="geometry">
       <rect>
-       <x>20</x>
+       <x>10</x>
        <y>30</y>
-       <width>161</width>
+       <width>171</width>
        <height>20</height>
       </rect>
      </property>
