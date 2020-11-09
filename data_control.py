@@ -16,6 +16,7 @@
 
 import logging
 import os
+import threading
 from evaluate_droplet import Droplet
 import time
 from datetime import datetime
@@ -56,8 +57,9 @@ class DataControl(QTableWidget):
     def new_data_point(self, target_time:float, droplet:Droplet, cycle:int):
         if self._is_time_invalid: self.init_time()
         self.data = self.data.append(pd.DataFrame([[time.monotonic() - self._time, cycle, droplet.angle_l, droplet.angle_r, droplet.base_diam, 0.0]], columns=self._header))
-        # TODO auch in thread?
-        self.redraw_table()
+        thr = threading.Thread(target=self.redraw_table)
+        thr.start()
+        # self.redraw_table()
 
     def redraw_table(self):
         self._block_painter = True
@@ -100,10 +102,12 @@ class DataControl(QTableWidget):
         Relaces \'!now!\' in filename with current datetime.
         """
         date = datetime.now().strftime('%Y%m%d_%H-%M-%S')
+        if self.ui.fileNameEdit.text() == "": raise ValueError("No File specified!")
         self._cur_filename = self.ui.fileNameEdit.text().replace('!now!', f'{date}')
         open(self._cur_filename, 'w').close()
 
     def save_data(self):
+        # FIXME does not work
         """ Saves all the stored data.
         Can be called as often as wanted, rewrites everything.
         """
