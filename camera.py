@@ -67,10 +67,6 @@ class AbstractCamera(QObject):
     def is_running(self):
         return self._is_running
 
-    @is_running.setter
-    def is_running(self, bool):
-        self._is_running = bool
-
     def snapshot(self):
         raise NotImplementedError
 
@@ -116,13 +112,13 @@ if HAS_VIMBA:
                     self.new_image_available.emit(frame.as_opencv_image())
 
         def stop_streaming(self):
-            if self.is_running:
+            if self._is_running:
                 self._stream_killswitch.set() # set the event the producer is waiting on
                 self._frame_producer_thread.join() # wait for the thread to actually be done
-                self.is_running = False
+                self._is_running = False
 
         def start_streaming(self):
-            self.is_running = True
+            self._is_running = True
             self._stream_killswitch = Event() # the event that will be used to stop the streaming
             self._frame_producer_thread = Thread(target=self._frame_producer) # create the thread object to run the frame producer
             self._frame_producer_thread.start() # actually start the thread to execute the method given as target
@@ -224,16 +220,16 @@ class TestCamera(AbstractCamera):
         self._test_image = cv2.imread('untitled1.png')
 
     def snapshot(self):
-        if not self.is_running:
+        if not self._is_running:
             self.new_image_available.emit(self._test_image.copy())
 
     def start_streaming(self):
-        self.is_running = True
+        self._is_running = True
         self._timer.start()
 
     def stop_streaming(self):
         self._timer.stop()
-        self.is_running = False
+        self._is_running = False
 
     def set_roi(self):
         pass
