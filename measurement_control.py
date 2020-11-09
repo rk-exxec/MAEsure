@@ -15,15 +15,12 @@
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # TODO meas ctl
-#   - werte für magnetschritte und so parse als kommaseparierte liste oder ranges mit start:stop:step oder kombination für ausreißerwerte
-#       -> als custom lineedit?
-#   - form braucht noch edit feld für anfangs und endwerte der parameter nicht nur intervall
-
 #   - zeit immer vor magnetfeld gemessen falls beide gewählt!
 #   - wnn nur magnet, droplet nicht nach jedem punkt wieder neu ausgeben?
 
 from evaluate_droplet import Droplet
 import logging
+import os
 
 import numpy as np
 import time
@@ -39,6 +36,7 @@ if TYPE_CHECKING:
 
 class MeasurementControl(QGroupBox):
     new_datapoint_signal = Signal(float, Droplet, int)
+    save_data_signal = Signal()
     def __init__(self, parent=None) -> None:
         super(MeasurementControl, self).__init__(parent)
         self.ui: Ui_main = self.window().ui
@@ -50,30 +48,58 @@ class MeasurementControl(QGroupBox):
         self._stop_meas_event = Event()
         self._meas_thread = Thread(target=self.measure)
         self._first_show = True
+        self._meas_aborted = True
 
     def showEvent(self, event):
         if self._first_show:
+            self.ui.fileNameEdit.setText(os.path.expanduser('~/Documents/!now!.dat'))
             self.connect_signals()
             self._first_show = False
 
     def connect_signals(self):
         self.new_datapoint_signal.connect(self.ui.dataControl.new_data_point)
+        self.save_data_signal.connect(self.ui.dataControl.save_data)
         self.ui.startMeasBtn.clicked.connect(self.start_measurement)
         self.ui.cancelMeasBtn.clicked.connect(self.stop_measurement)
 
     @Slot()
+    def start_stop_btn_pushed(self):
+        if self.ui.startMeasBtn.text() == "Start":
+            self.ui.startMeasBtn.setText("Stop")
+            self.start_measurement()
+        else:
+            self.stop_measurement()
+            self.ui.startMeasBtn.setText("Start")
+
     def start_measurement(self):
+        if not self.ui.camera_ctl.is_streaming():
+            QMessageBox.information(self, 'MAEsure Information',' Camera is not running!\nPlease start camera first!', QMessageBox.Ok)
+            logging.info('Meas_Start: Camera not running')
+            return
         if self._meas_thread.is_alive():
             QMessageBox.information(self, 'MAEsure Information',' Cannot start measurement while already running!', QMessageBox.Ok)
-            logging.info('Meas_Start: Measurement already running!')
-        self._stop_meas_event.clear()
-        self.read_intervals()
-        self.ui.dataControl.init_data()
+            logging.info('Meas_Start: Measurement already running')
+            return
+        try:
+            self.read_intervals()
+            self.ui.dataControl.init_data()
+        except Exception as ex:
+            QMessageBox.warning(self, 'MAEsure Error', f'An error occured:\n{str(ex)}', QMessageBox.Ok)
+            return
         self._meas_thread = Thread(target=self.measure)
+        self._stop_meas_event.clear()
         self._meas_thread.start()
 
-    @Slot()
     def stop_measurement(self):
+        self._meas_aborted = False
+        self._stop_meas_event.set()
+        self._meas_thread.join(5)
+        if self._meas_thread.is_alive():
+            logging.error('Meas_Stop: Failed to kill measurement thread')
+
+    @Slot()
+    def abort_measurement(self):
+        self._meas_aborted = True
         self._stop_meas_event.set()
         self._meas_thread.join(5)
         if self._meas_thread.is_alive():
@@ -83,7 +109,6 @@ class MeasurementControl(QGroupBox):
         """ Here the measurement process happens
         This fcn will not return until done or aborted
         """
-        # TODO execute in thread!!!
         # init vars
         old_t = 0
 
@@ -110,8 +135,11 @@ class MeasurementControl(QGroupBox):
             #self.ui.pump_control.withdraw()
             if self._stop_meas_event.is_set():
                 break
-
-        self.ui.dataControl.save_data()
+        # still save data, when stopped
+        if not self._meas_aborted:
+            self.save_data_signal.emit()
+        else:
+            self._meas_aborted = True
 
     def read_intervals(self):
         try:
