@@ -95,7 +95,7 @@ def evaluate_droplet(img, y_base) -> Droplet:
     a = maj_ax/2
     b = min_ax/2
 
-    # FIXME diesen fit zum laufen bringen https://scikit-image.org/docs/0.15.x/api/skimage.measure.html
+    # diesen fit vllt zum laufen bringen https://scikit-image.org/docs/0.15.x/api/skimage.measure.html
     #points = edge.reshape(-1,2)
     #points[:,[0,1]] = points[:,[1,0]]
     # ell = EllipseModel()
