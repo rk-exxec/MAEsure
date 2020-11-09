@@ -34,7 +34,6 @@ if TYPE_CHECKING:
 
 # TODO camera control
 #   pause running while setting roi - needs testing
-#   escape not removing rubberband
 
 # TODO cleanup functions
 
@@ -74,6 +73,9 @@ class CameraControl(QGroupBox):
         self.ui.startCamBtn.clicked.connect(self.prev_start_pushed)
         self.ui.setROIBtn.clicked.connect(self.apply_roi)
         self.ui.resetROIBtn.clicked.connect(self.cam.reset_roi)
+
+    def is_streaming(self) -> bool:
+        return self.cam.is_running
 
     @Slot()
     def prev_start_pushed(self, event):

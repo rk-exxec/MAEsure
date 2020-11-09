@@ -101,6 +101,7 @@ class CameraPreview(QOpenGLWidget):
             self.apply_roi()
         elif event.key() == Qt.Key_Escape:
             self._abort_roi()
+            self.update()
 
     def update_image(self, cv_img: np.ndarray, eval: bool = True):
         """ Updates the image_label with a new opencv image"""
