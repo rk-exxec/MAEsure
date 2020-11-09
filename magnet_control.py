@@ -15,9 +15,16 @@
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import functools
+import pyvisa
+import time
+import numpy as np
+import pandas as pd
+from scipy import interpolate
+
 from PySide2.QtCore import QTimer, Signal, Slot, Qt, QThread
 from PySide2.QtGui import QShowEvent
 from PySide2.QtWidgets import QGroupBox, QLabel, QMainWindow, QMessageBox, QPushButton
+from scipy.interpolate.interpolate import interp1d
 
 from light_widget import LightWidget
 from lt_control.lt_control import LT
@@ -45,7 +52,7 @@ class CustomCallbackTimer(QTimer):
         self.timeout.connect(target)
 
 # TODO implement as standalone for Heiko Unold
-# TODO calib
+# TODO calib - test
 # TODO retry failed serial port in timer and update motor status once connected again
 # TODO test new decorator
 
@@ -65,6 +72,9 @@ class MagnetControl(QGroupBox):
         self._invalid = False
         self.wait_movement_thread = WaitMovementThread(self.wait_movement, self.finished_moving)
         self.update_pos_timer = CustomCallbackTimer(self.update_pos, 250)
+        self._calibration_table: pd.DataFrame = None
+        self.mag_to_mm_interp: interpolate.interp1d = None
+        self.mm_to_mag_interp: interpolate.interp1d = None
 
     def __del__(self):
         #self._lt_ctl.close()
@@ -192,8 +202,10 @@ class MagnetControl(QGroupBox):
         with self._lt_ctl:
             if self._mov_unit == 'steps':
                 return self._lt_ctl.get_position()
-            else:
+            elif self._mov_unit == 'mm':
                 return self._lt_ctl.steps_to_mm(self._lt_ctl.get_position())
+            elif self._mov_unit == 'mT':
+                return self.mm_to_mag_interp(self._lt_ctl.steps_to_mm(self._lt_ctl.get_position()))
 
     @Slot()
     def jog_up_start(self):
@@ -215,7 +227,7 @@ class MagnetControl(QGroupBox):
             elif self._mov_unit == 'steps':
                 self._lt_ctl.move_absolute(int(self._mov_dist))
             elif self._mov_unit == 'mT':
-                print('Not implemented!')
+                self._lt_ctl.move_absolute_mm(self.mag_to_mm_interp(self._mov_dist))
         self.lock_movement_buttons()
         self.wait_movement_thread.start()
 
@@ -288,3 +300,47 @@ class MagnetControl(QGroupBox):
 
     def set_status_message(self, text: str = ''):
         self.ui.statusLabel.setText(text)
+
+    def load_calib_file(self, file):
+        self._calibration_table = pd.read_csv(file)
+        self.mag_to_mm_interp = interp1d(self._calibration_table['Field(T)'], self._calibration_table['Distance(m)'])
+        self.mm_to_mag_interp = interp1d(self._calibration_table['Distance(m)'], self._calibration_table['Field(T)'])
+
+    def do_calibration(self):
+        # TODO test this
+        rm = pyvisa.ResourceManager()
+        res = rm.list_resources('GPIB?*INSTR')
+        gm_addr = res[0]
+        gaussmeter = rm.open_resource(gm_addr)
+        gaussmeter.query('AUTO 1')
+        _prefix = {'y': 1e-24, 'z': 1e-21,'a': 1e-18,'f': 1e-15,'p': 1e-12,'n': 1e-9,'u': 1e-6,'m': 1e-3,
+           'c': 1e-2,'d': 1e-1,'k': 1e3,'M': 1e6,'G': 1e9,'T': 1e12,'P': 1e15,'E': 1e18,'Z': 1e21,'Y': 1e24}
+        df = pd.DataFrame(columns=['Steps','Field(T)','Distance(m)'])
+
+        csv_sep = '\t'
+        path = 'G:/Messungen/Magnet Kalibrierung/N42_25_5 Magnete/MagnetCalibration_test_slow.csv'
+
+        with open(path, 'w') as f:
+            #f.write('SEP=' + csv_sep +'\n')
+            #df.to_csv(f, sep = csv_sep)
+            f.write('Steps\tDistance(mm)\tField(T)\n')
+            #print('Steps\tDistance(mm)\tField(T)')
+            for i in np.arange(0, 35, .5):
+                self._lt_ctl.move_absolute_mm(i)
+                time.sleep(1)
+                mult = gaussmeter.query('FIELDM?').strip()
+                if len(mult) == 0:
+                    mult = 1
+                else:
+                    mult = _prefix[mult]
+                tesla = abs(float(gaussmeter.query('FIELD?'))*mult)
+                steps = self._lt_ctl.get_position()
+                #df = df.append(pd.DataFrame([[steps, self._lt_ctl.steps_to_mm(steps), tesla]]))
+                #df.at[i,'Steps'] = steps
+                #df.at[i,'Field(T)'] = tesla
+                #df.at[i,'Distance(m)'] = steps*(1.25e-3/1600)
+                #print('{0:d}\t{1:.3E} mm\t{2:.3E} T'.format(steps, self._lt_ctl.steps_to_mm(steps), tesla))
+                f.write('{0:d}\t{1:.3E}\t{2:.3E}\n'.format(steps, self._lt_ctl.steps_to_mm(steps), tesla))
+        self.load_calib_file(path)
+        self._lt_ctl.move_absolute(0)
+        gaussmeter.close()
