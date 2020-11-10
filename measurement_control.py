@@ -48,7 +48,7 @@ class MeasurementControl(QGroupBox):
         self._stop_meas_event = Event()
         self._meas_thread = Thread(target=self.measure)
         self._first_show = True
-        self._meas_aborted = True
+        self._meas_aborted = False
 
     def showEvent(self, event):
         if self._first_show:
