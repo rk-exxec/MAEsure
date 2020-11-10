@@ -35,8 +35,6 @@ if TYPE_CHECKING:
 # TODO camera control
 #   pause running while setting roi - needs testing
 
-# TODO cleanup functions
-
 USE_TEST_IMAGE = False
 
 class CameraControl(QGroupBox):

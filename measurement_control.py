@@ -142,6 +142,7 @@ class MeasurementControl(QGroupBox):
             self._meas_aborted = True
 
     def read_intervals(self):
+        """ Try to read the time and magnet intervals """
         try:
             if self.ui.sweepTimeChk:
                 self._time_interval = self.parse_intervals(self.ui.timeInt.text())

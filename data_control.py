@@ -55,6 +55,7 @@ class DataControl(QTableWidget):
 
     @Slot(float, Droplet, int)
     def new_data_point(self, target_time:float, droplet:Droplet, cycle:int):
+        """ add new datapoint to dataframe and invoke redrawing of table"""
         if self._is_time_invalid: self.init_time()
         self.data = self.data.append(pd.DataFrame([[time.monotonic() - self._time, cycle, droplet.angle_l, droplet.angle_r, droplet.base_diam, 0.0]], columns=self._header))
         thr = threading.Thread(target=self.redraw_table)
@@ -62,6 +63,7 @@ class DataControl(QTableWidget):
         # self.redraw_table()
 
     def redraw_table(self):
+        """ Redraw table with contents of dataframe"""
         self._block_painter = True
         self.setHorizontalHeaderLabels(self._header)
         self.setRowCount(self.data.shape[0])
@@ -79,6 +81,8 @@ class DataControl(QTableWidget):
         #self.viewport().update()
 
     def export_data_csv(self, filename):
+        """ Export data as csv with selected separator
+        """
         sep = self._seps[self.ui.sepComb.currentIndex()]
         with open(filename, 'w', newline='') as f:
             if self.data is not None:
@@ -89,6 +93,9 @@ class DataControl(QTableWidget):
                 logging.warning('data_ctl:cannot convert empty dataframe to csv')
 
     def select_filename(self):
+        """ Opens Save As... dialog to determine file save location.
+        Displays filename in line edit
+        """
         file, filter = QFileDialog.getSaveFileName(self, 'Save Measurement Data', f'{self._default_dir}/!now!.dat' ,'Data Files (*.dat *.csv)')
         if file == '': return
         self._default_dir = os.path.dirname(file)
@@ -107,22 +114,30 @@ class DataControl(QTableWidget):
         open(self._cur_filename, 'w').close()
 
     def save_data(self):
-        # FIXME does not work
         """ Saves all the stored data.
         Can be called as often as wanted, rewrites everything.
         """
         self.export_data_csv(self._cur_filename)
 
     def import_data_csv(self, filename):
+        """ Import data and display it.
+        Can be used to append measurement to exiting data
+        """
         with open(filename, 'r') as f:
             self.data = pd.read_csv(f, sep='\t')
         self.redraw_table()
 
     def init_time(self):
+        """ Initialize time variable to current time if invalid.
+        """
         self._time = time.monotonic()
         self._is_time_invalid = False
 
     def init_data(self):
+        """ Initialize the date before measurement.
+        Create new dataframe with column headers and create new file with current filename.
+        Invalidate time variable.
+        """
         self.data = pd.DataFrame(columns=self._header)
         self.create_file()
         self._is_time_invalid = True

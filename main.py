@@ -17,9 +17,42 @@
 import sys
 import os
 import pydevd
+import atexit
 import logging
-from PySide2.QtGui import QPixmap, Qt
-from PySide2.QtWidgets import QApplication, QSplashScreen
+from PySide2.QtGui import QResizeEvent, QPixmap
+from PySide2.QtWidgets import QMainWindow, QApplication, QSplashScreen
+
+from ui_form import Ui_main
+
+from camera_control import CameraControl
+from magnet_control import MagnetControl
+# from pump_control import PumpControl
+from data_control import DataControl
+#from measurement_control import MeasurementControl
+from light_widget import LightWidget
+
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super(MainWindow, self).__init__()
+        self.ui = Ui_main()
+        self.ui.setupUi(self)
+        atexit.register(self.cleanup)
+        self.ui.statusbar.showMessage('Welcome!', timeout=5)
+        self._size = self.size()
+        self.show()
+
+    def __del__(self):
+        del self.ui.camera_prev
+
+    def resizeEvent(self, event: QResizeEvent):
+        # prevent resizing of window
+        self.setFixedSize(self._size)
+
+    def closeEvent(self, event):
+        self.ui.camera_prev.closeEvent(event)
+
+    def cleanup(self):
+        del self
 
 if __name__ == "__main__":
     os.system('pyside2-uic -o ui_form.py qt_resources/form.ui')
@@ -31,7 +64,6 @@ if __name__ == "__main__":
     splash.setMask(pic.mask())
     splash.show()
     app.processEvents()
-    from main_window import MainWindow
     widget = MainWindow()
     #widget.show()
     splash.finish(widget)

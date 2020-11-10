@@ -28,36 +28,47 @@ except Exception:
     HAS_VIMBA = False
 
 class FrameRateCounter:
+    """ Framerate counter with rolling average filter """
     def __init__(self, length=5):
+        # lenght of filter
         self.length = length
         self.buffer = [50.0]*length
         self.counter = 0
         self.last_timestamp = 0
 
     def _rotate(self):
+        # increase current index by 1 or loop back to 0
         if self.counter == (self.length - 1):
             self.counter = 0
         else:
             self.counter += 1
 
     def _put(self, value):
+        # add value to current line then rotate index
         self.buffer[self.counter] = value
         self._rotate()
 
     @staticmethod
     def _calc_frametime(timestamp_new, timestamp_old):
+        # Calculate frametime from camera timestamps (in ns)
         return (timestamp_new - timestamp_old)*1e-9
 
     @property
     def average_fps(self) -> float:
+        """ Return the averaged fps """
         return sum(self.buffer) / self.length
 
     def add_new_timesstamp(self, timestamp):
+        """ Add new poi to buffer
+        Framtime is calculated from timestamp then added to buffer.
+        """
         self._put(1 / self._calc_frametime(timestamp, self.last_timestamp))
         self.last_timestamp = timestamp
 
 
 class AbstractCamera(QObject):
+    """ Interface class for implementing camera objects for MAEsure """
+    # signal to emit when a new image is available
     new_image_available = Signal(np.ndarray)
     def __init__(self):
         super(AbstractCamera, self).__init__()
@@ -68,21 +79,29 @@ class AbstractCamera(QObject):
         return self._is_running
 
     def snapshot(self):
+        """ record a single image and emit signal """
         raise NotImplementedError
 
     def start_streaming(self):
+        """ start streaming """
         raise NotImplementedError
 
     def stop_streaming(self):
         raise NotImplementedError
 
-    def set_roi(self):
+    def set_roi(self, x, y, w, h):
+        """ set the region of interest on the cam
+        :param x,y: x,y of ROI in image coordinates
+        :param w,h: width and height of ROI
+        """
         raise NotImplementedError
 
     def reset_roi(self):
+        """ Reset ROI to full size """
         raise NotImplementedError
 
     def get_framerate(self):
+        """ return current FPS of camera"""
         pass #raise NotImplementedError
 
 if HAS_VIMBA:
@@ -231,7 +250,7 @@ class TestCamera(AbstractCamera):
         self._timer.stop()
         self._is_running = False
 
-    def set_roi(self):
+    def set_roi(self,x,y,w,h):
         pass
 
     def reset_roi(self):
