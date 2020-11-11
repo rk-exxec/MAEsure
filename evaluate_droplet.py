@@ -62,7 +62,13 @@ class Droplet():
             return 'No droplet!'
 
 def evaluate_droplet(img, y_base) -> Droplet:
+    """ Analyze an image for a droplet and determine the contact angles
+    :param img: the image to be evaluated as np.ndarray
+    :param y_base: the y coordinate of the surface the droplet sits on
+    :returns: a Droplet() object with all the informations
+    """
     drplt = Droplet()
+    # crop img from baseline down (contains no useful information)
     crop_img = img[:y_base,:]
     shape = img.shape
     height = shape[0]
@@ -74,12 +80,14 @@ def evaluate_droplet(img, y_base) -> Droplet:
     #thresh_low = 0.5*thresh_high
 
     # values only for 8bit images!
-    bw_edges = cv2.Canny(crop_img, 76, 179)
-    contours, hierarchy = cv2.findContours(bw_edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
 
+    # apply canny filter to image
+    bw_edges = cv2.Canny(crop_img, 76, 179)
+
+    #find all contours in image and select the "longest"
+    contours, hierarchy = cv2.findContours(bw_edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
     if len(contours) == 0:
         raise ValueError('No contours found!')
-
     edge = max(contours, key=cv2.contourArea)
 
     if USE_GPU:
@@ -90,6 +98,7 @@ def evaluate_droplet(img, y_base) -> Droplet:
             # img = cv2.drawContours(img,cntrs,-1,(100,100,255),2)
             img = cv2.drawContours(img,edge,-1,(255,0,0),2)
 
+    # apply ellipse fitting algorithm to droplet
     (x0,y0), (maj_ax,min_ax), phi_deg = cv2.fitEllipse(edge)
     phi = radians(phi_deg)
     a = maj_ax/2
@@ -109,22 +118,24 @@ def evaluate_droplet(img, y_base) -> Droplet:
         img = cv2.ellipse(img, (int(round(x0)),int(round(y0))), (int(round(a)),int(round(b))), int(round(phi*180/pi)), 0, 360, (255,0,255), thickness=1, lineType=cv2.LINE_AA)
         #img = cv2.ellipse(img, (int(round(x0)),int(round(y0))), (int(round(a)),int(round(b))), 0, 0, 360, (0,0,255), thickness=1, lineType=cv2.LINE_AA)
 
+    # calöculate intersections of ellipse with baseline
     intersection = calc_intersection_line_ellipse((x0,y0,a,b,phi),(0,y_base))
     if intersection is None:
         raise ValueError('No intersections found')
-
     x_int_l = min(intersection)
     x_int_r = max(intersection)
 
     foc_len = sqrt(abs(a**2 - b**2))
 
-    # calc slope and angle of tangent
+    # calc slope and angle of tangent at intersections
     m_t_l = calc_slope_of_ellipse((x0,y0,a,b,phi), x_int_l, y_base)
     m_t_r = calc_slope_of_ellipse((x0,y0,a,b,phi), x_int_r, y_base)
 
+    # calc angle of inclination of teangents
     angle_l = pi - atan2(m_t_l,1)
     angle_r = atan2(m_t_r,1) + pi
 
+    # write values to droplet object
     drplt.angle_l = angle_l
     drplt.angle_r = angle_r
     drplt.maj = maj_ax
@@ -144,6 +155,7 @@ def evaluate_droplet(img, y_base) -> Droplet:
     drplt.is_valid = True
 
     if DEBUG & DBG_DRAW_TAN_ANGLE:
+        # painting
         y_int = int(round(y_base))
         img = cv2.line(img, (int(round(x_int_l - (y_int/m_t_l))), 0), (int(round(x_int_l + ((height - y_int)/m_t_l))), int(round(height))), (255,0,255), thickness=1, lineType=cv2.LINE_AA)
         img = cv2.line(img, (int(round(x_int_r - (y_int/m_t_r))), 0), (int(round(x_int_r + ((height - y_int)/m_t_r))), int(round(height))), (255,0,255), thickness=1, lineType=cv2.LINE_AA)
@@ -205,23 +217,6 @@ def calc_slope_of_ellipse(ellipse_pars, x, y):
     m_tan = - (tan_a_r / tan_b_r)
 
     return m_tan
-
-def line(p1, p2):
-    A = (p1[1] - p2[1])
-    B = (p2[0] - p1[0])
-    C = (p1[0]*p2[1] - p2[0]*p1[1])
-    return A, B, -C
-
-def _intersection(L1, L2):
-    D  = L1[0] * L2[1] - L1[1] * L2[0]
-    Dx = L1[2] * L2[1] - L1[1] * L2[2]
-    Dy = L1[0] * L2[2] - L1[2] * L2[0]
-    if D != 0:
-        x = Dx / D
-        y = Dy / D
-        return x,y
-    else:
-        return False
 
 if __name__ == "__main__":
     im = cv2.imread('untitled1.png')

@@ -51,30 +51,38 @@ class PumpControl(QGroupBox):
         self.ui.stopPumpBtn.clicked.connect(self.stop)
 
     def fill(self):
-        # caution! only use if limitswitches are properly setup to avoid damage to syringe
+        """ Pump will fill the current syringe to max level
+        Caution! only use if limitswitches are properly setup to avoid damage to syringe
+        """
         self._pump.settargetvolume(1000)
         self._pump.withdraw()
 
     def empty(self):
-        # caution! only use if limitswitches are properly setup to avoid damage to syringe
+        """ Pump will empty syringe completely
+        Caution! only use if limitswitches are properly setup to avoid damage to syringe
+        """
         self._pump.settargetvolume(1000)
         self._pump.infuse()
 
     def infuse(self):
+        """ Pump will move plunger down until specified volume is displaced """
         amount = self.ui.amountSpinBox.value()
         self._pump.settargetvolume(amount)
         self._pump.infuse()
 
     def withdraw(self):
+        """ Pump will move plunge up until specified volume is gained """
         amount = self.ui.amountSpinBox.value()
         self._pump.settargetvolume(amount)
         self._pump.withdraw()
 
     def stop(self):
+        """ Immediately stop the pump """
         self._pump.stop()
 
     @staticmethod
     def find_com_port() -> str:
+        """ find the comport the pump is connected to """
         lst = comports()
         for port in lst:
             # FIXME apply proper name when pump arrives

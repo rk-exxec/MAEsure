@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     from ui_form import Ui_main
 
 class WaitMovementThread(QThread):
+    """ Thread with callback function on exit """
     def __init__(self, target, slotOnFinished=None):
         super(WaitMovementThread, self).__init__()
         self.target = target
@@ -45,6 +46,7 @@ class WaitMovementThread(QThread):
         self.target(*args, **kwargs)
 
 class CustomCallbackTimer(QTimer):
+    """ Timer with custom callback function """
     def __init__(self, target, interval=500):
         super(CustomCallbackTimer, self).__init__()
         self.setInterval(interval)
@@ -90,10 +92,11 @@ class MagnetControl(QGroupBox):
         self.ui.stopBtn.clicked.connect(self.motor_stop)
         self.ui.posSpinBox.valueChanged.connect(self.spin_box_val_changed) #lambda pos: self.magnet_ctl.set_mov_dist(int(pos)) or self.ui.posSlider.setValue(int(pos))
         self.ui.unitComboBox.currentTextChanged.connect(self.mag_mov_unit_changed)
-        self.ui.posSlider.sliderMoved.connect(self.slider_moved) # lambda pos: self.ui.posLineEdit.setText(str(pos)) or self.ui.posSpinBox.setValue(float(pos))
+        self.ui.posSlider.sliderMoved.connect(self.slider_moved) # only fires with user input lambda pos: self.ui.posLineEdit.setText(str(pos)) or self.ui.posSpinBox.setValue(float(pos))
         self.ui.softRampChk.stateChanged.connect(self.change_ramp_type)
 
     def OnlyIfPortActive(func):
+        """ Decorator that only executes fcn if serial port is open, otherwise it fails silently """
         def null(*args, **kwargs):
             pass
 
@@ -115,7 +118,7 @@ class MagnetControl(QGroupBox):
 
     @OnlyIfPortActive
     def update_pos(self):
-        # update spin box with current pos
+        """ update spin box with current pos"""
         try:
             pos = float(self.get_position())
         except Exception as toe:
@@ -124,6 +127,7 @@ class MagnetControl(QGroupBox):
 
     @OnlyIfPortActive
     def update_motor_status(self):
+        """ Get motor status and display it """
         with self._lt_ctl:
             try:
                 if not self._lt_ctl.is_referenced():
@@ -143,6 +147,7 @@ class MagnetControl(QGroupBox):
 
     @Slot(str)
     def mag_mov_unit_changed(self, unit: str):
+        """ update slider and spin box if the movement units has changes """
         self._mov_unit = unit.strip()
         if unit == 'mm':
             self.ui.posSlider.setMaximum(3906) #max mm are 39.0625
@@ -157,6 +162,7 @@ class MagnetControl(QGroupBox):
 
     @Slot(float)
     def spin_box_val_changed(self, value: float):
+        """ update internal variable and slider if spin box value changed """
         if self.ui.unitComboBox.currentText() == 'steps':
             self._mov_dist = int(value)
             self.ui.posSlider.setValue(int(value))
@@ -166,6 +172,7 @@ class MagnetControl(QGroupBox):
 
     @Slot(int)
     def slider_moved(self, value: int):
+        """ update spin box if slider moved """
         if self.ui.unitComboBox.currentText() == 'steps':
             self.ui.posSpinBox.setValue(float(value))
         elif self.ui.unitComboBox.currentText() == 'mm':
@@ -174,6 +181,7 @@ class MagnetControl(QGroupBox):
     @Slot(int)
     @OnlyIfPortActive
     def change_ramp_type(self, state: Qt.CheckState):
+        """ set motor brake and accel ramp on check changed """
         if state == Qt.Checked:
             with self._lt_ctl:
                 self._lt_ctl.set_soft_ramp()
@@ -185,6 +193,7 @@ class MagnetControl(QGroupBox):
 
 
     def do_timeout_dialog(self) -> bool:
+        """ display a dialog if the connection timed out """
         msgBox = QMessageBox()
         msgBox.setText("The connection timed out")
         msgBox.setInformativeText("Could not connect ot the stepper driver!")
@@ -199,6 +208,7 @@ class MagnetControl(QGroupBox):
             return False
 
     def get_position(self):
+        """ return the motor position in the current unit """
         with self._lt_ctl:
             if self._mov_unit == 'steps':
                 return self._lt_ctl.get_position()
@@ -209,18 +219,21 @@ class MagnetControl(QGroupBox):
 
     @Slot()
     def jog_up_start(self):
+        """ start motor movement away from motor """
         with self._lt_ctl:
             self._lt_ctl.move_inf_start(0)
         self.update_pos_timer.start()
 
     @Slot()
     def jog_down_start(self):
+        """ start motor movement towards motor """
         with self._lt_ctl:
             self._lt_ctl.move_inf_start(1)
         self.update_pos_timer.start()
 
     @Slot()
     def move_pos(self):
+        """ move motor to specified position """
         with self._lt_ctl:
             if self._mov_unit == 'mm':
                 self._lt_ctl.move_absolute_mm(self._mov_dist)
@@ -233,6 +246,7 @@ class MagnetControl(QGroupBox):
 
     @Slot()
     def motor_stop(self):
+        """ stop motor immediately"""
         with self._lt_ctl:
             self._lt_ctl.stop()
         if self.update_pos_timer.isActive():
@@ -242,6 +256,7 @@ class MagnetControl(QGroupBox):
 
     @Slot()
     def motor_stop_soft(self):
+        """ stops motor with brake ramp """
         with self._lt_ctl:
             self._lt_ctl.stop_soft()
         if self.update_pos_timer.isActive():
@@ -250,10 +265,12 @@ class MagnetControl(QGroupBox):
         self.wait_movement_thread.start()
 
     def wait_movement(self):
+        """ wait unitl movement stops """
         with self._lt_ctl:
             self._lt_ctl.wait_movement()
 
     def finished_moving(self):
+        """ update ui position displays when movement finishes """
         # callback for when the motor stops moving (only absolute and relative, not jogging)
         self.update_pos()
         self.update_motor_status()
@@ -261,6 +278,7 @@ class MagnetControl(QGroupBox):
 
     @Slot()
     def reference(self):
+        """ execute referencing process """
         self.ui.lamp.set_yellow()
         with self._lt_ctl:
             self._lt_ctl.do_referencing()
@@ -268,6 +286,7 @@ class MagnetControl(QGroupBox):
         self.wait_movement_thread.start()
 
     def is_driver_ready(self) -> bool:
+        """ check if the motor drive is ready for movement """
         with self._lt_ctl:
             return self._lt_ctl.test_connection()
 
@@ -302,11 +321,13 @@ class MagnetControl(QGroupBox):
         self.ui.statusLabel.setText(text)
 
     def load_calib_file(self, file):
+        """ load magnet to mm calibration file """
         self._calibration_table = pd.read_csv(file)
         self.mag_to_mm_interp = interp1d(self._calibration_table['Field(T)'], self._calibration_table['Distance(m)'])
         self.mm_to_mag_interp = interp1d(self._calibration_table['Distance(m)'], self._calibration_table['Field(T)'])
 
     def do_calibration(self):
+        """ do a magnet vs mm calibration """
         # TODO test this
         rm = pyvisa.ResourceManager()
         res = rm.list_resources('GPIB?*INSTR')

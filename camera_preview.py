@@ -40,7 +40,8 @@ class CameraPreview(QOpenGLWidget):
         self._droplet = Droplet()
 
     def prepare(self):
-        self._baseline.y_level= self.mapFromImage(y=250)
+        # preset the baseline to 250 which is roughly base of the test image droplet
+        self._baseline.y_level = self.mapFromImage(y=250)
 
     def paintGL(self):#, event: QPaintEvent):
         # completely override super.paintEvent() to use double buffering
@@ -66,6 +67,7 @@ class CameraPreview(QOpenGLWidget):
                 transform.translate(offset_x, offset_y)
                 transform.scale(scale_x, scale_y)
                 db_painter.setTransform(transform)
+                # drawing tangents and baseline
                 db_painter.drawLine(*self._droplet.line_l)
                 db_painter.drawLine(*self._droplet.line_r)
                 db_painter.drawLine(*self._droplet.int_l, *self._droplet.int_r)
@@ -83,6 +85,7 @@ class CameraPreview(QOpenGLWidget):
 
     def mousePressEvent(self,event):
         if event.button() == Qt.LeftButton:
+            # create new rubberband rectangle
             self.roi_origin = QPoint(event.pos())
             self._roi_rubber_band.setGeometry(QRect(self.roi_origin, QSize()))
             self._roi_rubber_band.show()
@@ -91,6 +94,7 @@ class CameraPreview(QOpenGLWidget):
         if event.buttons() == Qt.NoButton:
             pass
         elif event.buttons() == Qt.LeftButton:
+            # resize rubberband while mouse is moving
             if not self.roi_origin.isNull():
                 self._roi_rubber_band.setGeometry(QRect(self.roi_origin, event.pos()).normalized())
         elif event.buttons() == Qt.RightButton:
@@ -98,8 +102,10 @@ class CameraPreview(QOpenGLWidget):
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Enter:
-            self.apply_roi()
+            # apply the ROI set by the rubberband
+            self.parent().apply_roi()
         elif event.key() == Qt.Key_Escape:
+            # hide rubberband
             self._abort_roi()
             self.update()
 
@@ -135,6 +141,7 @@ class CameraPreview(QOpenGLWidget):
         return QPixmap.fromImage(p)
 
     def map_droplet_drawing_vals(self, droplet: Droplet):
+        """ convert the droplet values from image coords into pixmap coords and values better for drawing """
         tangent_l = tuple(map(lambda x: self.mapFromImage(*x), droplet.line_l))
         tangent_r = tuple(map(lambda x: self.mapFromImage(*x), droplet.line_r))
         center = self.mapFromImage(*droplet.center)
@@ -187,26 +194,32 @@ class CameraPreview(QOpenGLWidget):
         return scale_x, scale_y, offset_x, offset_y
 
     def show_baseline(self):
+        """ Show the baseline selector """
         self._baseline.show()
 
     def hide_baseline(self):
+        """ Hide the baseline selector """
         self._baseline.hide()
 
     def hide_rubberband(self):
+        """ Hide the rubberband """
         self._roi_rubber_band.hide()
 
     def get_baseline_y(self) -> int:
+        """ return the y value the baseline is on in image coordinates """
         y_base = self._baseline.y_level
         y = self.mapToImage(y=y_base)
         return y
 
     def set_new_baseline_constraints(self):
+        """ set the mina nd max y value for the baseline """
         pix_size = self._pixmap.size()
         offset_y = int(round(abs(pix_size.height() - self.height())/2))
         self._baseline.max_level = pix_size.height() + offset_y
         self._baseline.min_level = offset_y
 
     def get_roi(self):
+        """ return the ROI selected by the rubberband """
         x,y = self._roi_rubber_band.mapToParent(QPoint(0,0)).toTuple()
         w,h = self._roi_rubber_band.size().toTuple()
         self.hide_rubberband()

@@ -38,11 +38,13 @@ if TYPE_CHECKING:
 USE_TEST_IMAGE = False
 
 class CameraControl(QGroupBox):
+    """ Class to control camera preview, camera object and evaluate button inputs """
     def __init__(self, parent=None):
         super(CameraControl, self).__init__(parent)
         self.ui: Ui_main = self.window().ui
         self._first_show = True # whether form is shown for the first time
-        self.cam: AbstractCamera = None
+        self.cam: AbstractCamera = None # AbstractCamera as interface class for different cameras
+        # if vimba software is installed
         if HAS_VIMBA and not USE_TEST_IMAGE:
             self.cam = VimbaCamera()
         else:
@@ -67,12 +69,13 @@ class CameraControl(QGroupBox):
         self.cam.stop_streaming()
 
     def connect_signals(self):
-        # Camera
+        # button signals
         self.ui.startCamBtn.clicked.connect(self.prev_start_pushed)
         self.ui.setROIBtn.clicked.connect(self.apply_roi)
         self.ui.resetROIBtn.clicked.connect(self.cam.reset_roi)
 
     def is_streaming(self) -> bool:
+        """ Return whether camera object is aquiring frames """
         return self.cam.is_running
 
     @Slot()
@@ -90,11 +93,13 @@ class CameraControl(QGroupBox):
 
     @Slot()
     def apply_roi(self):
+        """ Apply the ROI selected by the rubberband rectangle """
         x,y,h,w = self.ui.camera_prev.get_roi()
         self.cam.set_roi(x,y,w,h)
 
     @Slot(np.ndarray)
     def update_image(self, cv_img: np.ndarray):
+        """ gets called when a new image is available from the camera """
         if self.cam.is_running:
             eval = True
             self.ui.frameInfoLbl.setText('Running | FPS: ' + str(self.cam.get_framerate()))
