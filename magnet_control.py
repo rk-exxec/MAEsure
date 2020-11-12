@@ -71,6 +71,7 @@ class MagnetControl(QGroupBox):
         self._shown = False
         self._mov_dist: float = 0
         self._mov_unit: str = 'steps'
+        self._old_unit: str = 'steps'
         self._invalid = False
         self.wait_movement_thread = WaitMovementThread(self.wait_movement, self.finished_moving)
         self.update_pos_timer = CustomCallbackTimer(self.update_pos, 250)
@@ -114,6 +115,11 @@ class MagnetControl(QGroupBox):
             self.update_motor_status()
             self.update_pos()
             self.change_ramp_type(self.ui.softRampChk.isChecked())
+            try:
+                self.load_calib_file('./MagnetCalibration.csv')
+                #self.unlock_mag_unit()
+            except Exception as ex:
+                self.lock_mag_unit()
             self._shown = True
 
     @OnlyIfPortActive
@@ -153,12 +159,29 @@ class MagnetControl(QGroupBox):
             self.ui.posSlider.setMaximum(3906) #max mm are 39.0625
             self.ui.posSlider.setTickInterval(100)
             self.ui.posSpinBox.setDecimals(2)
-            self.ui.posSpinBox.setValue(self._lt_ctl.steps_to_mm(self.ui.posSpinBox.value()))
+            if self._old_unit == 'steps':
+                self.ui.posSpinBox.setValue(self._lt_ctl.steps_to_mm(self.ui.posSpinBox.value()))
+            elif self._old_unit == 'mT':
+                #/1000 bc interpolation works with tesla, while we work with mT
+                self.ui.posSpinBox.setValue(self.mag_to_mm_interp(self.ui.posSpinBox.value()/1000))
         elif unit == 'steps':
             self.ui.posSlider.setMaximum(50000)
             self.ui.posSlider.setTickInterval(1000)
             self.ui.posSpinBox.setDecimals(0)
-            self.ui.posSpinBox.setValue(self._lt_ctl.mm_to_steps(self.ui.posSpinBox.value()))
+            if self._old_unit == 'mm':
+                self.ui.posSpinBox.setValue(self._lt_ctl.mm_to_steps(self.ui.posSpinBox.value()))
+            elif self._old_unit == 'mT':
+                self.ui.posSpinBox.setValue(self._lt_ctl.mm_to_steps(self.mag_to_mm_interp(self.ui.posSpinBox.value()/1000)))
+        elif unit == 'mT':
+            self.ui.posSlider.setMaximum(max(self._calibration_table['Field(T)'])*1000)
+            self.ui.posSlider.setTickInterval(10)
+            self.ui.posSpinBox.setDecimals(0)
+            if self._old_unit == 'mm':
+                self.ui.posSpinBox.setValue(self.mm_to_mag_interp(self.ui.posSpinBox.value())*1000)
+            elif self._old_unit == 'steps':
+                self.ui.posSpinBox.setValue(self.mm_to_mag_interp(self._lt_ctl.steps_to_mm(self.ui.posSpinBox.value()))*1000)
+
+        self._old_unit = self._mov_unit
 
     @Slot(float)
     def spin_box_val_changed(self, value: float):
@@ -169,6 +192,9 @@ class MagnetControl(QGroupBox):
         elif self.ui.unitComboBox.currentText() == 'mm':
             self._mov_dist = value
             self.ui.posSlider.setValue(int(value*100))
+        elif self.ui.unitComboBox.currentText() == 'mT':
+            self._mov_dist = value
+            self.ui.posSlider.setValue(int(value))
 
     @Slot(int)
     def slider_moved(self, value: int):
@@ -177,6 +203,8 @@ class MagnetControl(QGroupBox):
             self.ui.posSpinBox.setValue(float(value))
         elif self.ui.unitComboBox.currentText() == 'mm':
             self.ui.posSpinBox.setValue(float(value/100))
+        elif self.ui.unitComboBox.currentText() == 'mT':
+            self.ui.posSpinBox.setValue(float(value))
 
     @Slot(int)
     @OnlyIfPortActive
@@ -215,7 +243,7 @@ class MagnetControl(QGroupBox):
             elif self._mov_unit == 'mm':
                 return self._lt_ctl.steps_to_mm(self._lt_ctl.get_position())
             elif self._mov_unit == 'mT':
-                return self.mm_to_mag_interp(self._lt_ctl.steps_to_mm(self._lt_ctl.get_position()))
+                return self.mm_to_mag_interp(self._lt_ctl.steps_to_mm(self._lt_ctl.get_position()))*1000
 
     @Slot()
     def jog_up_start(self):
@@ -240,7 +268,7 @@ class MagnetControl(QGroupBox):
             elif self._mov_unit == 'steps':
                 self._lt_ctl.move_absolute(int(self._mov_dist))
             elif self._mov_unit == 'mT':
-                self._lt_ctl.move_absolute_mm(self.mag_to_mm_interp(self._mov_dist))
+                self._lt_ctl.move_absolute_mm(self.mag_to_mm_interp(self._mov_dist/1000))
         self.lock_movement_buttons()
         self.wait_movement_thread.start()
 
@@ -290,7 +318,17 @@ class MagnetControl(QGroupBox):
         with self._lt_ctl:
             return self._lt_ctl.test_connection()
 
+    def unlock_mag_unit(self):
+        """ mag unit is now available """
+        self.ui.unitComboBox.addItem('mT')
+
+    def lock_mag_unit(self):
+        """ mag unit is not available """
+        self.ui.unitComboBox.clear()
+        self.ui.unitComboBox.addItems(['steps','mm'])
+
     def lock_movement_buttons(self):
+        """ lock buttons if movemnt shouldn't be possible """
         self.ui.jogUpBtn.setEnabled(False)
         self.ui.jogDownBtn.setEnabled(False)
         self.ui.jogUpBtn.setEnabled(False)
@@ -318,6 +356,7 @@ class MagnetControl(QGroupBox):
         self.ui.softRampChk.setEnabled(True)
 
     def set_status_message(self, text: str = ''):
+        """ set the message that is displayed on the motor control label """
         self.ui.statusLabel.setText(text)
 
     def load_calib_file(self, file):
@@ -339,7 +378,7 @@ class MagnetControl(QGroupBox):
         df = pd.DataFrame(columns=['Steps','Field(T)','Distance(m)'])
 
         csv_sep = '\t'
-        path = 'G:/Messungen/Magnet Kalibrierung/N42_25_5 Magnete/MagnetCalibration_test_slow.csv'
+        path = './MagnetCalibration.csv'
 
         with open(path, 'w') as f:
             #f.write('SEP=' + csv_sep +'\n')
@@ -363,5 +402,6 @@ class MagnetControl(QGroupBox):
                 #print('{0:d}\t{1:.3E} mm\t{2:.3E} T'.format(steps, self._lt_ctl.steps_to_mm(steps), tesla))
                 f.write('{0:d}\t{1:.3E}\t{2:.3E}\n'.format(steps, self._lt_ctl.steps_to_mm(steps), tesla))
         self.load_calib_file(path)
-        self._lt_ctl.move_absolute(0)
+        self.unlock_mag_unit()
+        #self._lt_ctl.move_absolute(0)
         gaussmeter.close()
