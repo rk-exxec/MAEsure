@@ -16,15 +16,14 @@
 
 # Droplet eval function
 
-from math import asin, copysign, cos, sin, atan, pi, sqrt, tan, atan2, radians, degrees
+from math import cos, sin, pi, sqrt, atan2, radians, degrees
 import cv2
-from numpy.linalg import eig, inv, svd
 import numpy as np
 from skimage.measure import EllipseModel
 DBG_SHOW_CONTOURS = 0x1
 DBG_DRAW_ELLIPSE = 0x2
 DBG_DRAW_TAN_ANGLE = 0x4
-DEBUG = DBG_SHOW_CONTOURS | DBG_DRAW_ELLIPSE
+DEBUG = DBG_SHOW_CONTOURS
 
 USE_GPU = True
 class Droplet():
@@ -131,7 +130,7 @@ def evaluate_droplet(img, y_base) -> Droplet:
     m_t_l = calc_slope_of_ellipse((x0,y0,a,b,phi), x_int_l, y_base)
     m_t_r = calc_slope_of_ellipse((x0,y0,a,b,phi), x_int_r, y_base)
 
-    # calc angle of inclination of teangents
+    # calc angle of inclination of tangents
     angle_l = pi - atan2(m_t_l,1)
     angle_r = atan2(m_t_r,1) + pi
 

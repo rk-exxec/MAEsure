@@ -27,6 +27,8 @@ if TYPE_CHECKING:
 
 # TODO Pump control https://www.hugo-sachs.de/media/manuals/Product%20Manuals/702220,%202225%20Microliter%20Manual.pdf
 # TODO error handling when no pump available!
+# TODO put settings in extra dialog?
+
 class PumpControl(QGroupBox):
     def __init__(self, parent=None) -> None:
         super(PumpControl, self).__init__(parent)
@@ -37,8 +39,8 @@ class PumpControl(QGroupBox):
             chain = pumpy.Chain(port)
             self._pump = pumpy.PHD2000(chain, name='Drplt_Pump')
             # FIXME syringe properties
-            self._pump.setdiameter(1)
-            self._pump.setflowrate(120) # 2ul / s
+            self._pump.setdiameter(self.ui.diamSpinBox.value())
+            self._pump.setflowrate(self.ui.flowSpinBox.value()) # 2ul / s
         except Exception as ex:
             self._pump = None
             logging.warning('Pump Error:' + str(ex))
@@ -49,6 +51,7 @@ class PumpControl(QGroupBox):
         self.ui.fillBtn.clicked.connect(self.fill)
         self.ui.emptyBtn.clicked.connect(self.empty)
         self.ui.stopPumpBtn.clicked.connect(self.stop)
+        self.ui.syringeApplyBtn.clicked.connect(self.apply_settings)
 
     def fill(self):
         """ Pump will fill the current syringe to max level
@@ -75,6 +78,11 @@ class PumpControl(QGroupBox):
         amount = self.ui.amountSpinBox.value()
         self._pump.settargetvolume(amount)
         self._pump.withdraw()
+
+    def apply_settings(self):
+        """ read the values from the ui and apply them to the pump """
+        self._pump.setdiameter(self.ui.diamSpinBox.value())
+        self._pump.setflowrate(self.ui.flowSpinBox.value()) # 2ul / s
 
     def stop(self):
         """ Immediately stop the pump """
