@@ -137,9 +137,9 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>150</y>
+       <y>170</y>
        <width>81</width>
-       <height>241</height>
+       <height>221</height>
       </rect>
      </property>
      <property name="text">
@@ -168,6 +168,19 @@ Surface Diam:
      </property>
      <property name="text">
       <string>Stopped</string>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="evalChk">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>140</y>
+       <width>70</width>
+       <height>17</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Eval</string>
      </property>
     </widget>
    </widget>
@@ -305,7 +318,7 @@ Surface Diam:
       <string>Soft Ramp</string>
      </property>
      <property name="checked">
-      <bool>true</bool>
+      <bool>false</bool>
      </property>
     </widget>
     <widget class="QGroupBox" name="groupBox_2">

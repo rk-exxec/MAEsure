@@ -16,6 +16,7 @@
 
 # This Python file uses the following encoding: utf-8
 
+from threading import Thread
 import numpy as np
 import logging
 
@@ -39,6 +40,7 @@ USE_TEST_IMAGE = False
 
 class CameraControl(QGroupBox):
     """ Class to control camera preview, camera object and evaluate button inputs """
+    update_image_signal = Signal(np.ndarray, bool)
     def __init__(self, parent=None):
         super(CameraControl, self).__init__(parent)
         self.ui: Ui_main = self.window().ui
@@ -49,9 +51,7 @@ class CameraControl(QGroupBox):
             self.cam = VimbaCamera()
         else:
             self.cam = TestCamera()
-            if not USE_TEST_IMAGE: logging.error('No camera found! Fallback to test cam!')
-
-        self.cam.new_image_available.connect(self.update_image)
+            if not USE_TEST_IMAGE: logging.error('No camera found! Fallback to test cam!')       
         self.update()
         self._oneshot_eval = False
 
@@ -69,6 +69,8 @@ class CameraControl(QGroupBox):
         self.cam.stop_streaming()
 
     def connect_signals(self):
+        self.cam.new_image_available.connect(self.update_image)
+        self.update_image_signal.connect(self.ui.camera_prev.update_image)
         # button signals
         self.ui.startCamBtn.clicked.connect(self.prev_start_pushed)
         self.ui.setROIBtn.clicked.connect(self.apply_roi)
@@ -94,14 +96,14 @@ class CameraControl(QGroupBox):
     @Slot()
     def apply_roi(self):
         """ Apply the ROI selected by the rubberband rectangle """
-        x,y,h,w = self.ui.camera_prev.get_roi()
+        x,y,w,h = self.ui.camera_prev.get_roi()
         self.cam.set_roi(x,y,w,h)
 
     @Slot(np.ndarray)
     def update_image(self, cv_img: np.ndarray):
         """ gets called when a new image is available from the camera """
         if self.cam.is_running:
-            eval = True
+            eval = self.ui.evalChk.isChecked()
             self.ui.frameInfoLbl.setText('Running | FPS: ' + str(self.cam.get_framerate()))
         elif self._oneshot_eval:
             eval = True
@@ -109,6 +111,12 @@ class CameraControl(QGroupBox):
         else:
             eval = False
 
+        if self.cam._image_size_invalid:
+            self.ui.camera_prev.invalidate_imagesize()
+            self.cam._image_size_invalid = False
+        # thread = Thread(target=self.ui.camera_prev.update_image, args=(cv_img, eval),)
         self.ui.camera_prev.update_image(cv_img, eval)
+        # thread.start()
+        #self.update_image_signal.emit(cv_img, eval)
 
         self.ui.drpltDataLbl.setText(str(self.ui.camera_prev._droplet))

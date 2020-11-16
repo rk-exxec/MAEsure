@@ -73,6 +73,7 @@ class AbstractCamera(QObject):
     def __init__(self):
         super(AbstractCamera, self).__init__()
         self._is_running = False
+        self._image_size_invalid = True
 
     @property
     def is_running(self):
@@ -161,7 +162,7 @@ if HAS_VIMBA:
                             self._cam.Width.set(w)
                             self._cam.Height.set(h)
             self._image_size_invalid = True
-            self.get_snapshot()
+            self.snapshot()
             if was_running: self.start_streaming()
 
         def set_roi(self, x, y, w, h):
@@ -181,7 +182,7 @@ if HAS_VIMBA:
                     self._cam.OffsetX.set(x)
                     self._cam.OffsetY.set(y)
             self._image_size_invalid = True
-            self.get_snapshot()
+            self.snapshot()
             if was_running: self.start_streaming()
 
         def _frame_producer(self):

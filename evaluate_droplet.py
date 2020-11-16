@@ -117,7 +117,7 @@ def evaluate_droplet(img, y_base) -> Droplet:
         img = cv2.ellipse(img, (int(round(x0)),int(round(y0))), (int(round(a)),int(round(b))), int(round(phi*180/pi)), 0, 360, (255,0,255), thickness=1, lineType=cv2.LINE_AA)
         #img = cv2.ellipse(img, (int(round(x0)),int(round(y0))), (int(round(a)),int(round(b))), 0, 0, 360, (0,0,255), thickness=1, lineType=cv2.LINE_AA)
 
-    # calöculate intersections of ellipse with baseline
+    # calculate intersections of ellipse with baseline
     intersection = calc_intersection_line_ellipse((x0,y0,a,b,phi),(0,y_base))
     if intersection is None:
         raise ValueError('No intersections found')
@@ -131,8 +131,8 @@ def evaluate_droplet(img, y_base) -> Droplet:
     m_t_r = calc_slope_of_ellipse((x0,y0,a,b,phi), x_int_r, y_base)
 
     # calc angle of inclination of tangents
-    angle_l = pi - atan2(m_t_l,1)
-    angle_r = atan2(m_t_r,1) + pi
+    angle_l = (pi - atan2(m_t_l,1)) % pi
+    angle_r = (atan2(m_t_r,1) + pi) % pi
 
     # write values to droplet object
     drplt.angle_l = angle_l

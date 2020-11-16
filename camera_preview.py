@@ -20,7 +20,7 @@ import numpy as np
 
 from PySide2 import QtGui
 from PySide2.QtWidgets import QLabel, QOpenGLWidget
-from PySide2.QtCore import  Qt, QPoint, QRect, QSize
+from PySide2.QtCore import  Qt, QPoint, QRect, QSize, Slot
 from PySide2.QtGui import QBrush, QImage, QPaintEvent, QPainter, QPen, QPixmap, QTransform
 
 from resizable_rubberband import ResizableRubberBand
@@ -43,7 +43,7 @@ class CameraPreview(QOpenGLWidget):
         # preset the baseline to 250 which is roughly base of the test image droplet
         self._baseline.y_level = self.mapFromImage(y=250)
 
-    def paintGL(self):#, event: QPaintEvent):
+    def paintEvent(self, event: QPaintEvent):
         # completely override super.paintEvent() to use double buffering
         painter = QPainter(self)
         #self.drawFrame(painter)
@@ -58,7 +58,7 @@ class CameraPreview(QOpenGLWidget):
         db_painter.setBackground(QBrush(Qt.black))
         db_painter.setPen(QPen(Qt.black,0))
         db_painter.drawPixmap(offset_x, offset_y, self._pixmap)
-        db_painter.setPen(QPen(Qt.magenta,2))
+        db_painter.setPen(QPen(Qt.magenta,1))
         # draw droplet outline and tangent only if evaluate_droplet was successful
         if self._droplet.is_valid:
             try:
@@ -109,7 +109,9 @@ class CameraPreview(QOpenGLWidget):
             self._abort_roi()
             self.update()
 
+    @Slot(np.ndarray, bool)
     def update_image(self, cv_img: np.ndarray, eval: bool = True):
+        #FIXME memory leak in here
         """ Updates the image_label with a new opencv image"""
         #print(np.shape(cv_img))
         try:
@@ -119,7 +121,7 @@ class CameraPreview(QOpenGLWidget):
                     drplt = evaluate_droplet(cv_img, self.get_baseline_y())
                     self._droplet = drplt
                 except Exception as ex:
-                    print(ex.with_traceback(None))
+                    #print(ex.with_traceback(None))
                     pass
             qt_img = self._convert_cv_qt(cv_img)
             self._pixmap = qt_img
@@ -160,7 +162,7 @@ class CameraPreview(QOpenGLWidget):
         res: List[int] = []
         if x is not None:
             scale_x = self._image_size[1] / pix_rect.width()
-            tr_x = int(round(x - (abs(pix_rect.width() - self.width())/2) * scale_x))
+            tr_x = int(round((x - (abs(pix_rect.width() - self.width())/2)) * scale_x))
             res.append(tr_x)
         if y is not None:
             scale_y = self._image_size[0] / pix_rect.height()
@@ -225,7 +227,10 @@ class CameraPreview(QOpenGLWidget):
         self.hide_rubberband()
         x,y = self.mapToImage(x=x, y=y)
         w,h = self.mapToImage(x=w, y=h)
-        return x,y,h,w
+        return x,y,w,h
 
     def _abort_roi(self):
         self._roi_rubber_band.hide()
+
+    def invalidate_imagesize(self):
+        self._image_size_invalid = True
