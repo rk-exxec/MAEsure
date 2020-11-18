@@ -27,6 +27,11 @@ try:
 except Exception:
     HAS_VIMBA = False
 
+from typing import List, TYPE_CHECKING
+if TYPE_CHECKING:
+    from vimba import Vimba, Frame, Camera, LOG_CONFIG_TRACE_FILE_ONLY
+    from vimba.frame import FrameStatus
+
 class FrameRateCounter:
     """ Framerate counter with rolling average filter """
     def __init__(self, length=5):
@@ -114,7 +119,7 @@ if HAS_VIMBA:
             self._cam : Camera = None
             self._cam_id: str = ''
             self._vimba: Vimba = Vimba.get_instance()
-            self._frc = FrameRateCounter(5)
+            self._frc = FrameRateCounter(10)
             #self._vimba.enable_log(LOG_CONFIG_TRACE_FILE_ONLY)
             self._init_camera()
             self._setup_camera()
@@ -195,7 +200,7 @@ if HAS_VIMBA:
                         self._cam.stop_streaming()
 
         def _frame_handler(self, cam: Camera, frame: Frame) -> None:
-            pydevd.settrace(suspend=False)
+            #pydevd.settrace(suspend=False)
             self._frc.add_new_timesstamp(frame.get_timestamp())
             if frame.get_status() != FrameStatus.Incomplete:
                 img = frame.as_opencv_image()
@@ -237,7 +242,8 @@ class TestCamera(AbstractCamera):
         self._timer.setInterval(16)
         self._timer.setSingleShot(False)
         self._timer.timeout.connect(self._timer_callback)
-        self._test_image = cv2.imread('untitled1.png')
+        self._test_image:np.ndarray = cv2.imread('untitled1.png', cv2.IMREAD_GRAYSCALE)
+        self._test_image = np.reshape(self._test_image, self._test_image.shape + (1,) )
 
     def snapshot(self):
         if not self._is_running:

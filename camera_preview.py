@@ -115,6 +115,7 @@ class CameraPreview(QOpenGLWidget):
         """ Updates the image_label with a new opencv image"""
         #print(np.shape(cv_img))
         try:
+            #pass
             # evaluate droplet only if camera is running or if a oneshot eval is requested
             if eval:
                 try:
@@ -130,16 +131,18 @@ class CameraPreview(QOpenGLWidget):
                 self.set_new_baseline_constraints()
                 self._image_size_invalid = False
             self.update()
+            del cv_img
         except Exception:
             pass
 
-    def _convert_cv_qt(self, cv_img):
+    def _convert_cv_qt(self, cv_img: np.ndarray):
         """Convert from an opencv image to QPixmap"""
-        rgb_image = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
-        h, w, ch = rgb_image.shape
+        #rgb_image = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
+        #h, w, ch = rgb_image.shape
+        h, w, ch = cv_img.shape
         bytes_per_line = ch * w
-        convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
-        p = convert_to_Qt_format.scaled(self.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        convert_to_Qt_format = QtGui.QImage(cv_img, w, h, bytes_per_line, QtGui.QImage.Format_Grayscale8)
+        p = convert_to_Qt_format.scaled(self.size(), Qt.KeepAspectRatio)
         return QPixmap.fromImage(p)
 
     def map_droplet_drawing_vals(self, droplet: Droplet):

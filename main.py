@@ -17,6 +17,7 @@
 import sys
 import os
 import pydevd
+import gc
 import atexit
 import logging
 from PySide2.QtGui import QResizeEvent, QPixmap
@@ -30,6 +31,8 @@ from magnet_control import MagnetControl
 from data_control import DataControl
 #from measurement_control import MeasurementControl
 from light_widget import LightWidget
+
+#TODO use QSettings to store settings ( also maybe put some stuff in dialog boxes)
 
 class MainWindow(QMainWindow):
     def __init__(self):
