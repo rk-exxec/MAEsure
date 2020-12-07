@@ -18,7 +18,7 @@
 from PySide2.QtWidgets import QGroupBox
 import pumpy
 import logging
-
+from pump import Microliter
 from serial.tools.list_ports_windows import comports
 
 from typing import TYPE_CHECKING
@@ -37,13 +37,15 @@ class PumpControl(QGroupBox):
         self._context_depth = 0
         try:
             chain = pumpy.Chain(port)
-            self._pump = pumpy.PHD2000(chain, name='Drplt_Pump')
-            # FIXME syringe properties
-            self._pump.setdiameter(self.ui.diamSpinBox.value())
-            self._pump.setflowrate(self.ui.flowSpinBox.value()) # 2ul / s
+            self._pump = Microliter(chain, name='uLOEM')
         except Exception as ex:
-            self._pump = None
-            logging.warning('Pump Error:' + str(ex))
+           self._pump = None
+           logging.warning('Pump Error:' + str(ex))
+
+    def showEvent(self, event):
+        self._pump.setdiameter(self.ui.diamSpinBox.value())
+        self._pump.setflowrate(self.ui.flowSpinBox.value()) # 2ul / s
+        self.connect_signals()
 
     def connect_signals(self):
         self.ui.dispenseBtn.clicked.connect(self.infuse)
@@ -94,7 +96,7 @@ class PumpControl(QGroupBox):
         lst = comports()
         for port in lst:
             # FIXME apply proper name when pump arrives
-            if port.manufacturer == 'Nanotec':
+            if port.manufacturer == 'Prolific':
                 return port.device
         # else:
         #     raise ConnectionError('No Pump found!')
