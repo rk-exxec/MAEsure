@@ -137,9 +137,9 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>170</y>
+       <y>210</y>
        <width>81</width>
-       <height>221</height>
+       <height>181</height>
       </rect>
      </property>
      <property name="text">
@@ -181,6 +181,19 @@ Surface Diam:
      </property>
      <property name="text">
       <string>Eval</string>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="record_chk">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>160</y>
+       <width>81</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Record video</string>
      </property>
     </widget>
    </widget>
@@ -1086,7 +1099,7 @@ Surface Diam:
       <enum>QAbstractSpinBox::NoButtons</enum>
      </property>
      <property name="decimals">
-      <number>1</number>
+      <number>2</number>
      </property>
      <property name="minimum">
       <double>0.100000000000000</double>
@@ -1095,7 +1108,7 @@ Surface Diam:
       <double>35.000000000000000</double>
      </property>
      <property name="value">
-      <double>1.000000000000000</double>
+      <double>4.610000000000000</double>
      </property>
     </widget>
     <widget class="QLabel" name="unitLbl1_3">
@@ -1135,12 +1148,36 @@ Surface Diam:
      <height>21</height>
     </rect>
    </property>
+   <widget class="QMenu" name="menuMenu">
+    <property name="title">
+     <string>Menu</string>
+    </property>
+    <addaction name="actionVideo_Path"/>
+    <addaction name="actionSyringe_Settings"/>
+    <addaction name="actionCSV_Settings"/>
+   </widget>
+   <addaction name="menuMenu"/>
   </widget>
   <widget class="QStatusBar" name="statusbar">
    <property name="sizeGripEnabled">
     <bool>false</bool>
    </property>
   </widget>
+  <action name="actionVideo_Path">
+   <property name="text">
+    <string>Video Path</string>
+   </property>
+  </action>
+  <action name="actionSyringe_Settings">
+   <property name="text">
+    <string>Syringe Settings</string>
+   </property>
+  </action>
+  <action name="actionCSV_Settings">
+   <property name="text">
+    <string>CSV Settings</string>
+   </property>
+  </action>
  </widget>
  <layoutdefault spacing="6" margin="9"/>
  <customwidgets>

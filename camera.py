@@ -27,7 +27,7 @@ try:
 except Exception:
     HAS_VIMBA = False
 
-from typing import List, TYPE_CHECKING
+from typing import List, TYPE_CHECKING, Tuple
 if TYPE_CHECKING:
     from vimba import Vimba, Frame, Camera, LOG_CONFIG_TRACE_FILE_ONLY
     from vimba.frame import FrameStatus
@@ -109,6 +109,11 @@ class AbstractCamera(QObject):
     def get_framerate(self):
         """ return current FPS of camera"""
         pass #raise NotImplementedError
+
+    def get_resolution(self) -> Tuple[int,int]:
+        """ return resolution of current camera capture (width, height) """
+        raise NotImplementedError
+
 
 if HAS_VIMBA:
     class VimbaCamera(AbstractCamera):
@@ -232,8 +237,16 @@ if HAS_VIMBA:
         def get_framerate(self):
             with self._vimba:
                 with self._cam:
-                    #return round(self._cam.AcquisitionFrameRate.get(),1)
-                    return round(self._frc.average_fps,1)
+                    return round(self._cam.AcquisitionFrameRate.get(),2)
+                    #return round(self._frc.average_fps,1)
+
+        def get_resolution(self) -> Tuple[int, int]:
+            with self._vimba:
+                with self._cam:
+                    res_x = self._cam.Width.get()
+                    res_y = self._cam.Height.get()
+                    return (res_x, res_y)
+
 
 class TestCamera(AbstractCamera):
     def __init__(self):
@@ -265,6 +278,9 @@ class TestCamera(AbstractCamera):
 
     def get_framerate(self):
         return 1000 / self._timer.interval()
+
+    def get_resolution(self) -> Tuple[int, int]:
+        return self._test_image.shape
 
     @Slot()
     def _timer_callback(self):

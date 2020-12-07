@@ -19,9 +19,12 @@
 from threading import Thread
 import numpy as np
 import logging
+from datetime import datetime
 
+from moviepy.video.io.ffmpeg_writer import FFMPEG_VideoWriter as VidWriter
+import cv2
 from PySide2 import QtGui
-from PySide2.QtWidgets import QGroupBox
+from PySide2.QtWidgets import QFileDialog, QGroupBox, QInputDialog
 from PySide2.QtCore import Signal, Slot
 
 from camera import AbstractCamera, TestCamera, HAS_VIMBA
@@ -43,9 +46,13 @@ class CameraControl(QGroupBox):
     update_image_signal = Signal(np.ndarray, bool)
     def __init__(self, parent=None):
         super(CameraControl, self).__init__(parent)
+        logging.info("Init CameraControl")
         self.ui: Ui_main = self.window().ui
         self._first_show = True # whether form is shown for the first time
         self.cam: AbstractCamera = None # AbstractCamera as interface class for different cameras
+        self.video_dir = "."
+        self.recorder: VidWriter = None
+        #self.recorder = cv2.VideoWriter()
         # if vimba software is installed
         if HAS_VIMBA and not USE_TEST_IMAGE:
             self.cam = VimbaCamera()
@@ -66,7 +73,10 @@ class CameraControl(QGroupBox):
             self.ui.camera_prev.prepare()
 
     def closeEvent(self, event: QtGui.QCloseEvent):
+        #self.recorder.release()
+        self.recorder.close()
         self.cam.stop_streaming()
+        
 
     def connect_signals(self):
         self.cam.new_image_available.connect(self.update_image)
@@ -75,6 +85,7 @@ class CameraControl(QGroupBox):
         self.ui.startCamBtn.clicked.connect(self.prev_start_pushed)
         self.ui.setROIBtn.clicked.connect(self.apply_roi)
         self.ui.resetROIBtn.clicked.connect(self.cam.reset_roi)
+        self.ui.actionVideo_Path.triggered.connect(self.set_video_path)
 
     def is_streaming(self) -> bool:
         """ Return whether camera object is aquiring frames """
@@ -83,11 +94,29 @@ class CameraControl(QGroupBox):
     @Slot()
     def prev_start_pushed(self, event):
         if self.ui.startCamBtn.text() != 'Stop':
+            if self.ui.record_chk.isChecked():
+                now = datetime.now().strftime("%Y%m%d_%H%M%S")
+                self.recorder = VidWriter(filename=self.video_dir + f"/{now}.mp4",
+                                            size=self.cam.get_resolution(),
+                                            fps=self.cam.get_framerate(),
+                                            codec='mpeg4',
+                                            preset='ultrafast',
+                                            bitrate='5000k')
+                #self.recorder.open(self.video_dir + f"/{now}.mp4", 0x21 ,self.cam.get_framerate(),self.cam.get_resolution())
+                logging.info(f"Start video recording. File: {self.video_dir}/{now}.mp4 Resolution:{str(self.cam.get_resolution())}@{self.cam.get_framerate()}")
             self.cam.start_streaming()
+            logging.info("Start camera stream")
             self.ui.startCamBtn.setText('Stop')
+            self.ui.record_chk.setEnabled(False)
             self.ui.frameInfoLbl.setText('Running')
         else:
             self.cam.stop_streaming()
+            if self.ui.record_chk.isChecked():
+                self.recorder.close()
+                #self.recorder.release()
+                logging.info("Stoped video recording")
+            self.ui.record_chk.setEnabled(True)
+            logging.info("Stop camera stream")
             self.ui.startCamBtn.setText('Start')
             self.cam.snapshot()
             self.ui.frameInfoLbl.setText('Stopped')
@@ -105,6 +134,10 @@ class CameraControl(QGroupBox):
         if self.cam.is_running:
             eval = self.ui.evalChk.isChecked()
             self.ui.frameInfoLbl.setText('Running | FPS: ' + str(self.cam.get_framerate()))
+            # save image frame if recording
+            if self.ui.record_chk.isChecked():
+                self.recorder.write_frame(cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB))
+                #self.recorder.write(cv_img)
         elif self._oneshot_eval:
             eval = True
             self._oneshot_eval = False
@@ -120,3 +153,8 @@ class CameraControl(QGroupBox):
         #self.update_image_signal.emit(cv_img, eval)
 
         self.ui.drpltDataLbl.setText(str(self.ui.camera_prev._droplet))
+
+    @Slot()
+    def set_video_path(self):
+        res = QFileDialog.getExistingDirectory(self, "Select default video directory", ".")
+        self.video_dir = res
