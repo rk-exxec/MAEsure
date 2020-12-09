@@ -14,6 +14,8 @@
 #     You should have received a copy of the GNU General Public License
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+# TODO expose more settings of lt_control, reference side, etc.
+
 import functools
 import pyvisa
 import time
@@ -139,6 +141,7 @@ class MagnetControl(QGroupBox):
                 if not self._lt_ctl.is_referenced():
                     self.ui.lamp.set_yellow()
                     self.set_status_message('Referencing needed!')
+                    self.unlock_movement_buttons()
                     self.lock_abs_pos_buttons()
                 else:
                     self.ui.lamp.set_green()
@@ -299,10 +302,9 @@ class MagnetControl(QGroupBox):
 
     def finished_moving(self):
         """ update ui position displays when movement finishes """
-        # callback for when the motor stops moving (only absolute and relative, not jogging)
+        # callback for when the motor stops moving (only absolute and relative, and jogging with soft stop)
         self.update_pos()
         self.update_motor_status()
-        self.unlock_movement_buttons()
 
     @Slot()
     def reference(self):
