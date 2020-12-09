@@ -58,7 +58,9 @@ class CameraPreview(QOpenGLWidget):
         db_painter.setBackground(QBrush(Qt.black))
         db_painter.setPen(QPen(Qt.black,0))
         db_painter.drawPixmap(offset_x, offset_y, self._pixmap)
-        db_painter.setPen(QPen(Qt.magenta,1))
+        pen = QPen(Qt.magenta,2)
+        pen.setCosmetic(True)
+        db_painter.setPen(pen)
         # draw droplet outline and tangent only if evaluate_droplet was successful
         if self._droplet.is_valid:
             try:
@@ -111,7 +113,7 @@ class CameraPreview(QOpenGLWidget):
 
     @Slot(np.ndarray, bool)
     def update_image(self, cv_img: np.ndarray, eval: bool = True):
-        #FIXME memory leak in here
+        #FIXME ring averager for angles
         """ Updates the image_label with a new opencv image"""
         #print(np.shape(cv_img))
         try:
@@ -124,6 +126,8 @@ class CameraPreview(QOpenGLWidget):
                 except Exception as ex:
                     #print(ex.with_traceback(None))
                     pass
+            else:
+                self._droplet = Droplet()
             qt_img = self._convert_cv_qt(cv_img)
             self._pixmap = qt_img
             if self._image_size_invalid:

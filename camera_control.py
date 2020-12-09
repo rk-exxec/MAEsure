@@ -25,7 +25,7 @@ from moviepy.video.io.ffmpeg_writer import FFMPEG_VideoWriter as VidWriter
 import cv2
 from PySide2 import QtGui
 from PySide2.QtWidgets import QFileDialog, QGroupBox, QInputDialog
-from PySide2.QtCore import Signal, Slot
+from PySide2.QtCore import QSignalBlocker, Signal, Slot
 
 from camera import AbstractCamera, TestCamera, HAS_VIMBA
 if HAS_VIMBA:
@@ -38,6 +38,8 @@ if TYPE_CHECKING:
 
 # TODO camera control
 #   pause running while setting roi - needs testing
+
+# TODO add ability to load video instead of using camera, with new camera class and moviepy ffmpeg reader?
 
 USE_TEST_IMAGE = False
 
@@ -131,6 +133,8 @@ class CameraControl(QGroupBox):
     @Slot(np.ndarray)
     def update_image(self, cv_img: np.ndarray):
         """ gets called when a new image is available from the camera """
+        # block image signal to prevent overloading
+        blocker = QSignalBlocker(self.cam)
         if self.cam.is_running:
             eval = self.ui.evalChk.isChecked()
             self.ui.frameInfoLbl.setText('Running | FPS: ' + str(self.cam.get_framerate()))
@@ -153,6 +157,7 @@ class CameraControl(QGroupBox):
         #self.update_image_signal.emit(cv_img, eval)
 
         self.ui.drpltDataLbl.setText(str(self.ui.camera_prev._droplet))
+        blocker.unblock()
 
     @Slot()
     def set_video_path(self):
