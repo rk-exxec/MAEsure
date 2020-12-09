@@ -285,3 +285,37 @@ class TestCamera(AbstractCamera):
     @Slot()
     def _timer_callback(self):
         self.new_image_available.emit(self._test_image.copy())
+
+class VideoStream(AbstractCamera):
+    def __init__(self):
+        super(VideoStream, self).__init__()
+
+    def snapshot(self):
+        """ record a single image and emit signal """
+        raise NotImplementedError
+
+    def start_streaming(self):
+        """ start streaming """
+        raise NotImplementedError
+
+    def stop_streaming(self):
+        raise NotImplementedError
+
+    def set_roi(self, x, y, w, h):
+        """ set the region of interest on the cam
+        :param x,y: x,y of ROI in image coordinates
+        :param w,h: width and height of ROI
+        """
+        raise NotImplementedError
+
+    def reset_roi(self):
+        """ Reset ROI to full size """
+        raise NotImplementedError
+
+    def get_framerate(self):
+        """ return current FPS of camera"""
+        pass #raise NotImplementedError
+
+    def get_resolution(self) -> Tuple[int,int]:
+        """ return resolution of current camera capture (width, height) """
+        raise NotImplementedError
