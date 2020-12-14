@@ -162,4 +162,5 @@ class CameraControl(QGroupBox):
     @Slot()
     def set_video_path(self):
         res = QFileDialog.getExistingDirectory(self, "Select default video directory", ".")
-        self.video_dir = res
+        if (res is not None and res != ""):
+            self.video_dir = res
