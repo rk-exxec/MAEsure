@@ -20,8 +20,6 @@ from PySide2.QtWidgets import QWidget, QHBoxLayout, QSizeGrip, QRubberBand
 from PySide2.QtGui import QPainter, QPen
 from PySide2.QtCore import Qt, QPoint
 
-# FIXME broken handles
-
 class ResizableRubberBand(QWidget):
     def __init__(self, parent=None):
         super(ResizableRubberBand, self).__init__(parent)

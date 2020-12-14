@@ -95,7 +95,6 @@ class PumpControl(QGroupBox):
         """ find the comport the pump is connected to """
         lst = comports()
         for port in lst:
-            # FIXME apply proper name when pump arrives
             if port.manufacturer == 'Prolific':
                 return port.device
         # else:
