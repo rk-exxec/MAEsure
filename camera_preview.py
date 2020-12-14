@@ -121,13 +121,13 @@ class CameraPreview(QOpenGLWidget):
             # evaluate droplet only if camera is running or if a oneshot eval is requested
             if eval:
                 try:
-                    drplt = evaluate_droplet(cv_img, self.get_baseline_y())
-                    self._droplet = drplt
+                    self._droplet.is_valid = False
+                    evaluate_droplet(cv_img, self.get_baseline_y())
                 except Exception as ex:
                     #print(ex.with_traceback(None))
                     pass
             else:
-                self._droplet = Droplet()
+                self._droplet.is_valid = False
             qt_img = self._convert_cv_qt(cv_img)
             self._pixmap = qt_img
             if self._image_size_invalid:

@@ -1,0 +1,131 @@
+#     MAEsure is a program to measure the surface energy of MAEs via contact angle
+#     Copyright (C) 2020  Raphael Kriegl
+
+#     This program is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+
+#     This program is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+from math import degrees
+
+from numpy.lib.function_base import angle
+
+class Singleton(object):
+    _instance = None
+    def __new__(class_, *args, **kwargs):
+        if not isinstance(class_._instance, class_):
+            class_._instance = object.__new__(class_, *args, **kwargs)
+        return class_._instance
+
+class Droplet(Singleton):
+    def __init__(self):
+        self.is_valid = False
+        self._angle_l = 0.0
+        self._angle_l_avg = RollingAverager()
+        self._angle_r = 0.0
+        self._angle_r_avg = RollingAverager()
+        self.center = (0,0)
+        self.maj = 0
+        self.min = 0
+        self.phi = 0.0
+        self.tilt_deg = 0
+        self.foc_pt1 = (0,0)
+        self.foc_pt2 = (0,0)
+        self.tan_l_m = 0
+        self.int_l = (0,0)
+        self.line_l = (0,0,0,0)
+        self.tan_r_m = 0
+        self.int_r = (0,0)
+        self.line_r = (0,0,0,0)
+        self.base_diam = 0
+        self._area = 0.0
+        self._area_avg = RollingAverager()
+        self._height = 0.0
+        self._height_avg = RollingAverager()
+
+    def __str__(self) -> str:
+        if self.is_valid:
+            return 'Angle Left:\n{:.2f}°\nAngle Right:\n{:.2f}°\nSurface Diam:\n{:.2f} px\nArea:\n{:.2f} px2\nHeight:\n{:.2f} px'.format(
+                round(degrees(self.angle_l),2), round(degrees(self.angle_r),2), round(self.base_diam), round(self.area,2), round(self.height,2)
+            )
+        else:
+            return 'No droplet!'
+
+    @property
+    def angle_l(self):
+        #return self._angle_l
+        return self._angle_l_avg.average
+
+    @angle_l.setter
+    def angle_l(self, value):
+        self._angle_l_avg._put(value)
+        self._angle_l = value
+
+    @property
+    def angle_r(self):
+        return self._angle_r_avg.average
+
+    @angle_r.setter
+    def angle_r(self, value):
+        self._angle_r_avg._put(value)
+        self._angle_r = value
+
+    @property
+    def height(self):
+        return self._height_avg.average
+
+    @height.setter
+    def height(self, value):
+        self._height_avg._put(value)
+        self._height = value
+
+    @property
+    def area(self):
+        return self._area_avg.average
+
+    @area.setter
+    def area(self, value):
+        self._area_avg._put(value)
+        self._area = value
+
+
+
+class RollingAverager:
+    """ rolling average filter """
+    def __init__(self, length=300):
+        # lenght of filter
+        self.length = length
+        self.buffer = [0.0]*length
+        self.counter = 0
+        self.first_number = True
+
+    def _rotate(self):
+        # increase current index by 1 or loop back to 0
+        if self.counter == (self.length - 1):
+            self.counter = 0
+        else:
+            self.counter += 1
+
+    def _put(self, value):
+        if self.first_number:
+            # initialize buffer with first value
+            self.buffer = [value]*self.length
+            self.first_number = False
+        else:
+            # add value to current line then rotate index
+            self.buffer[self.counter] = value
+        self._rotate()
+
+    @property
+    def average(self) -> float:
+        """ Return the averaged value """
+        return sum(self.buffer) / self.length
+

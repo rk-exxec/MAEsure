@@ -16,49 +16,26 @@
 
 # Droplet eval function
 
-from math import cos, sin, pi, sqrt, atan2, radians, degrees
+# TODO add rolling average, with outlier ingoring and 1 sec worth of averaging
+# ideally to the whole contour before fitting the ellipse
+
+from math import acos, cos, sin, pi, sqrt, atan2, radians, degrees
 import cv2
 import numpy as np
-from skimage.measure import EllipseModel
+
+from droplet import Droplet
+
+DBG_NONE = 0x0
 DBG_SHOW_CONTOURS = 0x1
 DBG_DRAW_ELLIPSE = 0x2
 DBG_DRAW_TAN_ANGLE = 0x4
-DEBUG = DBG_SHOW_CONTOURS
+DEBUG = DBG_NONE
 
-USE_GPU = True
-class Droplet():
-    def __init__(self):
-        self.is_valid = False
-        self.angle_l = 0
-        self.angle_r = 0
-        self.center = (0,0)
-        self.maj = 0
-        self.min = 0
-        self.phi = 0.0
-        self.tilt_deg = 0
-        self.foc_pt1 = (0,0)
-        self.foc_pt2 = (0,0)
-        self.tan_l_m = 0
-        self.int_l = (0,0)
-        self.line_l = (0,0,0,0)
-        self.tan_r_m = 0
-        self.int_r = (0,0)
-        self.line_r = (0,0,0,0)
-        self.base_diam = 0
+USE_GPU = False
 
-    def __repr__(self):
-        return 'Droplet({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})'.format(
-            self.is_valid, self.angle_l, self.angle_r, self.center, self.maj, self.min, self.phi, self.tilt_deg, self.foc_pt1, self.foc_pt2,
-            self.tan_l_m, self.int_l, self.line_l, self.tan_r_m, self.int_r, self.line_r, self.base_diam
-            )
 
-    def __str__(self) -> str:
-        if self.is_valid:
-            return 'Angle Left:\n{:.2f}°\nAngle Right:\n{:.2f}°\nSurface Diam:\n{:.2f} px'.format(
-                round(degrees(self.angle_l),2), round(degrees(self.angle_r),2), round(self.base_diam)
-            )
-        else:
-            return 'No droplet!'
+
+# TODO calculate real size of params ( maybe with reference object? 3d prtin smth that fits in slot, speacieal measure and then save that value for other measurements)
 
 def evaluate_droplet(img, y_base) -> Droplet:
     """ Analyze an image for a droplet and determine the contact angles
@@ -75,16 +52,23 @@ def evaluate_droplet(img, y_base) -> Droplet:
     if USE_GPU:
         crop_img = cv2.UMat(crop_img)
     # calculate thrresholds
-    #thresh_high, thresh_im = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    #thresh_low = 0.5*thresh_high
+    thresh_high, thresh_im = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    thresh_low = 0.5*thresh_high
+    # thresh_high = 179
+    # thresh_low = 76
 
     # values only for 8bit images!
 
     # apply canny filter to image
-    bw_edges = cv2.Canny(crop_img, 76, 179)
+    # FIXME adjust canny params, detect too much edges
+    bw_edges = cv2.Canny(crop_img, thresh_low, thresh_high)
+    # FIXME block detection of syringe
 
-    #find all contours in image and select the "longest"
-    contours, hierarchy = cv2.findContours(bw_edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    #find all contours in image and select the "longest", https://docs.opencv.org/3.4/d3/dc0/group__imgproc__shape.html#ga17ed9f5d79ae97bd4c7cf18403e1689a
+    # https://docs.opencv.org/3.4/d9/d8b/tutorial_py_contours_hierarchy.html 
+    # https://docs.opencv.org/3.4/d3/dc0/group__imgproc__shape.html#ga4303f45752694956374734a03c54d5ff
+    # contours, hierarchy = cv2.findContours(bw_edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    contours, hierarchy = cv2.findContours(bw_edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     if len(contours) == 0:
         raise ValueError('No contours found!')
     edge = max(contours, key=cv2.contourArea)
@@ -134,6 +118,13 @@ def evaluate_droplet(img, y_base) -> Droplet:
     angle_l = (pi - atan2(m_t_l,1)) % pi
     angle_r = (atan2(m_t_r,1) + pi) % pi
 
+    # calc area of droplet
+    area = calc_area_of_droplet((x_int_l, x_int_r), (x0,y0,a,b,phi), y_base)
+
+    # calc height of droplet
+    drplt_height = calc_height_of_droplet((x0,y0,a,b,phi), y_base)
+
+    # TODO ROLLING AVERAGE FOR ELLIPSE?
     # write values to droplet object
     drplt.angle_l = angle_l
     drplt.angle_r = angle_r
@@ -151,6 +142,8 @@ def evaluate_droplet(img, y_base) -> Droplet:
     drplt.foc_pt1 = (x0 + foc_len*cos(phi), y0 + foc_len*sin(phi))
     drplt.foc_pt2 = (x0 - foc_len*cos(phi), y0 - foc_len*sin(phi))
     drplt.base_diam = x_int_r - x_int_l
+    drplt.area = area
+    drplt.height = drplt_height
     drplt.is_valid = True
 
     if DEBUG & DBG_DRAW_TAN_ANGLE:
@@ -164,7 +157,7 @@ def evaluate_droplet(img, y_base) -> Droplet:
         img = cv2.putText(img, '<' + str(round(angle_l*180/pi,1)), (5,y_int-5), cv2.FONT_HERSHEY_COMPLEX, .5, (0,0,0))
         img = cv2.putText(img, '<' + str(round(angle_r*180/pi,1)), (width - 80,y_int-5), cv2.FONT_HERSHEY_COMPLEX, .5, (0,0,0))
 
-    return drplt#, img
+    #return drplt#, img
 
 def calc_intersection_line_ellipse(ellipse_pars, line_pars):
     """
@@ -216,6 +209,45 @@ def calc_slope_of_ellipse(ellipse_pars, x, y):
     m_tan = - (tan_a_r / tan_b_r)
 
     return m_tan
+
+def calc_area_of_droplet(line_intersections, ellipse_pars, y_int) -> float:
+    (x0, y0, a, b, phi) = ellipse_pars
+    (x1,x2) = line_intersections
+    # calculate the angles of the vectors from ellipse origin to the intersections
+    dy = abs(y_int - y0)
+    dx1 = abs(x1 - x0)
+    ang_x1 = acos(dx1 / sqrt(dy**2 + dx1**2))
+    dx2 = abs(x2 - x0) 
+    ang_x2 = acos(dx2 / sqrt(dy**2 + dx2**2))
+    if y_int > y0:
+        ang_x1 += pi
+        ang_x2 -= pi/2
+    else:
+        ang_x1 = pi - ang_x1
+    # adjust for ellipse tilt
+    ang_x1 -= phi
+    ang_x2 -= phi
+
+    # calculate the surface area of the segment between x1 and x2, https://rechneronline.de/pi/elliptical-sector.php
+    dphi = ang_x1 - ang_x2
+    sec_area = a*b/2 * (dphi - atan2( (b-a)*sin(2*ang_x1), (a+b+(b-a)*cos(2*ang_x1) ) + atan2( (b-a)*sin(2*ang_x2), (a+b+(b-a)*cos(2*ang_x2)) )))
+    # add or remove triangle enclosed by x1, x2 and origin of ellipse to get area of ellipse above baseline
+    if y_int > y0:
+        area = sec_area + (dy*(dx1/2 + dx2/2))
+    else:
+        area = sec_area - (dy*(dx1/2 + dx2/2))
+
+    return area
+
+def calc_height_of_droplet(ellipse_pars, y_base) -> float:
+    (x0, y0, a, b, phi) = ellipse_pars
+    # https://math.stackexchange.com/questions/91132/how-to-get-the-limits-of-rotated-ellipse
+    # lowspot of ellipse ( topspot in image ), origin - ell_height
+    y_low = y0 - sqrt(a**2 * sin(phi)**2 + b**2 * cos(phi)**2)
+    
+    droplt_height = y_base - y_low
+    return droplt_height
+
 
 if __name__ == "__main__":
     im = cv2.imread('untitled1.png')
