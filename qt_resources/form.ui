@@ -1155,6 +1155,7 @@ Surface Diam:
     <addaction name="actionVideo_Path"/>
     <addaction name="actionSyringe_Settings"/>
     <addaction name="actionCSV_Settings"/>
+    <addaction name="actionKalibrate_Size"/>
    </widget>
    <addaction name="menuMenu"/>
   </widget>
@@ -1176,6 +1177,14 @@ Surface Diam:
   <action name="actionCSV_Settings">
    <property name="text">
     <string>CSV Settings</string>
+   </property>
+  </action>
+  <action name="actionKalibrate_Size">
+   <property name="text">
+    <string>Kalibrate Size</string>
+   </property>
+   <property name="toolTip">
+    <string>Calibrate the pixel to mm ratio with object of known size. Place obect in front of camera and make sure it is detected properly by the droplet algorithm.</string>
    </property>
   </action>
  </widget>
