@@ -113,7 +113,6 @@ class CameraPreview(QOpenGLWidget):
 
     @Slot(np.ndarray, bool)
     def update_image(self, cv_img: np.ndarray, eval: bool = True):
-        #FIXME ring averager for angles
         """ Updates the image_label with a new opencv image"""
         #print(np.shape(cv_img))
         try:

@@ -15,6 +15,7 @@
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from math import degrees
+from PySide2.QtCore import QSettings
 
 from numpy.lib.function_base import angle
 
@@ -25,8 +26,11 @@ class Singleton(object):
             class_._instance = object.__new__(class_, *args, **kwargs)
         return class_._instance
 
+# TODO make length always be a fixed fraction of a second and change with framerate
+
 class Droplet(Singleton):
     def __init__(self):
+        settings = QSettings()
         self.is_valid = False
         self._angle_l = 0.0
         self._angle_l_avg = RollingAverager()
@@ -50,12 +54,18 @@ class Droplet(Singleton):
         self._area_avg = RollingAverager()
         self._height = 0.0
         self._height_avg = RollingAverager()
+        self.scale_px_to_mm: float = float(settings.value("droplet/scale_px_to_mm", 0.0))
 
     def __str__(self) -> str:
         if self.is_valid:
-            return 'Angle Left:\n{:.2f}°\nAngle Right:\n{:.2f}°\nSurface Diam:\n{:.2f} px\nArea:\n{:.2f} px2\nHeight:\n{:.2f} px'.format(
-                round(degrees(self.angle_l),2), round(degrees(self.angle_r),2), round(self.base_diam), round(self.area,2), round(self.height,2)
-            )
+            if self.scale_px_to_mm is None or self.scale_px_to_mm <= 0:
+                return 'Angle Left:\n{:.2f}°\nAngle Right:\n{:.2f}°\nSurface Diam:\n{:.2f} px\nArea:\n{:.2f} px2\nHeight:\n{:.2f} px'.format(
+                    round(degrees(self.angle_l),2), round(degrees(self.angle_r),2), round(self.base_diam), round(self.area,2), round(self.height,2)
+                )
+            else:
+                return 'Angle Left:\n{:.2f}°\nAngle Right:\n{:.2f}°\nSurface Diam:\n{:.2f} mm\nArea:\n{:.2f} mm2\nHeight:\n{:.2f} mm'.format(
+                    round(degrees(self.angle_l),2), round(degrees(self.angle_r),2), round(self.base_diam_mm,2), round(self.area_mm,2), round(self.height_mm,2)
+                )
         else:
             return 'No droplet!'
 
@@ -88,6 +98,14 @@ class Droplet(Singleton):
         self._height = value
 
     @property
+    def height_mm(self):
+        return self._height_avg.average * self.scale_px_to_mm
+
+    @property
+    def base_diam_mm(self):
+        return self.base_diam * self.scale_px_to_mm
+
+    @property
     def area(self):
         return self._area_avg.average
 
@@ -95,6 +113,21 @@ class Droplet(Singleton):
     def area(self, value):
         self._area_avg._put(value)
         self._area = value
+
+    @property
+    def area_mm(self):
+        return self._area_avg.average * self.scale_px_to_mm**2
+
+    def set_scale(self, scale):
+        self.scale_px_to_mm = scale
+        settings = QSettings()
+        settings.setValue("droplet/scale_px_to_mm", scale)
+
+    def set_filter_length(self, value):
+        self._angle_l_avg.set_length(value)
+        self._angle_r_avg.set_length(value)
+        self._height_avg.set_length(value)
+        self._area_avg.set_length(value)
 
 
 
@@ -128,4 +161,8 @@ class RollingAverager:
     def average(self) -> float:
         """ Return the averaged value """
         return sum(self.buffer) / self.length
+
+    def set_length(self, value):
+        self.length = value
+        self.first_number = True
 

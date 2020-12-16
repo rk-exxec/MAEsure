@@ -27,6 +27,8 @@ from PySide2 import QtGui
 from PySide2.QtWidgets import QFileDialog, QGroupBox, QInputDialog
 from PySide2.QtCore import QSignalBlocker, Signal, Slot
 
+
+from droplet import Droplet
 from camera import AbstractCamera, TestCamera, HAS_VIMBA
 if HAS_VIMBA:
     from camera import VimbaCamera
@@ -88,6 +90,7 @@ class CameraControl(QGroupBox):
         self.ui.setROIBtn.clicked.connect(self.apply_roi)
         self.ui.resetROIBtn.clicked.connect(self.cam.reset_roi)
         self.ui.actionVideo_Path.triggered.connect(self.set_video_path)
+        self.ui.actionKalibrate_Size.triggered.connect(self.calib_size)
 
     def is_streaming(self) -> bool:
         """ Return whether camera object is aquiring frames """
@@ -164,3 +167,14 @@ class CameraControl(QGroupBox):
         res = QFileDialog.getExistingDirectory(self, "Select default video directory", ".")
         if (res is not None and res != ""):
             self.video_dir = res
+
+    @Slot()
+    def calib_size(self):
+        # TODO do oneshot eval and extrac height and width from froplet, then calc scale and set in droplet
+        res,ok = QInputDialog.getDouble(self,"Size of calib element", "Please enter the height of the test subject in mm:", 0, 0, 100)
+        if not ok or res == 0.0:
+            return
+        self._oneshot_eval = True
+        droplt = Droplet()
+        self.cam.snapshot()
+        droplt.set_scale(res / droplt._height)

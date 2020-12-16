@@ -34,9 +34,6 @@ DEBUG = DBG_NONE
 USE_GPU = False
 
 
-
-# TODO calculate real size of params ( maybe with reference object? 3d prtin smth that fits in slot, speacieal measure and then save that value for other measurements)
-
 def evaluate_droplet(img, y_base) -> Droplet:
     """ Analyze an image for a droplet and determine the contact angles
     :param img: the image to be evaluated as np.ndarray
@@ -123,8 +120,7 @@ def evaluate_droplet(img, y_base) -> Droplet:
 
     # calc height of droplet
     drplt_height = calc_height_of_droplet((x0,y0,a,b,phi), y_base)
-
-    # TODO ROLLING AVERAGE FOR ELLIPSE?
+    
     # write values to droplet object
     drplt.angle_l = angle_l
     drplt.angle_r = angle_r

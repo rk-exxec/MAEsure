@@ -22,6 +22,7 @@ import atexit
 import logging
 from PySide2.QtGui import QResizeEvent, QPixmap
 from PySide2.QtWidgets import QMainWindow, QApplication, QSplashScreen
+from PySide2.QtCore import QCoreApplication, QSettings
 
 from ui_form import Ui_main
 
@@ -33,6 +34,8 @@ from data_control import DataControl
 from light_widget import LightWidget
 
 #TODO use QSettings to store settings ( also maybe put some stuff in dialog boxes)
+
+# TODO comments for droplet, camera control etc
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -60,6 +63,8 @@ class MainWindow(QMainWindow):
 if __name__ == "__main__":
     os.system('pyside2-uic -o ui_form.py qt_resources/form.ui')
     logging.basicConfig(filename='app.log', filemode='w', level=logging.WARNING)
+    QCoreApplication.setOrganizationName("OTH Regensburg")
+    QCoreApplication.setApplicationName("MAEsure")
     app = QApplication(sys.argv)
     pic = QPixmap('qt_resources/maesure.png')
     splash = QSplashScreen(pic)#, Qt.WindowStaysOnTopHint)
