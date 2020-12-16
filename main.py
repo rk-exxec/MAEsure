@@ -33,7 +33,7 @@ from data_control import DataControl
 #from measurement_control import MeasurementControl
 from light_widget import LightWidget
 
-#TODO use QSettings to store settings ( also maybe put some stuff in dialog boxes)
+# TODO use QSettings to store settings ( also maybe put some stuff in dialog boxes)
 
 # TODO comments for droplet, camera control etc
 

@@ -18,7 +18,7 @@
 from PySide2.QtWidgets import QWidget, QHBoxLayout
 from PySide2.QtGui import QBrush, QPainter, QPainterPath, QPen
 from PySide2.QtCore import QRectF, Qt, QPoint
-
+# TODO store baseline y in QSettings
 COLOR = Qt.green
 
 class Baseline(QWidget):  

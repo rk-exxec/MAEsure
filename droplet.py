@@ -28,6 +28,8 @@ class Singleton(object):
 
 # TODO make length always be a fixed fraction of a second and change with framerate
 
+# TODO comments
+
 class Droplet(Singleton):
     def __init__(self):
         settings = QSettings()
