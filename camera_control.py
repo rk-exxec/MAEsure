@@ -50,19 +50,24 @@ class CameraControl(QGroupBox):
     update_image_signal = Signal(np.ndarray, bool)
     def __init__(self, parent=None):
         super(CameraControl, self).__init__(parent)
-        logging.info("Init CameraControl")
+        logging.debug("Init CameraControl")
+        # load UI components
         self.ui: Ui_main = self.window().ui
         self._first_show = True # whether form is shown for the first time
         self.cam: AbstractCamera = None # AbstractCamera as interface class for different cameras
         self.video_dir = "."
         self.recorder: VidWriter = None
-        #self.recorder = cv2.VideoWriter()
+
+        # initialize camera object
+        self.cam: AbstractCamera = None # AbstractCamera as interface class for different cameras
         # if vimba software is installed
         if HAS_VIMBA and not USE_TEST_IMAGE:
             self.cam = VimbaCamera()
+            logging.debug("Using Vimba Camera")
         else:
             self.cam = TestCamera()
-            if not USE_TEST_IMAGE: logging.error('No camera found! Fallback to test cam!')       
+            if not USE_TEST_IMAGE: logging.error('No camera found! Fallback to test cam!')
+            else: logging.debug("Using Test Camera")
         self.update()
         self._oneshot_eval = False
 
@@ -73,11 +78,13 @@ class CameraControl(QGroupBox):
     def showEvent(self, event):
         if self._first_show:
             self.connect_signals()
+            # on first show take snapshot of camera to display
             self.cam.snapshot()
+            # prep preview window
             self.ui.camera_prev.prepare()
 
     def closeEvent(self, event: QtGui.QCloseEvent):
-        #self.recorder.release()
+        # close camera stream and recorder object
         self.recorder.close()
         self.cam.stop_streaming()
         
@@ -89,6 +96,7 @@ class CameraControl(QGroupBox):
         self.ui.startCamBtn.clicked.connect(self.prev_start_pushed)
         self.ui.setROIBtn.clicked.connect(self.apply_roi)
         self.ui.resetROIBtn.clicked.connect(self.cam.reset_roi)
+        # action menu signals
         self.ui.actionVideo_Path.triggered.connect(self.set_video_path)
         self.ui.actionKalibrate_Size.triggered.connect(self.calib_size)
 
@@ -110,7 +118,7 @@ class CameraControl(QGroupBox):
                 #self.recorder.open(self.video_dir + f"/{now}.mp4", 0x21 ,self.cam.get_framerate(),self.cam.get_resolution())
                 logging.info(f"Start video recording. File: {self.video_dir}/{now}.mp4 Resolution:{str(self.cam.get_resolution())}@{self.cam.get_framerate()}")
             self.cam.start_streaming()
-            logging.info("Start camera stream")
+            logging.info("Started camera stream")
             self.ui.startCamBtn.setText('Stop')
             self.ui.record_chk.setEnabled(False)
             self.ui.frameInfoLbl.setText('Running')
@@ -139,27 +147,32 @@ class CameraControl(QGroupBox):
         # block image signal to prevent overloading
         blocker = QSignalBlocker(self.cam)
         if self.cam.is_running:
+            # evaluate droplet if checkbox checked
             eval = self.ui.evalChk.isChecked()
+            # display current fps
             self.ui.frameInfoLbl.setText('Running | FPS: ' + str(self.cam.get_framerate()))
             # save image frame if recording
             if self.ui.record_chk.isChecked():
                 self.recorder.write_frame(cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB))
-                #self.recorder.write(cv_img)
         elif self._oneshot_eval:
+            # enable evaluate for one frame (eg snapshots)
             eval = True
             self._oneshot_eval = False
         else:
             eval = False
 
+        # if ROI size changed, cause update of internal variables for new image dimensions
         if self.cam._image_size_invalid:
             self.ui.camera_prev.invalidate_imagesize()
             self.cam._image_size_invalid = False
-        # thread = Thread(target=self.ui.camera_prev.update_image, args=(cv_img, eval),)
-        self.ui.camera_prev.update_image(cv_img, eval)
-        # thread.start()
-        #self.update_image_signal.emit(cv_img, eval)
 
+        # update preview image    
+        self.ui.camera_prev.update_image(cv_img, eval)
+
+        # display droplet parameters
         self.ui.drpltDataLbl.setText(str(self.ui.camera_prev._droplet))
+
+        # unblock signals from cam
         blocker.unblock()
 
     @Slot()
@@ -170,11 +183,11 @@ class CameraControl(QGroupBox):
 
     @Slot()
     def calib_size(self):
-        # TODO do oneshot eval and extrac height and width from froplet, then calc scale and set in droplet
+        # do oneshot eval and extract height from froplet, then calc scale and set in droplet
         res,ok = QInputDialog.getDouble(self,"Size of calib element", "Please enter the height of the test subject in mm:", 0, 0, 100)
         if not ok or res == 0.0:
             return
         self._oneshot_eval = True
-        droplt = Droplet()
+        droplt = Droplet() # singleton
         self.cam.snapshot()
         droplt.set_scale(res / droplt._height)

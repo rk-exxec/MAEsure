@@ -17,6 +17,7 @@
 from math import degrees
 from PySide2.QtCore import QSettings
 
+from typing import Tuple
 from numpy.lib.function_base import angle
 
 class Singleton(object):
@@ -32,34 +33,35 @@ class Singleton(object):
 
 class Droplet(Singleton):
     def __init__(self):
-        settings = QSettings()
-        self.is_valid = False
-        self._angle_l = 0.0
-        self._angle_l_avg = RollingAverager()
-        self._angle_r = 0.0
-        self._angle_r_avg = RollingAverager()
-        self.center = (0,0)
-        self.maj = 0
-        self.min = 0
-        self.phi = 0.0
-        self.tilt_deg = 0
-        self.foc_pt1 = (0,0)
-        self.foc_pt2 = (0,0)
-        self.tan_l_m = 0
-        self.int_l = (0,0)
-        self.line_l = (0,0,0,0)
-        self.tan_r_m = 0
-        self.int_r = (0,0)
-        self.line_r = (0,0,0,0)
-        self.base_diam = 0
-        self._area = 0.0
-        self._area_avg = RollingAverager()
-        self._height = 0.0
-        self._height_avg = RollingAverager()
-        self.scale_px_to_mm: float = float(settings.value("droplet/scale_px_to_mm", 0.0))
+        settings                                    = QSettings()
+        self.is_valid       : bool                  = False
+        self._angle_l       : float                 = 0.0
+        self._angle_l_avg                           = RollingAverager()
+        self._angle_r       : float                 = 0.0
+        self._angle_r_avg                           = RollingAverager()
+        self.center         : Tuple[int,int]        = (0,0)
+        self.maj            : int                   = 0
+        self.min            : int                   = 0
+        self.phi            : float                 = 0.0
+        self.tilt_deg       : float                 = 0.0
+        self.foc_pt1        : Tuple[int,int]        = (0,0)
+        self.foc_pt2        : Tuple[int,int]        = (0,0)
+        self.tan_l_m        : int                   = 0
+        self.int_l          : Tuple[int,int]        = (0,0)
+        self.line_l         : Tuple[int,int,int,int] = (0,0,0,0)
+        self.tan_r_m        : int                   = 0
+        self.int_r          : Tuple[int,int]        = (0,0)
+        self.line_r         : Tuple[int,int,int,int] = (0,0,0,0)
+        self.base_diam      : int                   = 0
+        self._area          : float                 = 0.0
+        self._area_avg                              = RollingAverager()
+        self._height        : float                 = 0.0
+        self._height_avg                            = RollingAverager()
+        self.scale_px_to_mm : float                 = float(settings.value("droplet/scale_px_to_mm", 0.0)) # try to load from persistent storage
 
     def __str__(self) -> str:
         if self.is_valid:
+            # if scalefactor is present, display in metric, else in pixles
             if self.scale_px_to_mm is None or self.scale_px_to_mm <= 0:
                 return 'Angle Left:\n{:.2f}°\nAngle Right:\n{:.2f}°\nSurface Diam:\n{:.2f} px\nArea:\n{:.2f} px2\nHeight:\n{:.2f} px'.format(
                     round(degrees(self.angle_l),2), round(degrees(self.angle_r),2), round(self.base_diam), round(self.area,2), round(self.height,2)
@@ -71,9 +73,9 @@ class Droplet(Singleton):
         else:
             return 'No droplet!'
 
+    # properties section, get returns the average, set feeds the rolling averager
     @property
     def angle_l(self):
-        #return self._angle_l
         return self._angle_l_avg.average
 
     @angle_l.setter
@@ -100,14 +102,6 @@ class Droplet(Singleton):
         self._height = value
 
     @property
-    def height_mm(self):
-        return self._height_avg.average * self.scale_px_to_mm
-
-    @property
-    def base_diam_mm(self):
-        return self.base_diam * self.scale_px_to_mm
-
-    @property
     def area(self):
         return self._area_avg.average
 
@@ -116,16 +110,28 @@ class Droplet(Singleton):
         self._area_avg._put(value)
         self._area = value
 
+    # return values after converting to metric
+    @property
+    def height_mm(self):
+        return self._height_avg.average * self.scale_px_to_mm
+
+    @property
+    def base_diam_mm(self):
+        return self.base_diam * self.scale_px_to_mm
+
     @property
     def area_mm(self):
         return self._area_avg.average * self.scale_px_to_mm**2
 
     def set_scale(self, scale):
+        """ set a scalefactor to calculate mm from pixels """
         self.scale_px_to_mm = scale
+        # save in persistent storage
         settings = QSettings()
         settings.setValue("droplet/scale_px_to_mm", scale)
 
     def set_filter_length(self, value):
+        """ adjust the filter length for the rolling average """
         self._angle_l_avg.set_length(value)
         self._angle_r_avg.set_length(value)
         self._height_avg.set_length(value)

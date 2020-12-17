@@ -238,9 +238,9 @@ def calc_area_of_droplet(line_intersections, ellipse_pars, y_int) -> float:
 def calc_height_of_droplet(ellipse_pars, y_base) -> float:
     (x0, y0, a, b, phi) = ellipse_pars
     # https://math.stackexchange.com/questions/91132/how-to-get-the-limits-of-rotated-ellipse
-    # lowspot of ellipse ( topspot in image ), origin - ell_height
+    # lowspot of ellipse ( topspot in image ), ell_origin - ell_height
     y_low = y0 - sqrt(a**2 * sin(phi)**2 + b**2 * cos(phi)**2)
-    
+    # actual height, baseline - lowspot
     droplt_height = y_base - y_low
     return droplt_height
 

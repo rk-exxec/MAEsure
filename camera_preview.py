@@ -114,9 +114,7 @@ class CameraPreview(QOpenGLWidget):
     @Slot(np.ndarray, bool)
     def update_image(self, cv_img: np.ndarray, eval: bool = True):
         """ Updates the image_label with a new opencv image"""
-        #print(np.shape(cv_img))
         try:
-            #pass
             # evaluate droplet only if camera is running or if a oneshot eval is requested
             if eval:
                 try:
@@ -167,7 +165,9 @@ class CameraPreview(QOpenGLWidget):
         pix_rect = self._pixmap.size()
         res: List[int] = []
         if x is not None:
+            # calculate scale
             scale_x = self._image_size[1] / pix_rect.width()
+            # subtract half the width delta, then scale
             tr_x = int(round((x - (abs(pix_rect.width() - self.width())/2)) * scale_x))
             res.append(tr_x)
         if y is not None:
