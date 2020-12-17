@@ -25,7 +25,7 @@ from moviepy.video.io.ffmpeg_writer import FFMPEG_VideoWriter as VidWriter
 import cv2
 from PySide2 import QtGui
 from PySide2.QtWidgets import QFileDialog, QGroupBox, QInputDialog
-from PySide2.QtCore import QSignalBlocker, Signal, Slot
+from PySide2.QtCore import QSettings, QSignalBlocker, Signal, Slot
 
 
 from droplet import Droplet
@@ -51,11 +51,15 @@ class CameraControl(QGroupBox):
     def __init__(self, parent=None):
         super(CameraControl, self).__init__(parent)
         logging.debug("Init CameraControl")
+        # loading settings
+        settings = QSettings()
+
         # load UI components
         self.ui: Ui_main = self.window().ui
         self._first_show = True # whether form is shown for the first time
-        self.cam: AbstractCamera = None # AbstractCamera as interface class for different cameras
-        self.video_dir = "."
+        
+        # video path and writer object to record videos
+        self.video_dir = settings.value("camera_control/video_dir", ".", str)
         self.recorder: VidWriter = None
 
         # initialize camera object
@@ -177,9 +181,12 @@ class CameraControl(QGroupBox):
 
     @Slot()
     def set_video_path(self):
+        """ update the save path for videos """
+        settings = QSettings()
         res = QFileDialog.getExistingDirectory(self, "Select default video directory", ".")
         if (res is not None and res != ""):
             self.video_dir = res
+            settings.setValue("camera_control/video_dir", res)
 
     @Slot()
     def calib_size(self):
