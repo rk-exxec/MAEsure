@@ -174,6 +174,12 @@ class RollingAverager:
         return sum(self.buffer) / self.length
 
     def set_length(self, value):
+        if value > self.length:
+            # append delta len to exisiting buffer
+            self.buffer = self.buffer + [self.buffer[-1]]*(value - self.length)
+        else:
+            # keep last numbers
+            self.buffer = self.buffer[-value:]
+            # roll counter over if too large
+            if self.counter > (value -1 ): self.counter = 0
         self.length = value
-        self.first_number = True
-
