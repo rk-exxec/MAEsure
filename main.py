@@ -62,7 +62,7 @@ class MainWindow(QMainWindow):
 
 if __name__ == "__main__":
     os.system('pyside2-uic -o ui_form.py qt_resources/form.ui')
-    logging.basicConfig(filename='app.log', filemode='w', level=logging.WARNING)
+    logging.basicConfig(filename='app.log', filemode='w', level=logging.DEBUG)
     QCoreApplication.setOrganizationName("OTH Regensburg")
     QCoreApplication.setApplicationName("MAEsure")
     app = QApplication(sys.argv)

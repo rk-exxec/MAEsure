@@ -17,6 +17,7 @@
 from typing import List, Tuple, Union
 import cv2
 import numpy as np
+import logging
 
 from PySide2 import QtGui
 from PySide2.QtWidgets import QLabel, QOpenGLWidget
@@ -121,8 +122,7 @@ class CameraPreview(QOpenGLWidget):
                     self._droplet.is_valid = False
                     evaluate_droplet(cv_img, self.get_baseline_y())
                 except Exception as ex:
-                    #print(ex.with_traceback(None))
-                    pass
+                    logging.error("Exception thrown in %s", "fcn:evaluate_droplet", exc_info=ex)
             else:
                 self._droplet.is_valid = False
             qt_img = self._convert_cv_qt(cv_img)
@@ -133,8 +133,8 @@ class CameraPreview(QOpenGLWidget):
                 self._image_size_invalid = False
             self.update()
             del cv_img
-        except Exception:
-            pass
+        except Exception as ex:
+            logging.error("Exception thrown in %s", "class:camera_preview fcn:update_image", exc_info=ex)
 
     def _convert_cv_qt(self, cv_img: np.ndarray):
         """Convert from an opencv image to QPixmap"""

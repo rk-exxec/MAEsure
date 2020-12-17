@@ -16,8 +16,10 @@
 
 from math import degrees
 from PySide2.QtCore import QSettings
+import logging
 
 from typing import Tuple
+
 from numpy.lib.function_base import angle
 
 class Singleton(object):
@@ -125,6 +127,7 @@ class Droplet(Singleton):
 
     def set_scale(self, scale):
         """ set a scalefactor to calculate mm from pixels """
+        logging.info(f"droplet: set scale to {scale}")
         self.scale_px_to_mm = scale
         # save in persistent storage
         settings = QSettings()
