@@ -148,8 +148,10 @@ class CameraPreview(QOpenGLWidget):
 
     def map_droplet_drawing_vals(self, droplet: Droplet):
         """ convert the droplet values from image coords into pixmap coords and values better for drawing """
-        tangent_l = tuple(map(lambda x: self.mapFromImage(*x), droplet.line_l))
-        tangent_r = tuple(map(lambda x: self.mapFromImage(*x), droplet.line_r))
+        tangent_l = tuple(self.mapFromImage(droplet.line_l[0:1]) + self.mapFromImage(droplet.line_l[2:3]))
+        #tuple(map(lambda x: self.mapFromImage(*x), droplet.line_l))
+        tangent_r = tuple(self.mapFromImage(droplet.line_r[0:1]) + self.mapFromImage(droplet.line_r[2:3])) 
+        #tuple(map(lambda x: self.mapFromImage(*x), droplet.line_r))
         center = self.mapFromImage(*droplet.center)
         maj, min = self.mapFromImage(droplet.maj, droplet.min)
         int_l = self.mapFromImage(*droplet.int_l)
