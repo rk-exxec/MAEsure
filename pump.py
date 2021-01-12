@@ -50,10 +50,10 @@ class Microliter(Pump):
             raise PumpError('%s: diameter %s mm is out of range' % 
                             (self.name, diameter))
         
-        diameter = remove_crud(str(diameter))
+        diam_str = remove_crud(str(diameter))
 
         # Send command   
-        self.write('MMD ' + diameter)
+        self.write('MMD ' + diam_str)
         resp = self.read(5)
 
         # Pump replies with address and status (:, < or >)        
@@ -61,14 +61,14 @@ class Microliter(Pump):
             # check if diameter has been set correctlry
             self.write('DIA')
             resp = self.read(15)
-            returned_diameter = remove_crud(resp[3:9])
+            returned_diameter = remove_crud(resp[0:9])
             
             # Check diameter was set accurately
-            if returned_diameter != diameter:
+            if float(returned_diameter) != diameter:
                 logging.error('%s: set diameter (%s mm) does not match diameter'
-                              ' returned by pump (%s mm)', self.name, diameter,
+                              ' returned by pump (%s mm)', self.name, diam_str,
                               returned_diameter)
-            elif returned_diameter == diameter:
+            else:
                 self.diameter = float(returned_diameter)
                 logging.info('%s: diameter set to %s mm', self.name,
                              self.diameter)
@@ -139,9 +139,9 @@ class Microliter(Pump):
 
     def settargetvolume(self, targetvolume):
         """Set the target volume to infuse or withdraw (microlitres)."""
-        self.write('MLT ' + str(targetvolume))
+        self.write('ULT ' + str(targetvolume))
         resp = self.read(5)
-        self.write('MLTW ' + str(targetvolume))
+        self.write('ULTW ' + str(targetvolume))
         resp = self.read(5)
 
         # response should be CRLFXX:, CRLFXX>, CRLFXX< where XX is address
