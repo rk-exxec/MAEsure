@@ -15,6 +15,7 @@
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import logging
+from time import sleep
 from pumpy import Pump, PumpError, remove_crud
 
 class Microliter(Pump):
@@ -39,6 +40,17 @@ class Microliter(Pump):
         else:
             return response
 
+    def readall(self):
+        response = ""
+        while len(response) == 0:
+            sleep(0.2)
+            response = self.serialcon.read_all().decode().strip()
+
+        if len(response) == 0:
+            raise PumpError('%s: no response to command' % self.name)
+        else:
+            return response
+
     def setdiameter(self, diameter):
         """Set syringe diameter (millimetres).
 
@@ -54,10 +66,10 @@ class Microliter(Pump):
 
         # Send command   
         self.write('MMD ' + diam_str)
-        resp = self.read(5)
+        resp = self.readall()
 
         # Pump replies with address and status (:, < or >)        
-        if (resp[-1] in ":<>"):
+        if (resp[-1] in ":<>*IWDT" or "*" in resp):
             # check if diameter has been set correctlry
             self.write('DIA')
             resp = self.read(15)
@@ -73,7 +85,7 @@ class Microliter(Pump):
                 logging.info('%s: diameter set to %s mm', self.name,
                              self.diameter)
         else:
-            raise PumpError('%s: unknown response to setdiameter' % self.name)
+            raise PumpError(f'{self.name}: unknown response to setdiameter: {resp}')
 
     def setflowrate(self, flowrate):
         """Set flow rate (microlitres per minute).
@@ -84,14 +96,14 @@ class Microliter(Pump):
         flowrate = remove_crud(str(flowrate))
 
         self.write('ULM ' + flowrate)
-        resp = self.read(5)
+        resp = self.readall()
         self.write('ULMW ' + flowrate)
-        resp = self.read(5)
+        resp = self.readall()
         
-        if (resp[-1] in ":<>"):
+        if (resp[-1] in ":<>*IWDT" or "*" in resp):
             # Flow rate was sent, check it was set correctly
             self.write('RAT')
-            resp = self.read(150)
+            resp = self.readall()
             returned_flowrate = remove_crud(resp[2:8])
 
             if returned_flowrate != flowrate:
@@ -103,7 +115,7 @@ class Microliter(Pump):
                 logging.info('%s: infuse flow rate set to %s uL/min', self.name,
                               self.flowrate)
             self.write('RATW')
-            resp = self.read(150)
+            resp = self.readall()
             returned_flowrate = remove_crud(resp[2:8])
 
             if returned_flowrate != flowrate:
@@ -118,38 +130,53 @@ class Microliter(Pump):
             raise PumpError('%s: flow rate (%s uL/min) is out of range' %
                            (self.name, flowrate))
         else:
-            raise PumpError('%s: unknown response' % self.name)
+            raise PumpError(f'{self.name}: unknown response: {resp}')
             
     def infuse(self):
         """Start infusing pump."""
         self.write('RUN')
-        resp = self.read(5)      
+        resp = self.readall()      
         if resp[-1] != '>':
-            raise PumpError("Pump did not start withdraw!")  
+            raise PumpError(f"Pump did not start infuse!: {resp}")  
         logging.info('%s: infusing',self.name)
 
     def withdraw(self):
         """Start withdrawing pump."""
         self.write('RUNW')
-        resp = self.read(5)
+        resp = self.readall()
         if resp[-1] != '<':
-            raise PumpError("Pump did not start withdraw!")
+            raise PumpError(f"Pump did not start withdraw!: {resp}")
 
         logging.info('%s: withdrawing',self.name)
 
+    def stop(self):
+        self.write("STP")
+        resp = self.readall()
+        if not resp[-1] in ":*IWDT":
+            raise PumpError(f"Pump did not stop: {resp}")
+
+
     def settargetvolume(self, targetvolume):
         """Set the target volume to infuse or withdraw (microlitres)."""
+        self.write('CLT')
+        resp = self.readall()
+        self.write('CLTW')
+        resp = self.readall()
+        self.write('CLV')
+        resp = self.readall()
+        self.write('CLVW')
+        resp = self.readall()
         self.write('ULT ' + str(targetvolume))
-        resp = self.read(5)
+        resp = self.readall()
         self.write('ULTW ' + str(targetvolume))
-        resp = self.read(5)
+        resp = self.readall()
 
         # response should be CRLFXX:, CRLFXX>, CRLFXX< where XX is address
         # Pump11 replies with leading zeros, e.g. 03, but PHD2000 misbehaves and 
         # returns without and gives an extra CR. Use int() to deal with
-        if resp[-1] in ":<>":
+        if resp[-1] in ":<>*IWDT" or "*" in resp:
             self.targetvolume = float(targetvolume)
             logging.info('%s: target volume set to %s uL', self.name,
                          self.targetvolume)
         else:
-            raise PumpError('%s: target volume not set' % self.name)
+            raise PumpError(f'{self.name}: unknown response: {resp}')
