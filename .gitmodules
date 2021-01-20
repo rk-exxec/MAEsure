@@ -1,3 +1,6 @@
 [submodule "lt_control"]
 	path = lt_control
 	url = https://github.com/rk-exxec/movtec_L60_Control
+[submodule "VimbaPython"]
+	path = VimbaPython
+	url = https://github.com/alliedvision/VimbaPython.git
