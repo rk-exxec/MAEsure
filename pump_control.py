@@ -43,6 +43,7 @@ class PumpControl(QGroupBox):
            logging.warning('Pump Error:' + str(ex))
 
     def showEvent(self, event):
+        self._pump.stop()
         self._pump.setdiameter(self.ui.diamSpinBox.value())
         self._pump.setflowrate(self.ui.flowSpinBox.value()) # 2ul / s
         self.connect_signals()
