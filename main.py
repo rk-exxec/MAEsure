@@ -37,6 +37,8 @@ from light_widget import LightWidget
 
 # TODO comments for droplet, camera control etc
 
+# FIXME sometimes doenst kill process on close, camera?
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
@@ -61,10 +63,14 @@ class MainWindow(QMainWindow):
         del self
 
 if __name__ == "__main__":
+    # compile python qt form into python file
     os.system('pyside2-uic -o ui_form.py qt_resources/form.ui')
+    # setup logging
     logging.basicConfig(filename='app.log', filemode='w', level=logging.DEBUG)
+    # pysde2 settings config
     QCoreApplication.setOrganizationName("OTH Regensburg")
     QCoreApplication.setApplicationName("MAEsure")
+    # init application
     app = QApplication(sys.argv)
     pic = QPixmap('qt_resources/maesure.png')
     splash = QSplashScreen(pic)#, Qt.WindowStaysOnTopHint)
@@ -75,4 +81,5 @@ if __name__ == "__main__":
     widget = MainWindow()
     #widget.show()
     splash.finish(widget)
+    # execute qt main loop
     sys.exit(app.exec_())
