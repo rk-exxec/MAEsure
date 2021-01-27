@@ -43,7 +43,7 @@ class Microliter(Pump):
     def readall(self):
         response = ""
         while len(response) == 0:
-            sleep(0.2)
+            sleep(0.1)
             response = self.serialcon.read_all().decode().strip()
 
         if len(response) == 0:
@@ -158,6 +158,7 @@ class Microliter(Pump):
 
     def settargetvolume(self, targetvolume):
         """Set the target volume to infuse or withdraw (microlitres)."""
+        # clear infuse target
         self.write('CLT')
         resp = self.readall()
         self.write('CLTW')
@@ -166,6 +167,7 @@ class Microliter(Pump):
         resp = self.readall()
         self.write('CLVW')
         resp = self.readall()
+        # set new infuse target
         self.write('ULT ' + str(targetvolume))
         resp = self.readall()
         self.write('ULTW ' + str(targetvolume))
