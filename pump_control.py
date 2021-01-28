@@ -30,6 +30,8 @@ if TYPE_CHECKING:
 # TODO put settings in extra dialog?
 
 class PumpControl(QGroupBox):
+    """
+    provides a grupbox with UI to control the pump """
     def __init__(self, parent=None) -> None:
         super(PumpControl, self).__init__(parent)
         self.ui: Ui_main = self.window().ui

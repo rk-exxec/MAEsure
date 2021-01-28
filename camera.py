@@ -83,6 +83,7 @@ class AbstractCamera(QObject):
 
     @property
     def is_running(self):
+        """ returns true if camera is capturing """
         return self._is_running
 
     def snapshot(self):
@@ -118,6 +119,7 @@ class AbstractCamera(QObject):
 
 if HAS_VIMBA:
     class VimbaCamera(AbstractCamera):
+        """ provides interface to the Allied Vision Camera """
         def __init__(self):
             super(VimbaCamera, self).__init__()
             self._stream_killswitch: Event = None
