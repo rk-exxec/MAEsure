@@ -27,23 +27,30 @@ class LightColor(Enum):
     OFF = auto()
 
 class LightWidget(QWidget):
+    """
+    provides a round status lamp as widget with 4 colors to indicata states ok, warning, stop and error
+    """
     def __init__(self, parent=None):
         super(LightWidget, self).__init__(parent)
         self._color = LightColor.OFF
 
     def set_red(self):
+        """ set lamp color to red """
         self._color = LightColor.RED
         self.update()
 
     def set_green(self):
+        """ set lamp color to green """
         self._color = LightColor.GREEN
         self.update()
 
     def set_error(self):
+        """ set lamp color to dark red """
         self._color = LightColor.ERROR
         self.update()
 
     def set_yellow(self):
+        """ set lamp color to yellow """
         self._color = LightColor.YELLOW
         self.update()
 

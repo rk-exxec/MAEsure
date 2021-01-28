@@ -34,6 +34,11 @@ class Singleton(object):
 # TODO comments
 
 class Droplet(Singleton):
+    """
+    provides a storage structure for droplet information and conversion functions  
+    implements singleton pattern
+    saves settings like droplet scale with QSettings mechanism to registry or similar
+    """
     def __init__(self):
         settings                                    = QSettings()
         self.is_valid       : bool                  = False
