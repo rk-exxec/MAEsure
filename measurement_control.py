@@ -59,9 +59,9 @@ class MeasurementControl(QGroupBox):
         if self._first_show:
             # try to use Home drive, if not, use Documents folder
             if os.path.exists("G:/Messungen/Angle_Measurements"):
-                self.ui.fileNameEdit.setText(os.path.expanduser('G:/Messungen/Angle_Measurements/!now!.dat'))
+                self.ui.fileNameEdit.setText(os.path.expanduser('G:/Messungen/Angle_Measurements/!now!_!pos!.dat'))
             else:
-                self.ui.fileNameEdit.setText(os.path.expanduser('~/Documents/!now!.dat'))
+                self.ui.fileNameEdit.setText(os.path.expanduser('~/Documents/!now!_!pos!.dat'))
             self.connect_signals()
             self._first_show = False
 

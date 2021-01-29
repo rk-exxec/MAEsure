@@ -96,7 +96,7 @@ class DataControl(QTableWidget):
         """ Opens Save As... dialog to determine file save location.
         Displays filename in line edit
         """
-        file, filter = QFileDialog.getSaveFileName(self, 'Save Measurement Data', f'{self._default_dir}/!now!.dat' ,'Data Files (*.dat *.csv)')
+        file, filter = QFileDialog.getSaveFileName(self, 'Save Measurement Data', f'{self._default_dir}/!now!_!pos!.dat' ,'Data Files (*.dat *.csv)')
         if file == '': return
         self._default_dir = os.path.dirname(file)
         #self.export_data_csv(file)
@@ -108,9 +108,10 @@ class DataControl(QTableWidget):
         Fiolename is picked from LineEdit.
         Relaces \'!now!\' in filename with current datetime.
         """
-        date = datetime.now().strftime('%Y%m%d_%H-%M-%S')
+        date = datetime.now().strftime('%y_%m_%d_%H-%M')
         if self.ui.fileNameEdit.text() == "": raise ValueError("No File specified!")
         self._cur_filename = self.ui.fileNameEdit.text().replace('!now!', f'{date}')
+        self._cur_filename = self._cur_filename.replace('!pos!', f'{self.window().ui.posSpinBox.value()}')
         open(self._cur_filename, 'w').close()
 
     def save_data(self):
