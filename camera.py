@@ -19,12 +19,13 @@ import cv2
 import pydevd
 from PySide2.QtCore import QObject, QTimer, Signal, Slot
 import numpy as np
+from vimba.error import VimbaCameraError
 
 try:
     from vimba import Vimba, Frame, Camera, LOG_CONFIG_TRACE_FILE_ONLY
     from vimba.frame import FrameStatus
     HAS_VIMBA = True
-except Exception:
+except Exception as ex:
     HAS_VIMBA = False
 
 from typing import List, TYPE_CHECKING, Tuple
@@ -82,6 +83,7 @@ class AbstractCamera(QObject):
 
     @property
     def is_running(self):
+        """ returns true if camera is capturing """
         return self._is_running
 
     def snapshot(self):
@@ -117,6 +119,7 @@ class AbstractCamera(QObject):
 
 if HAS_VIMBA:
     class VimbaCamera(AbstractCamera):
+        """ provides interface to the Allied Vision Camera """
         def __init__(self):
             super(VimbaCamera, self).__init__()
             self._stream_killswitch: Event = None
@@ -235,10 +238,13 @@ if HAS_VIMBA:
                     self._cam.ReverseY.set(True)
 
         def get_framerate(self):
-            with self._vimba:
-                with self._cam:
-                    return round(self._cam.AcquisitionFrameRate.get(),2)
-                    #return round(self._frc.average_fps,1)
+            try:
+                with self._vimba:
+                    with self._cam:
+                        return round(self._cam.AcquisitionFrameRate.get(),2)
+                        #return round(self._frc.average_fps,1)
+            except VimbaCameraError as ex:
+                return -1
 
         def get_resolution(self) -> Tuple[int, int]:
             with self._vimba:

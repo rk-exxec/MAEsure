@@ -30,9 +30,16 @@ class Microliter(Pump):
     """
 
     def write(self,command):
+        """ write command to pump 
+        :param command: command as string 
+        """
         self.serialcon.write(str(self.address + command + '\r').encode())
 
     def read(self,bytes=5):
+        """ read number of bytes from serial buffer 
+        :param bytes: number of bytes to read
+        :returns: bytes read from buffer
+        """
         response = self.serialcon.read(bytes).decode().strip()
 
         if len(response) == 0:
@@ -41,9 +48,12 @@ class Microliter(Pump):
             return response
 
     def readall(self):
+        """ read complete serial buffer 
+        :returns: bytes read from buffer
+        """
         response = ""
         while len(response) == 0:
-            sleep(0.2)
+            sleep(0.1)
             response = self.serialcon.read_all().decode().strip()
 
         if len(response) == 0:
@@ -150,6 +160,7 @@ class Microliter(Pump):
         logging.info('%s: withdrawing',self.name)
 
     def stop(self):
+        """ stop pump movement """
         self.write("STP")
         resp = self.readall()
         if not resp[-1] in ":*IWDT":
@@ -158,6 +169,7 @@ class Microliter(Pump):
 
     def settargetvolume(self, targetvolume):
         """Set the target volume to infuse or withdraw (microlitres)."""
+        # clear infuse target
         self.write('CLT')
         resp = self.readall()
         self.write('CLTW')
@@ -166,6 +178,7 @@ class Microliter(Pump):
         resp = self.readall()
         self.write('CLVW')
         resp = self.readall()
+        # set new infuse target
         self.write('ULT ' + str(targetvolume))
         resp = self.readall()
         self.write('ULTW ' + str(targetvolume))

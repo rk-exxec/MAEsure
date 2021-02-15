@@ -1038,7 +1038,7 @@ Surface Diam:
       <number>1</number>
      </property>
      <property name="maximum">
-      <double>1000.000000000000000</double>
+      <double>10000.000000000000000</double>
      </property>
      <property name="value">
       <double>120.000000000000000</double>

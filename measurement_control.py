@@ -29,7 +29,7 @@ import time
 from threading import Thread, Event
 
 from PySide2 import QtGui
-from PySide2.QtWidgets import QGroupBox, QMessageBox
+from PySide2.QtWidgets import QApplication, QGroupBox, QMessageBox
 from PySide2.QtCore import Signal, Slot, Qt
 
 from typing import List, TYPE_CHECKING
@@ -37,6 +37,9 @@ if TYPE_CHECKING:
     from ui_form import Ui_main
 
 class MeasurementControl(QGroupBox):
+    """
+    class that provides a groupbox with UI to control the measurement process
+    """
     new_datapoint_signal = Signal(float, Droplet, int)
     save_data_signal = Signal()
     def __init__(self, parent=None) -> None:
@@ -54,7 +57,11 @@ class MeasurementControl(QGroupBox):
 
     def showEvent(self, event):
         if self._first_show:
-            self.ui.fileNameEdit.setText(os.path.expanduser('~/Documents/!now!.dat'))
+            # try to use Home drive, if not, use Documents folder
+            if os.path.exists("G:/Messungen/Angle_Measurements"):
+                self.ui.fileNameEdit.setText(os.path.expanduser('G:/Messungen/Angle_Measurements/!now!_!pos!.dat'))
+            else:
+                self.ui.fileNameEdit.setText(os.path.expanduser('~/Documents/!now!_!pos!.dat'))
             self.connect_signals()
             self._first_show = False
 
@@ -66,14 +73,22 @@ class MeasurementControl(QGroupBox):
 
     @Slot()
     def start_stop_btn_pushed(self):
+        """ 
+        Starts or stops the measurement and updates the UI
+        """
         if self.ui.startMeasBtn.text() == "Start":
             self.ui.startMeasBtn.setText("Stop")
+            QApplication.processEvents()
             self.start_measurement()
         else:
             self.stop_measurement()
             self.ui.startMeasBtn.setText("Start")
 
     def start_measurement(self):
+        """
+        checks if measurement is not already running and camera is functional. 
+        If conditions met will start measurement thread
+        """
         if not self.ui.camera_ctl.is_streaming():
             QMessageBox.information(self, 'MAEsure Information',' Camera is not running!\nPlease start camera first!', QMessageBox.Ok)
             logging.info('Meas_Start: Camera not running')
@@ -93,6 +108,9 @@ class MeasurementControl(QGroupBox):
         self._meas_thread.start()
 
     def stop_measurement(self):
+        """
+        Stops the measurement gracefully, still writing the data.
+        """
         self._meas_aborted = False
         self._stop_meas_event.set()
         self._meas_thread.join(5)
@@ -101,6 +119,9 @@ class MeasurementControl(QGroupBox):
 
     @Slot()
     def abort_measurement(self):
+        """
+        stops the measurement without saving data
+        """
         self._meas_aborted = True
         self._stop_meas_event.set()
         self._meas_thread.join(5)
@@ -137,7 +158,7 @@ class MeasurementControl(QGroupBox):
             #self.ui.pump_control.withdraw()
             if self._stop_meas_event.is_set():
                 break
-        # still save data, when stopped
+        # still save data when stopped
         if not self._meas_aborted:
             self.save_data_signal.emit()
         else:
@@ -173,26 +194,26 @@ class MeasurementControl(QGroupBox):
         """
         expr = expr.strip()
         if expr == '': raise ValueError('Expression empty!')
-        out: List[float] = []
-        for s in expr.split(','):
-            if ':' in s:
-                r = s.split(':')
-                r[0] = float(r[0])
-                r[1] = float(r[1])
-                if len(r) == 2:
-                    r.append(10)
-                elif len(r) == 3:
-                    r[2] = int(r[2])
-                out += list(np.linspace(r[0], r[1], num=r[2], endpoint=True))
-            elif '*' in s:
-                r = s.split('*')
-                r[0] = float(r[0])
-                r[1] = float(r[1])
-                if len(r) == 2:
-                    r.append(10)
-                elif len(r) == 3:
-                    r[2] = int(r[2])
-                out += list(np.logspace(r[0], r[1], num=r[2], endpoint=True))
+        calcd_range: List[float] = []
+        for expr_part in expr.split(','):
+            if ':' in expr_part:
+                range_vals = expr_part.split(':')
+                range_vals[0] = float(range_vals[0])
+                range_vals[1] = float(range_vals[1])
+                if len(range_vals) == 2:
+                    range_vals.append(10)
+                elif len(range_vals) == 3:
+                    range_vals[2] = int(range_vals[2])
+                calcd_range += list(np.linspace(range_vals[0], range_vals[1], num=range_vals[2], endpoint=True))
+            elif '*' in expr_part:
+                range_vals = expr_part.split('*')
+                range_vals[0] = float(range_vals[0])
+                range_vals[1] = float(range_vals[1])
+                if len(range_vals) == 2:
+                    range_vals.append(10)
+                elif len(range_vals) == 3:
+                    range_vals[2] = int(range_vals[2])
+                calcd_range += list(np.logspace(range_vals[0], range_vals[1], num=range_vals[2], endpoint=True))
             else:
-                out.append(float(s))
-        return out
+                calcd_range.append(float(expr_part))
+        return calcd_range
