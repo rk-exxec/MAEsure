@@ -1,8 +1,9 @@
 ﻿.venv
-.vscode
+.vscode/.ropeproject
 __pycache__
 VimbaPython
 ui_form.py
 app.log
 *.mp4
 *.pyproject.user*
+docs/_build
