@@ -1,2 +1,2 @@
-sphinx-apidoc -f -o ./api ..
-sphinx-apidoc -f -o ./api ../src ../src/ui_form.py
+sphinx-apidoc -fMe -o ./api ..
+sphinx-apidoc -fMe -o ./api ../src ../src/*ui_form*

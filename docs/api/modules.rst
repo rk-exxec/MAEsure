@@ -18,4 +18,3 @@ src
    pump
    pump_control
    resizable_rubberband
-   ui_form
