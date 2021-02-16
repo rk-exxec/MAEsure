@@ -1,0 +1,1 @@
+sphinx-apidoc -f -o ./api .. ../ui_form.py
