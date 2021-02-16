@@ -2,9 +2,10 @@ MAEsure - API documentation
 ==============================================
 
 .. toctree::
-   :glob:
-
-   api/*
+   :maxdepth: 2
+   
+   api/main
+   api/modules
 
 
 Indices and tables

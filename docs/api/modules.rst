@@ -1,5 +1,5 @@
-DropletEval
-===========
+src
+===
 
 .. toctree::
    :maxdepth: 4
@@ -13,7 +13,6 @@ DropletEval
    evaluate_droplet
    light_widget
    magnet_control
-   main
    main_window
    measurement_control
    pump
