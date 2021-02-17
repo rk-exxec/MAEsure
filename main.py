@@ -15,6 +15,7 @@
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import sys
+sys.path.append('./src')
 import os
 import pydevd
 import gc
@@ -64,7 +65,7 @@ class MainWindow(QMainWindow):
 
 if __name__ == "__main__":
     # compile python qt form into python file
-    os.system('pyside2-uic -o ui_form.py qt_resources/form.ui')
+    os.system('pyside2-uic -o src/ui_form.py qt_resources/form.ui')
     # setup logging
     logging.basicConfig(filename='app.log', filemode='w', level=logging.DEBUG)
     # pysde2 settings config

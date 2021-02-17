@@ -21,6 +21,9 @@ from PySide2.QtGui import QPainter, QPen
 from PySide2.QtCore import Qt, QPoint
 
 class ResizableRubberBand(QWidget):
+    """ provides a rectangle which is defined by click and drag with the mouse and can be resized
+    afterwards
+    """
     def __init__(self, parent=None):
         super(ResizableRubberBand, self).__init__(parent)
         self.setWindowFlag(Qt.SubWindow)
