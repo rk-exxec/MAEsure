@@ -63,11 +63,37 @@ class MainWindow(QMainWindow):
     def cleanup(self):
         del self
 
+def initialize_logger(out_dir):
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+     
+    # create console handler and set level to info
+    handler = logging.StreamHandler()
+    handler.setLevel(logging.INFO)
+    #formatter = logging.Formatter("%(levelname)s - %(message)s")
+    #handler.setFormatter(formatter)
+    logger.addHandler(handler)
+ 
+    # create error file handler and set level to error
+    handler = logging.FileHandler(os.path.join(out_dir, "error.log"),"w", encoding=None, delay="true")
+    handler.setLevel(logging.ERROR)
+    #formatter = logging.Formatter("%(levelname)s - %(message)s")
+    #handler.setFormatter(formatter)
+    logger.addHandler(handler)
+ 
+    # create debug file handler and set level to debug
+    handler = logging.FileHandler(os.path.join(out_dir, "all.log"),"w")
+    handler.setLevel(logging.DEBUG)
+    #formatter = logging.Formatter("%(levelname)s - %(message)s")
+    #handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
 if __name__ == "__main__":
     # compile python qt form into python file
     os.system('pyside2-uic -o src/ui_form.py qt_resources/form.ui')
     # setup logging
-    logging.basicConfig(filename='app.log', filemode='w', level=logging.DEBUG)
+    #logging.basicConfig(filename='app.log', filemode='w', level=logging.DEBUG)
+    initialize_logger("./log")
     # pysde2 settings config
     QCoreApplication.setOrganizationName("OTH Regensburg")
     QCoreApplication.setApplicationName("MAEsure")

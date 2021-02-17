@@ -19,11 +19,11 @@ import cv2
 import pydevd
 from PySide2.QtCore import QObject, QTimer, Signal, Slot
 import numpy as np
-from vimba.error import VimbaCameraError
 
 try:
     from vimba import Vimba, Frame, Camera, LOG_CONFIG_TRACE_FILE_ONLY
     from vimba.frame import FrameStatus
+    from vimba.error import VimbaCameraError
     HAS_VIMBA = True
 except Exception as ex:
     HAS_VIMBA = False
@@ -32,6 +32,7 @@ from typing import List, TYPE_CHECKING, Tuple
 if TYPE_CHECKING:
     from vimba import Vimba, Frame, Camera, LOG_CONFIG_TRACE_FILE_ONLY
     from vimba.frame import FrameStatus
+    from vimba.error import VimbaCameraError
 
 class FrameRateCounter:
     """ Framerate counter with rolling average filter """
@@ -43,6 +44,9 @@ class FrameRateCounter:
         self.last_timestamp = 0
 
     def _rotate(self):
+        """
+        update internal index of filter
+        """
         # increase current index by 1 or loop back to 0
         if self.counter == (self.length - 1):
             self.counter = 0
@@ -50,18 +54,27 @@ class FrameRateCounter:
             self.counter += 1
 
     def _put(self, value):
+        """
+        add value to filter and rotate
+        """
         # add value to current line then rotate index
         self.buffer[self.counter] = value
         self._rotate()
 
     @staticmethod
     def _calc_frametime(timestamp_new, timestamp_old):
-        # Calculate frametime from camera timestamps (in ns)
+        """
+        Calculate frametime from camera timestamps (in ns)
+
+        :param timestamp_new: current timestamp from camera (ns)
+        :param timestamp_old: previous timestamp from camera (ns)
+        :returns: time between timestamps in s
+        """
         return (timestamp_new - timestamp_old)*1e-9
 
     @property
     def average_fps(self) -> float:
-        """ Return the averaged fps """
+        """ the averaged fps """
         return sum(self.buffer) / self.length
 
     def add_new_timesstamp(self, timestamp):
@@ -83,7 +96,11 @@ class AbstractCamera(QObject):
 
     @property
     def is_running(self):
-        """ returns true if camera is capturing """
+        """ 
+        Check if camera is running
+
+        :returns: True if camera is running, else False 
+        """
         return self._is_running
 
     def snapshot(self):
@@ -98,7 +115,9 @@ class AbstractCamera(QObject):
         raise NotImplementedError
 
     def set_roi(self, x, y, w, h):
-        """ set the region of interest on the cam
+        """ 
+        set the region of interest on the cam
+
         :param x,y: x,y of ROI in image coordinates
         :param w,h: width and height of ROI
         """

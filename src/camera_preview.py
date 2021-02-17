@@ -29,6 +29,9 @@ from baseline import Baseline
 from evaluate_droplet import Droplet, evaluate_droplet
 
 class CameraPreview(QOpenGLWidget):
+    """ 
+    widget to display camera feed and overlay droplet approximations from opencv
+    """
     def __init__(self, parent=None):
         super(CameraPreview, self).__init__(parent)
         self.roi_origin = QPoint()
@@ -41,10 +44,16 @@ class CameraPreview(QOpenGLWidget):
         self._droplet = Droplet()
 
     def prepare(self):
-        # preset the baseline to 250 which is roughly base of the test image droplet
+        """ preset the baseline to 250 which is roughly base of the test image droplet """
         self._baseline.y_level = self.mapFromImage(y=250)
 
     def paintEvent(self, event: QPaintEvent):
+        """
+        custom paint event to 
+        draw camera stream and droplet approximation if available
+
+        uses double buffering to avoid flicker
+        """
         # completely override super.paintEvent() to use double buffering
         painter = QPainter(self)
         #self.drawFrame(painter)
@@ -87,6 +96,11 @@ class CameraPreview(QOpenGLWidget):
         painter.end()
 
     def mousePressEvent(self,event):
+        """
+        mouse pressed handler
+
+        creates ROI rubberband rectangle
+        """
         if event.button() == Qt.LeftButton:
             # create new rubberband rectangle
             self.roi_origin = QPoint(event.pos())
@@ -94,6 +108,11 @@ class CameraPreview(QOpenGLWidget):
             self._roi_rubber_band.show()
 
     def mouseMoveEvent(self, event):
+        """
+        mouse moved handler
+
+        resizes the ROI rubberband rectangle if left mouse button is pressed
+        """
         if event.buttons() == Qt.NoButton:
             pass
         elif event.buttons() == Qt.LeftButton:
@@ -104,6 +123,12 @@ class CameraPreview(QOpenGLWidget):
             pass
 
     def keyPressEvent(self, event):
+        """
+        keyboard pressed handler
+
+        - Esc: aborts ROI rubberband and hides it
+        - Enter: applys ROI from rubberband to camera
+        """
         if event.key() == Qt.Key_Enter:
             # apply the ROI set by the rubberband
             self.parent().apply_roi()
@@ -114,7 +139,12 @@ class CameraPreview(QOpenGLWidget):
 
     @Slot(np.ndarray, bool)
     def update_image(self, cv_img: np.ndarray, eval: bool = True):
-        """ Updates the image_label with a new opencv image"""
+        """ 
+        Updates the image_label with a new opencv image
+        
+        :param cv_img: camera image array
+        :param eval: if True: do image processing on given image
+        """
         try:
             # evaluate droplet only if camera is running or if a oneshot eval is requested
             if eval:
@@ -122,7 +152,7 @@ class CameraPreview(QOpenGLWidget):
                     self._droplet.is_valid = False
                     evaluate_droplet(cv_img, self.get_baseline_y())
                 except Exception as ex:
-                    logging.error("Exception thrown in %s", "fcn:evaluate_droplet", exc_info=ex)
+                    logging.exception("Exception thrown in %s", "fcn:evaluate_droplet", exc_info=ex)
             else:
                 self._droplet.is_valid = False
             qt_img = self._convert_cv_qt(cv_img)
@@ -134,10 +164,15 @@ class CameraPreview(QOpenGLWidget):
             self.update()
             del cv_img
         except Exception as ex:
-            logging.error("Exception thrown in %s", "class:camera_preview fcn:update_image", exc_info=ex)
+            logging.exception("Exception thrown in %s", "class:camera_preview fcn:update_image", exc_info=ex)
 
     def _convert_cv_qt(self, cv_img: np.ndarray):
-        """Convert from an opencv image to QPixmap"""
+        """
+        Convert from an opencv image to QPixmap
+        
+        :param cv_img: opencv image as numpy array
+        :returns: opencv image as QPixmap scaled to widget dimensions
+        """
         #rgb_image = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
         #h, w, ch = rgb_image.shape
         h, w, ch = cv_img.shape
@@ -147,7 +182,19 @@ class CameraPreview(QOpenGLWidget):
         return QPixmap.fromImage(p)
 
     def map_droplet_drawing_vals(self, droplet: Droplet):
-        """ convert the droplet values from image coords into pixmap coords and values better for drawing """
+        """ 
+        convert the droplet values from image coords into pixmap coords and values better for drawing 
+        
+        :param droplet: droplet object containing the data
+        :returns: converted coordinates and lengths in px as 7-Tuple:
+            - left tangent slope
+            - right tangent slope
+            - left intersection x coordinate
+            - right intersection x coordinate
+            - center coordinates of ellips as tuple (x,y)
+            - major axis length
+            - minor axis length
+        """
         tangent_l = tuple(self.mapFromImage(droplet.line_l[0:1]) + self.mapFromImage(droplet.line_l[2:3]))
         #tuple(map(lambda x: self.mapFromImage(*x), droplet.line_l))
         tangent_r = tuple(self.mapFromImage(droplet.line_r[0:1]) + self.mapFromImage(droplet.line_r[2:3])) 
@@ -195,7 +242,11 @@ class CameraPreview(QOpenGLWidget):
         return tuple(res) if len(res)>1 else res[0]
 
     def get_from_image_transform(self):
-        """ Gets the scale and offset for a Image to QLabel coordinate transform """
+        """ 
+        Gets the scale and offset for a Image to QLabel coordinate transform 
+
+        :returns: 4-Tuple: Scale factors for x and y as tuple, Offset as tuple (x,y)
+        """
         pix_rect = self._pixmap.size()
         scale_x = float(pix_rect.width() / self._image_size[1])
         offset_x = abs(pix_rect.width() - self.width())/2
@@ -216,13 +267,17 @@ class CameraPreview(QOpenGLWidget):
         self._roi_rubber_band.hide()
 
     def get_baseline_y(self) -> int:
-        """ return the y value the baseline is on in image coordinates """
+        """ 
+        return the y value the baseline is on in image coordinates 
+        
+        :returns: y value of baseline in image coordinates
+        """
         y_base = self._baseline.y_level
         y = self.mapToImage(y=y_base)
         return y
 
     def set_new_baseline_constraints(self):
-        """ set the mina nd max y value for the baseline """
+        """ set the min and max y value for the baseline """
         pix_size = self._pixmap.size()
         offset_y = int(round(abs(pix_size.height() - self.height())/2))
         self._baseline.max_level = pix_size.height() + offset_y
@@ -238,7 +293,13 @@ class CameraPreview(QOpenGLWidget):
         return x,y,w,h
 
     def _abort_roi(self):
+        """
+        abort ROI set by hiding the rubberband selector
+        """
         self._roi_rubber_band.hide()
 
     def invalidate_imagesize(self):
+        """
+        invalidate image size, causes image size to be reevaluated on next camera image
+        """
         self._image_size_invalid = True

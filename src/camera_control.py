@@ -46,7 +46,9 @@ if TYPE_CHECKING:
 USE_TEST_IMAGE = False
 
 class CameraControl(QGroupBox):
-    """ Class to control camera preview, camera object and evaluate button inputs """
+    """ 
+    Widget to control camera preview, camera object and evaluate button inputs
+    """
     update_image_signal = Signal(np.ndarray, bool)
     def __init__(self, parent=None):
         super(CameraControl, self).__init__(parent)
@@ -80,6 +82,11 @@ class CameraControl(QGroupBox):
         del self.cam
 
     def showEvent(self, event):
+        """
+        custom show event
+
+        connects the signals, requests an initial camear image and triggers camera view setup
+        """
         if self._first_show:
             self.connect_signals()
             # on first show take snapshot of camera to display
@@ -88,12 +95,18 @@ class CameraControl(QGroupBox):
             self.ui.camera_prev.prepare()
 
     def closeEvent(self, event: QtGui.QCloseEvent):
+        """
+        custom close event
+
+        stops camera and video recorder
+        """
         # close camera stream and recorder object
         self.recorder.close()
         self.cam.stop_streaming()
         
 
     def connect_signals(self):
+        """ connect all the signals """
         self.cam.new_image_available.connect(self.update_image)
         self.update_image_signal.connect(self.ui.camera_prev.update_image)
         # button signals
@@ -105,22 +118,37 @@ class CameraControl(QGroupBox):
         self.ui.actionKalibrate_Size.triggered.connect(self.calib_size)
 
     def is_streaming(self) -> bool:
-        """ Return whether camera object is aquiring frames """
+        """ 
+        Return whether camera object is aquiring frames 
+        
+        :returns: True if camera is streaming, otherwise False
+        """
         return self.cam.is_running
 
     @Slot()
     def prev_start_pushed(self, event):
+        """
+        Start Button pushed event
+
+        If camera is not streaming:
+
+        - Start video recorder if corresponding checkbox is ticked
+
+        - Start camera streaming
+
+        - Lock ROI buttons and checkboxes
+
+        If camera is streaming:
+
+        - Stop video recorder if it was active
+
+        - Stop camera streaming
+
+        - Unlock buttons
+        """
         if self.ui.startCamBtn.text() != 'Stop':
             if self.ui.record_chk.isChecked():
-                now = datetime.now().strftime("%Y%m%d_%H%M%S")
-                self.recorder = VidWriter(filename=self.video_dir + f"/{now}.mp4",
-                                            size=self.cam.get_resolution(),
-                                            fps=self.cam.get_framerate(),
-                                            codec='mpeg4',
-                                            preset='ultrafast',
-                                            bitrate='5000k')
-                #self.recorder.open(self.video_dir + f"/{now}.mp4", 0x21 ,self.cam.get_framerate(),self.cam.get_resolution())
-                logging.info(f"Start video recording. File: {self.video_dir}/{now}.mp4 Resolution:{str(self.cam.get_resolution())}@{self.cam.get_framerate()}")
+                self.start_video_recorder()
             self.cam.start_streaming()
             logging.info("Started camera stream")
             self.ui.startCamBtn.setText('Stop')
@@ -131,9 +159,7 @@ class CameraControl(QGroupBox):
         else:
             self.cam.stop_streaming()
             if self.ui.record_chk.isChecked():
-                self.recorder.close()
-                #self.recorder.release()
-                logging.info("Stoped video recording")
+                self.stop_video_recorder()
             self.ui.record_chk.setEnabled(True)
             logging.info("Stop camera stream")
             self.ui.startCamBtn.setText('Start')
@@ -143,15 +169,46 @@ class CameraControl(QGroupBox):
             self.ui.frameInfoLbl.setText('Stopped')
             self.ui.drpltDataLbl.setText(str(self.ui.camera_prev._droplet))
 
+    def start_video_recorder(self):
+        """
+        start the `VidWriter` video recorder
+
+        used to record the video from the camera
+        """
+        now = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.recorder = VidWriter(filename=self.video_dir + f"/{now}.mp4",
+                                    size=self.cam.get_resolution(),
+                                    fps=self.cam.get_framerate(),
+                                    codec='mpeg4',
+                                    preset='ultrafast',
+                                    bitrate='5000k')
+        #self.recorder.open(self.video_dir + f"/{now}.mp4", 0x21 ,self.cam.get_framerate(),self.cam.get_resolution())
+        logging.info(f"Start video recording. File: {self.video_dir}/{now}.mp4 Resolution:{str(self.cam.get_resolution())}@{self.cam.get_framerate()}")
+
+    def stop_video_recorder(self):
+        """
+        stops the video recorder
+        """
+        self.recorder.close()
+        #self.recorder.release()
+        logging.info("Stoped video recording")
+
     @Slot()
     def apply_roi(self):
         """ Apply the ROI selected by the rubberband rectangle """
         x,y,w,h = self.ui.camera_prev.get_roi()
+        logging.info(f"Applying ROI pos:({x}, {y}), size:({w}, {h})")
         self.cam.set_roi(x,y,w,h)
+        
 
     @Slot(np.ndarray)
     def update_image(self, cv_img: np.ndarray):
-        """ gets called when a new image is available from the camera """
+        """ 
+        Slot that gets called when a new image is available from the camera 
+        
+        :param cv_img: the image array from the camera
+        :type cv_img: np.ndarray, numpy 2D array
+        """
         # block image signal to prevent overloading
         blocker = QSignalBlocker(self.cam)
         if self.cam.is_running:
@@ -194,7 +251,15 @@ class CameraControl(QGroupBox):
 
     @Slot()
     def calib_size(self):
-        # do oneshot eval and extract height from froplet, then calc scale and set in droplet
+        """ 
+        map pixels to mm 
+        
+        - place object with known size at default distance from camera
+        - call this fcn
+        - enter size of object
+        - fcn calculates scale factor and saves it to droplet object
+        """
+        # do oneshot eval and extract height from droplet, then calc scale and set in droplet
         res,ok = QInputDialog.getDouble(self,"Size of calib element", "Please enter the height of the test subject in mm:", 0, 0, 100)
         if not ok or res == 0.0:
             return
