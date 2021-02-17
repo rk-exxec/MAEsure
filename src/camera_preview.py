@@ -98,7 +98,7 @@ class CameraPreview(QOpenGLWidget):
     def mousePressEvent(self,event):
         """
         mouse pressed handler
-
+        
         creates ROI rubberband rectangle
         """
         if event.button() == Qt.LeftButton:
@@ -186,14 +186,15 @@ class CameraPreview(QOpenGLWidget):
         convert the droplet values from image coords into pixmap coords and values better for drawing 
         
         :param droplet: droplet object containing the data
-        :returns: converted coordinates and lengths in px as 7-Tuple:
-            - left tangent slope
-            - right tangent slope
-            - left intersection x coordinate
-            - right intersection x coordinate
-            - center coordinates of ellips as tuple (x,y)
-            - major axis length
-            - minor axis length
+        :returns: **tuple** (tangent_l, tangent_r, int_l, int_r, center, maj, min)
+
+            - **tangent_l**: start and end coordinates left tangent as (x1,y1,x2,y2)
+            - **tangent_r**: start and end coordinates right tangent as (x1,y1,x2,y2)
+            - **int_l**: left intersection of ellipse and baseline as (x,y)
+            - **int_l**: right intersection of ellipse and baseline as (x,y)
+            - **center**: center of the ellipse as (x,y)
+            - **maj**: major axis length of the ellipse
+            - **min**: minor axis length of the ellipse
         """
         tangent_l = tuple(self.mapFromImage(droplet.line_l[0:1]) + self.mapFromImage(droplet.line_l[2:3]))
         #tuple(map(lambda x: self.mapFromImage(*x), droplet.line_l))
@@ -203,10 +204,12 @@ class CameraPreview(QOpenGLWidget):
         maj, min = self.mapFromImage(droplet.maj, droplet.min)
         int_l = self.mapFromImage(*droplet.int_l)
         int_r = self.mapFromImage(*droplet.int_r)
-        return tangent_l,tangent_r,int_l,int_r,center,maj,min
+        return tangent_l, tangent_r, int_l, int_r, center, maj, min
 
     def mapToImage(self, x=None, y=None) -> Union[Tuple[int,int],int]:
-        """ Convert QLabel coordinates to image pixel coordinates
+        """ 
+        Convert QLabel coordinates to image pixel coordinates
+
         :param x: x coordinate to be transformed
         :param y: y coordinate to be transformed
         :returns: x or y or Tuple (x,y) of the transformed coordinates, depending on what parameters where given
@@ -226,7 +229,9 @@ class CameraPreview(QOpenGLWidget):
         return tuple(res) if len(res)>1 else res[0]
 
     def mapFromImage(self, x=None, y=None) -> Union[Tuple[int,int],int]:
-        """ Convert Image pixel coordinates to QLabel coordinates
+        """ 
+        Convert Image pixel coordinates to QLabel coordinates
+
         :param x: x coordinate to be transformed
         :param y: y coordinate to be transformed
         :returns: x or y or Tuple (x,y) of the transformed coordinates, depending on what parameters where given
