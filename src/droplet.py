@@ -23,6 +23,7 @@ from typing import Tuple
 from numpy.lib.function_base import angle
 
 class Singleton(object):
+    """ singleton base class """
     _instance = None
     def __new__(class_, *args, **kwargs):
         if not isinstance(class_._instance, class_):
@@ -35,9 +36,30 @@ class Singleton(object):
 
 class Droplet(Singleton):
     """
-    provides a storage structure for droplet information and conversion functions  
-    implements singleton pattern
-    saves settings like droplet scale with QSettings mechanism to registry or similar
+    provides a singleton storage structure for droplet information and conversion functions  
+
+    saves droplet scale with QSettings
+
+    Has the following attributes:
+
+    - **is_valid**: whether contained data is valid
+    - **_angle_l**, **_angle_r**: the unfiltered left and right tangent angles
+    - **_angle_l_avg**, **_angle_r_avg**: the rolling averager filter object for the angles
+    - **center**: center point of fitted ellipse (x,y)
+    - **maj**: length of major ellipse axis
+    - **min**: lenght of minor ellipse axis
+    - **phi**: tilt of ellipse in rad
+    - **tilt_deg**: tilt of ellipse in deg
+    - **foc_pt1**, foc_pt2**: focal points of ellipse (x,y)
+    - **tan_l_m**, **tan_r_m**: slope of left and right tangent
+    - **int_l**, **int_r**: left and right intersections of ellipse with baseline
+    - **line_l**, **line_r**: left and right tangent as 4-Tuple (x1,y1,x2,y2)
+    - **base_diam**: diameter of the contact surface of droplet
+    - **_area**: unfiltered area of droplet silouette
+    - **_area_avg**: rolling average filter for area
+    - **_height**: unfiltered droplet height in px
+    - **_height_avg**: rolling average filter for height
+    - **scale_px_to_mm**: scale to convert between px and mm, is loaded from storage on startup
     """
     def __init__(self):
         settings                                    = QSettings()
@@ -83,6 +105,7 @@ class Droplet(Singleton):
     # properties section, get returns the average, set feeds the rolling averager
     @property
     def angle_l(self):
+        """ average of left tangent angle """
         return self._angle_l_avg.average
 
     @angle_l.setter
@@ -92,6 +115,7 @@ class Droplet(Singleton):
 
     @property
     def angle_r(self):
+        """ average of right tangent angle """
         return self._angle_r_avg.average
 
     @angle_r.setter
@@ -101,6 +125,7 @@ class Droplet(Singleton):
 
     @property
     def height(self):
+        """ height of droplet in px """
         return self._height_avg.average
 
     @height.setter
@@ -110,6 +135,7 @@ class Droplet(Singleton):
 
     @property
     def area(self):
+        """ approx area of droplet silouette in px^2 """
         return self._area_avg.average
 
     @area.setter
@@ -120,10 +146,18 @@ class Droplet(Singleton):
     # return values after converting to metric
     @property
     def height_mm(self):
+        """ droplet height in mm 
+        
+        .. seealso:: :meth:`set_scale` 
+        """
         return self._height_avg.average * self.scale_px_to_mm
 
     @property
     def base_diam_mm(self):
+        """ droplet contact surface width in mm
+
+        .. seealso:: :meth:`set_scale` 
+        """
         return self.base_diam * self.scale_px_to_mm
 
     @property
@@ -131,7 +165,12 @@ class Droplet(Singleton):
         return self._area_avg.average * self.scale_px_to_mm**2
 
     def set_scale(self, scale):
-        """ set a scalefactor to calculate mm from pixels """
+        """ set and store a scalefactor to calculate mm from pixels
+
+        :param scale: the scalefactor to calculate mm from px
+        
+        .. seealso:: :meth:`camera_control.CameraControl.calib_size` 
+        """
         logging.info(f"droplet: set scale to {scale}")
         self.scale_px_to_mm = scale
         # save in persistent storage
@@ -139,7 +178,10 @@ class Droplet(Singleton):
         settings.setValue("droplet/scale_px_to_mm", scale)
 
     def set_filter_length(self, value):
-        """ adjust the filter length for the rolling average """
+        """ adjust the filter length for the rolling average
+        
+        :param value: new filter length
+        """
         self._angle_l_avg.set_length(value)
         self._angle_r_avg.set_length(value)
         self._height_avg.set_length(value)

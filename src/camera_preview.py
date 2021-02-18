@@ -144,6 +144,8 @@ class CameraPreview(QOpenGLWidget):
         
         :param cv_img: camera image array
         :param eval: if True: do image processing on given image
+
+        .. seealso:: :py:meth:`camera_control.CameraControl.update_image`
         """
         try:
             # evaluate droplet only if camera is running or if a oneshot eval is requested
@@ -302,6 +304,7 @@ class CameraPreview(QOpenGLWidget):
         abort ROI set by hiding the rubberband selector
         """
         self._roi_rubber_band.hide()
+        logging.info("aborted ROI select")
 
     def invalidate_imagesize(self):
         """

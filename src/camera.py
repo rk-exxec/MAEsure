@@ -89,6 +89,10 @@ class AbstractCamera(QObject):
     """ Interface class for implementing camera objects for MAEsure """
     # signal to emit when a new image is available
     new_image_available = Signal(np.ndarray)
+    """ signal that emits when camera has new image available
+
+    .. seealso:: :meth:`camera_control.CameraControl.update_image`
+    """
     def __init__(self):
         super(AbstractCamera, self).__init__()
         self._is_running = False

@@ -69,11 +69,11 @@ class CameraControl(QGroupBox):
         # if vimba software is installed
         if HAS_VIMBA and not USE_TEST_IMAGE:
             self.cam = VimbaCamera()
-            logging.debug("Using Vimba Camera")
+            logging.info("Using Vimba Camera")
         else:
             self.cam = TestCamera()
             if not USE_TEST_IMAGE: logging.error('No camera found! Fallback to test cam!')
-            else: logging.debug("Using Test Camera")
+            else: logging.info("Using Test Camera")
         self.update()
         self._oneshot_eval = False
 
@@ -205,9 +205,13 @@ class CameraControl(QGroupBox):
     def update_image(self, cv_img: np.ndarray):
         """ 
         Slot that gets called when a new image is available from the camera 
+
+        handles the signal :attr:`camera.AbstractCamera.new_image_available`
         
         :param cv_img: the image array from the camera
         :type cv_img: np.ndarray, numpy 2D array
+
+        .. seealso:: :py:meth:`camera_preview.CameraPreview.update_image`, :attr:`camera.AbstractCamera.new_image_available`
         """
         # block image signal to prevent overloading
         blocker = QSignalBlocker(self.cam)
@@ -248,6 +252,7 @@ class CameraControl(QGroupBox):
         if (res is not None and res != ""):
             self.video_dir = res
             settings.setValue("camera_control/video_dir", res)
+            logging.info(f"set default videodirectory to {res}")
 
     @Slot()
     def calib_size(self):
@@ -267,3 +272,4 @@ class CameraControl(QGroupBox):
         droplt = Droplet() # singleton
         self.cam.snapshot()
         droplt.set_scale(res / droplt._height)
+        logging.info(f"set image to real scae to {res / droplt._height}")
