@@ -799,7 +799,7 @@ Surface Diam:
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>60</y>
+       <y>90</y>
        <width>75</width>
        <height>23</height>
       </rect>
@@ -812,7 +812,7 @@ Surface Diam:
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>90</y>
+       <y>120</y>
        <width>75</width>
        <height>23</height>
       </rect>
@@ -825,7 +825,7 @@ Surface Diam:
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>120</y>
+       <y>150</y>
        <width>191</width>
        <height>17</height>
       </rect>
@@ -838,7 +838,7 @@ Surface Diam:
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>140</y>
+       <y>170</y>
        <width>70</width>
        <height>17</height>
       </rect>
@@ -851,7 +851,7 @@ Surface Diam:
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>30</y>
+       <y>60</y>
        <width>171</width>
        <height>20</height>
       </rect>
@@ -864,7 +864,7 @@ Surface Diam:
      <property name="geometry">
       <rect>
        <x>138</x>
-       <y>60</y>
+       <y>90</y>
        <width>41</width>
        <height>22</height>
       </rect>
@@ -884,13 +884,29 @@ Surface Diam:
      <property name="geometry">
       <rect>
        <x>110</x>
-       <y>60</y>
+       <y>90</y>
        <width>31</width>
        <height>21</height>
       </rect>
      </property>
      <property name="text">
       <string>Sep:</string>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="materialIDEdit">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>20</y>
+       <width>113</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="toolTip">
+      <string>The ID of the aurface used for measuring</string>
+     </property>
+     <property name="placeholderText">
+      <string>ID of material</string>
      </property>
     </widget>
    </widget>

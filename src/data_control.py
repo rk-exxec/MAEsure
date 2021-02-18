@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from ui_form import Ui_main
 
 class DataControl(QTableWidget):
+    """ class for data and file control """
     def __init__(self, parent=None) -> None:
         super(DataControl, self).__init__(parent)
         self.ui: Ui_main = self.window().ui
@@ -41,12 +42,20 @@ class DataControl(QTableWidget):
         self._is_time_invalid = False
         self._first_show = True
         self._default_dir = '%USERDATA%'
+        self._initial_filename = '!now!_!ID!_!pos!'
         self._cur_filename = ''
         self._seps = ['\t',',']
 
     def showEvent(self, event):
         #super().showEvent()
         if self._first_show:
+            # try to use Home drive, if not, use Documents folder
+            if os.path.exists("G:/Messungen/Angle_Measurements"):
+                self.ui.fileNameEdit.setText(os.path.expanduser(f'G:/Messungen/Angle_Measurements/{self._initial_filename}.dat'))
+                self._default_dir = 'G:/Messungen/Angle_Measurements'
+            else:
+                self.ui.fileNameEdit.setText(os.path.expanduser(f'~/Documents/{self._initial_filename}.dat'))
+                self._default_dir = '~/Documents'
             self.connect_signals()
             self._first_show = False
 
@@ -55,7 +64,13 @@ class DataControl(QTableWidget):
 
     @Slot(float, Droplet, int)
     def new_data_point(self, target_time:float, droplet:Droplet, cycle:int):
-        """ add new datapoint to dataframe and invoke redrawing of table"""
+        """ 
+        add new datapoint to dataframe and invoke redrawing of table
+        
+        :param target_time: unused
+        :param droplet: droplet data
+        :param cycle: current cycle in case of repeated measurements
+        """
         if self._is_time_invalid: self.init_time()
         self.data = self.data.append(pd.DataFrame([[time.monotonic() - self._time, cycle, droplet.angle_l, droplet.angle_r, droplet.base_diam, 0.0]], columns=self._header))
         thr = threading.Thread(target=self.redraw_table)
@@ -63,7 +78,7 @@ class DataControl(QTableWidget):
         # self.redraw_table()
 
     def redraw_table(self):
-        """ Redraw table with contents of dataframe"""
+        """ Redraw table with contents of dataframe """
         self._block_painter = True
         self.setHorizontalHeaderLabels(self._header)
         self.setRowCount(self.data.shape[0])
@@ -82,21 +97,23 @@ class DataControl(QTableWidget):
 
     def export_data_csv(self, filename):
         """ Export data as csv with selected separator
+
+        :param filename: name of file to create and write data to
         """
         sep = self._seps[self.ui.sepComb.currentIndex()]
         with open(filename, 'w', newline='') as f:
             if self.data is not None:
                 self.data.to_csv(f, sep=sep, index=False)
-                logging.info(f'data_ctl:Saved data as {filename}')
+                logging.info(f'data_ctl: Saved data as {filename}')
             else:
                 QMessageBox.information(self, 'MAEsure Information', 'No data to be saved!', QMessageBox.Ok)
-                logging.warning('data_ctl:cannot convert empty dataframe to csv')
+                logging.warning('data_ctl: cannot convert empty dataframe to csv')
 
     def select_filename(self):
-        """ Opens Save As... dialog to determine file save location.
+        """ Opens `Save As...` dialog to determine file save location.
         Displays filename in line edit
         """
-        file, filter = QFileDialog.getSaveFileName(self, 'Save Measurement Data', f'{self._default_dir}/!now!_!pos!.dat' ,'Data Files (*.dat *.csv)')
+        file, filter = QFileDialog.getSaveFileName(self, 'Save Measurement Data', f'{self._default_dir}/{self._initial_filename}' ,'Data Files (*.dat *.csv)')
         if file == '': return
         self._default_dir = os.path.dirname(file)
         #self.export_data_csv(file)
@@ -105,23 +122,29 @@ class DataControl(QTableWidget):
     def create_file(self):
         """ Create the file, where all the data will be written to.
         Will be called at start of measurement.
-        Fiolename is picked from LineEdit.
-        Relaces \'!now!\' in filename with current datetime.
+        Filename is picked from LineEdit.
+
+        - Replaces \'!now!\' in filename with current datetime.
+        - Replaces \'!pos!\' in filename with current magnet pos.
+        - Replaces \'!ID!\' in filename with current material ID.
         """
         date = datetime.now().strftime('%y_%m_%d_%H-%M')
         if self.ui.fileNameEdit.text() == "": raise ValueError("No File specified!")
         self._cur_filename = self.ui.fileNameEdit.text().replace('!now!', f'{date}')
         self._cur_filename = self._cur_filename.replace('!pos!', f'{self.window().ui.posSpinBox.value()}')
+        self._cur_filename = self._cur_filename.replace('!ID!', f'{self.window().ui.materialIDEdit.text()}')
         open(self._cur_filename, 'w').close()
 
     def save_data(self):
         """ Saves all the stored data.
-        Can be called as often as wanted, rewrites everything.
+
+        Overwrites everything.
         """
         self.export_data_csv(self._cur_filename)
 
     def import_data_csv(self, filename):
         """ Import data and display it.
+
         Can be used to append measurement to exiting data
         """
         with open(filename, 'r') as f:
@@ -136,6 +159,7 @@ class DataControl(QTableWidget):
 
     def init_data(self):
         """ Initialize the date before measurement.
+
         Create new dataframe with column headers and create new file with current filename.
         Invalidate time variable.
         """
