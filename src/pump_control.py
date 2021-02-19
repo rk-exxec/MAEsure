@@ -31,12 +31,14 @@ if TYPE_CHECKING:
 
 class PumpControl(QGroupBox):
     """
-    provides a grupbox with UI to control the pump """
+    provides a grupbox with UI to control the pump 
+    """
     def __init__(self, parent=None) -> None:
         super(PumpControl, self).__init__(parent)
         self.ui: Ui_main = self.window().ui
         port = self.find_com_port()
         self._context_depth = 0
+        logging.debug("initialize pump")
         try:
             chain = pumpy.Chain(port)
             self._pump = Microliter(chain, name='uLOEM')
@@ -60,34 +62,41 @@ class PumpControl(QGroupBox):
 
     def fill(self):
         """ Pump will fill the current syringe to max level
-        Caution! only use if limitswitches are properly setup to avoid damage to syringe
+
+        **Caution!** only use if limitswitches are properly setup to avoid damage to syringe
         """
+        logging.info("filling syringe")
         self._pump.settargetvolume(1000)
         self._pump.withdraw()
 
     def empty(self):
-        """ Pump will empty syringe completely
-        Caution! only use if limitswitches are properly setup to avoid damage to syringe
+        """ Pump will empty syringe completely  
+
+        **Caution!** only use if limitswitches are properly setup to avoid damage to syringe
         """
+        logging.info("emptying syringe")
         self._pump.settargetvolume(1000)
         self._pump.infuse()
 
     def infuse(self):
         """ Pump will move plunger down until specified volume is displaced """
         amount = self.ui.amountSpinBox.value()
+        logging.info(f"pump: infusing {amount} ul")
         self._pump.settargetvolume(amount)
         self._pump.infuse()
 
     def withdraw(self):
         """ Pump will move plunge up until specified volume is gained """
         amount = self.ui.amountSpinBox.value()
+        logging.info(f"pump: withdrawing {amount} ul")
         self._pump.settargetvolume(amount)
         self._pump.withdraw()
 
     def apply_settings(self):
         """ read the values from the ui and apply them to the pump """
         self._pump.setdiameter(self.ui.diamSpinBox.value())
-        self._pump.setflowrate(self.ui.flowSpinBox.value()) # 2ul / s
+        self._pump.setflowrate(self.ui.flowSpinBox.value())
+        logging.info(f"set syringe diameter to {self.ui.diamSpinBox.value()} mm, flowrate to {self.ui.flowSpinBox.value()} ul/m")
 
     def stop(self):
         """ Immediately stop the pump """

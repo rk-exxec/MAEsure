@@ -21,6 +21,7 @@
 import functools
 import pyvisa
 import time
+import logging
 import numpy as np
 import pandas as pd
 from scipy import interpolate
@@ -84,6 +85,7 @@ class MagnetControl(QGroupBox):
         self._calibration_table: pd.DataFrame = None
         self.mag_to_mm_interp: interpolate.interp1d = None
         self.mm_to_mag_interp: interpolate.interp1d = None
+        logging.debug("initialized magnet control")
 
     def __del__(self):
         #self._lt_ctl.close()
@@ -110,6 +112,7 @@ class MagnetControl(QGroupBox):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             if args[0]._lt_ctl.has_connection_error():
+                logging.warning("magnet control: device not ready")
                 return null(*args, **kwargs)
             else:
                 return func(*args, **kwargs)
@@ -147,10 +150,12 @@ class MagnetControl(QGroupBox):
                     self.set_status_message('Referencing needed!')
                     self.unlock_movement_buttons()
                     self.lock_abs_pos_buttons()
+                    logging.info("magnet control: no reference! locking absolute movement")
                 else:
                     self.ui.lamp.set_green()
                     self.set_status_message('')
                     self.unlock_movement_buttons()
+                    logging.info("magnet control: has reference! unlocking absolute movement")
                 return True
             except TimeoutError as te:
                 self.ui.lamp.set_red()
@@ -187,7 +192,9 @@ class MagnetControl(QGroupBox):
                 self.ui.posSpinBox.setValue(self.mm_to_mag_interp(self.ui.posSpinBox.value())*1000)
             elif self._old_unit == 'steps':
                 self.ui.posSpinBox.setValue(self.mm_to_mag_interp(self._lt_ctl.steps_to_mm(self.ui.posSpinBox.value()))*1000)
-
+        else:
+            return
+        logging.info(f"magnet control: movement unit changed from {self._old_unit} to {self._mov_unit}")
         self._old_unit = self._mov_unit
 
     @Slot(float)
@@ -220,9 +227,11 @@ class MagnetControl(QGroupBox):
         if state == Qt.Checked:
             with self._lt_ctl:
                 self._lt_ctl.set_soft_ramp()
+            logging.info("magnet control: set soft ramp")
         elif state == Qt.Unchecked:
             with self._lt_ctl:
                 self._lt_ctl.set_quick_ramp()
+                logging.info("magnet control: set quick ramp")
         else:
             pass
 
@@ -255,6 +264,7 @@ class MagnetControl(QGroupBox):
     @Slot()
     def jog_up_start(self):
         """ start motor movement away from motor """
+        logging.info("magnet control: start jog up")
         with self._lt_ctl:
             self._lt_ctl.move_inf_start(0)
         self.update_pos_timer.start()
@@ -262,6 +272,7 @@ class MagnetControl(QGroupBox):
     @Slot()
     def jog_down_start(self):
         """ start motor movement towards motor """
+        logging.info("magnet control: start jog down")
         with self._lt_ctl:
             self._lt_ctl.move_inf_start(1)
         self.update_pos_timer.start()
@@ -277,6 +288,7 @@ class MagnetControl(QGroupBox):
             elif self._mov_unit == 'mT':
                 self._lt_ctl.move_absolute_mm(self.mag_to_mm_interp(self._mov_dist/1000))
         self.lock_movement_buttons()
+        logging.info(f"magnet control: start movement to {self._mov_dist}{self._mov_unit}")
         self.wait_movement_thread.start()
 
     @Slot()
@@ -286,6 +298,7 @@ class MagnetControl(QGroupBox):
             self._lt_ctl.stop()
         if self.update_pos_timer.isActive():
             self.update_pos_timer.stop()
+        logging.info("magnet control: stop")
         self.update_pos()
         self.update_motor_status()
 
@@ -296,6 +309,7 @@ class MagnetControl(QGroupBox):
             self._lt_ctl.stop_soft()
         if self.update_pos_timer.isActive():
             self.update_pos_timer.stop()
+        logging.info("magnet control: stop")
         self.lock_movement_buttons()
         self.wait_movement_thread.start()
 
@@ -307,6 +321,7 @@ class MagnetControl(QGroupBox):
     def finished_moving(self):
         """ update ui position displays when movement finishes """
         # callback for when the motor stops moving (only absolute and relative, and jogging with soft stop)
+        logging.info("magnet control: reached pos")
         self.update_pos()
         self.update_motor_status()
 
@@ -314,6 +329,7 @@ class MagnetControl(QGroupBox):
     def reference(self):
         """ execute referencing process """
         self.ui.lamp.set_yellow()
+        logging.info("magnet control: referencing")
         with self._lt_ctl:
             self._lt_ctl.do_referencing()
         self.lock_movement_buttons()

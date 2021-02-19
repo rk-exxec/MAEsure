@@ -42,6 +42,7 @@ class CameraPreview(QOpenGLWidget):
         self._roi_rubber_band = ResizableRubberBand(self)
         self._baseline = Baseline(self)
         self._droplet = Droplet()
+        logging.debug("initialized camera preview")
 
     def prepare(self):
         """ preset the baseline to 250 which is roughly base of the test image droplet """

@@ -52,7 +52,6 @@ class CameraControl(QGroupBox):
     update_image_signal = Signal(np.ndarray, bool)
     def __init__(self, parent=None):
         super(CameraControl, self).__init__(parent)
-        logging.debug("Init CameraControl")
         # loading settings
         settings = QSettings()
 
@@ -76,6 +75,7 @@ class CameraControl(QGroupBox):
             else: logging.info("Using Test Camera")
         self.update()
         self._oneshot_eval = False
+        logging.debug("initialized camera control")
 
     def __del__(self):
         # self.cam.stop_streaming()

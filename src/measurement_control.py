@@ -84,6 +84,7 @@ class MeasurementControl(QGroupBox):
         checks if measurement is not already running and camera is functional. 
         If conditions met will start measurement thread
         """
+        logging.info("startng measurement")
         if not self.ui.camera_ctl.is_streaming():
             QMessageBox.information(self, 'MAEsure Information',' Camera is not running!\nPlease start camera first!', QMessageBox.Ok)
             logging.info('Meas_Start: Camera not running')
@@ -97,6 +98,7 @@ class MeasurementControl(QGroupBox):
             self.ui.dataControl.init_data()
         except Exception as ex:
             QMessageBox.warning(self, 'MAEsure Error', f'An error occured:\n{str(ex)}', QMessageBox.Ok)
+            logging.exception("measurement control: error", exc_info=ex)
             return
         self._meas_thread = Thread(target=self.measure)
         self._stop_meas_event.clear()
@@ -106,6 +108,7 @@ class MeasurementControl(QGroupBox):
         """
         Stops the measurement gracefully, still writing the data.
         """
+        logging.info("stopping measurement")
         self._meas_aborted = False
         self._stop_meas_event.set()
         self._meas_thread.join(5)
@@ -117,6 +120,7 @@ class MeasurementControl(QGroupBox):
         """
         stops the measurement without saving data
         """
+        logging.info("aborting measurement")
         self._meas_aborted = True
         self._stop_meas_event.set()
         self._meas_thread.join(5)
@@ -164,28 +168,33 @@ class MeasurementControl(QGroupBox):
         try:
             if self.ui.sweepTimeChk:
                 self._time_interval = self.parse_intervals(self.ui.timeInt.text())
+                logging.info(f"measurement time interval: {self.ui.timeInt.text()}")
             else:
                 self._time_interval = []
         except ValueError as ve:
             QMessageBox.critical(self, 'MAEsure Error!', 'No time values specified! Aborting!', QMessageBox.Ok)
-            logging.error('Time interval: ' + str(ve))
+            logging.error('Time interval error: ' + str(ve))
 
         try:
             if self.ui.sweepMagChk:
                 self._magnet_interval = self.parse_intervals(self.ui.magInt.text())
+                logging.info(f"measurement magnet interval: {self.ui.magInt.text()}")
             else:
                 self._magnet_interval = []
         except ValueError as ve:
             QMessageBox.critical(self, 'MAEsure Error!', 'No magnet values specified! Aborting!', QMessageBox.Ok)
-            logging.error('Magnet inteval: ' + str(ve))
+            logging.error('Magnet inteval error: ' + str(ve))
         self._repeat_after = self.ui.repWhenCombo.currentIndex()
 
     def parse_intervals(self, expr:str):
         """ Parses string of values to float list
-        expr can look like '2', '1.0,2.3,3.8', '1.1,3:6' or '1.7,4:6:5,-2.8'
-        with 'x:y:z' the values will be passed to numpy.linspace(x, y, num=z, endpoint=True), optional z = 10
-        with 'x*y*z' the values will be passed to numpy.logspace(x, y, num=z, endpoint=True), z is optional, def = 10
-        Values won't be sorted
+
+        :param expr: the interval expression
+
+        **expr** can look like '2', '1.0,2.3,3.8', '1.1,3:6' or '1.7,4:6:5,-2.8'  
+        - with 'x:y:z' the values will be passed to `numpy.linspace(x, y, num=z, endpoint=True)`, optional z = 10
+        - with 'x*y*z' the values will be passed to `numpy.logspace(x, y, num=z, endpoint=True)`, z is optional, def = 10
+        *Values won't be sorted*
         """
         expr = expr.strip()
         if expr == '': raise ValueError('Expression empty!')

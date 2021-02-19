@@ -14,7 +14,7 @@
 #     You should have received a copy of the GNU General Public License
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
+import logging
 from PySide2.QtWidgets import QWidget, QHBoxLayout
 from PySide2.QtGui import QBrush, QPainter, QPainterPath, QPen
 from PySide2.QtCore import QRectF, Qt, QPoint
@@ -37,6 +37,7 @@ class Baseline(QWidget):
         self._max_level: int = 10000
         self._min_level: int = 0
         self.show()
+        logging.debug("initialized baseline widget")
 
     @property
     def y_level(self) -> int:

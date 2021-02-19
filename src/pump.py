@@ -19,24 +19,23 @@ from time import sleep
 from pumpy import Pump, PumpError, remove_crud
 
 class Microliter(Pump):
-    """Create Pump object for Microliter OEM Pump.
+    """Class to contol Harvard Apparatus Microliter OEM Pump as an extension to pumpy.
 
-    Argument:
-        Chain: pump chain
-
-    Optional arguments:
-        address: pump address. Default is 0.
-        name: used in logging. Default is Pump 11.
+    :param chain: chain object to attatch to
+    :param address: optional pump address. Default is 0.
+    :param name: optional name for the pump to be used in logging. Default is Pump 11.
     """
 
     def write(self,command):
-        """ write command to pump 
+        """ write command to pump
+
         :param command: command as string 
         """
         self.serialcon.write(str(self.address + command + '\r').encode())
 
     def read(self,bytes=5):
-        """ read number of bytes from serial buffer 
+        """ read number of bytes from serial buffer
+
         :param bytes: number of bytes to read
         :returns: bytes read from buffer
         """
@@ -48,7 +47,8 @@ class Microliter(Pump):
             return response
 
     def readall(self):
-        """ read complete serial buffer 
+        """ read complete serial buffer
+
         :returns: bytes read from buffer
         """
         response = ""
@@ -62,11 +62,14 @@ class Microliter(Pump):
             return response
 
     def setdiameter(self, diameter):
-        """Set syringe diameter (millimetres).
+        """Set syringe diameter
 
-        Pump 11 syringe diameter range is 0.1-35 mm. Note that the pump
-        ignores precision greater than 2 decimal places. If more d.p.
-        are specificed the diameter will be truncated.
+        :param diameter: the diameter fo the syringe in mm
+
+        .. note:: 
+            Pump 11 syringe diameter range is 0.1-35 mm. 
+            Note that the pump ignores precision greater than 2 decimal places. 
+            If more d.p. are specificed the diameter will be truncated.
         """
         if diameter > 4.61 or diameter < 0.1:
             raise PumpError('%s: diameter %s mm is out of range' % 
@@ -98,10 +101,14 @@ class Microliter(Pump):
             raise PumpError(f'{self.name}: unknown response to setdiameter: {resp}')
 
     def setflowrate(self, flowrate):
-        """Set flow rate (microlitres per minute).
+        """Set flow rate
 
-        The pump will tell you if the specified flow rate is out of
-        range. This depends on the syringe diameter. See Pump 11 manual.
+        :param flowrate: flowrate in ul/min
+
+        .. note:: 
+            The pump will tell you if the specified flow rate is out of range.
+            This depends on the syringe diameter. See Pump 11 manual.
+
         """
         flowrate = remove_crud(str(flowrate))
 
@@ -161,6 +168,7 @@ class Microliter(Pump):
 
     def stop(self):
         """ stop pump movement """
+        logging.info("stopping pump")
         self.write("STP")
         resp = self.readall()
         if not resp[-1] in ":*IWDT":
