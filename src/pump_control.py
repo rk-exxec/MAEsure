@@ -41,7 +41,7 @@ class PumpControl(QGroupBox):
         logging.debug("initialize pump")
         try:
             chain = pumpy.Chain(port)
-            self._pump = Microliter(chain, name='uLOEM')
+            self._pump = pumpy.Microliter(chain, name='Pump')
         except Exception as ex:
            self._pump = None
            logging.warning('Pump Error:' + str(ex))
