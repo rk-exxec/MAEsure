@@ -37,12 +37,13 @@ class DataControl(QTableWidget):
         self._time = 0
         self.data: pd.DataFrame = None
         self._block_painter = False
-        self._header = ['Time', 'Cycle', 'Left_Angle', 'Right_Angle', 'Base_Width', 'Substate_Surface_Energy']
+        self._header = ['Time', 'Cycle', 'Left_Angle', 'Right_Angle', 'Base_Width', 'Substate_Surface_Energy', 'ID', 'DateTime']
         self.setHorizontalHeaderLabels(self._header)
         self._is_time_invalid = False
         self._first_show = True
         self._default_dir = '%USERDATA%'
         self._initial_filename = '!now!_!ID!_!pos!'
+        self._meas_start_datetime = ''
         self._cur_filename = ''
         self._seps = ['\t',',']
 
@@ -72,7 +73,8 @@ class DataControl(QTableWidget):
         :param cycle: current cycle in case of repeated measurements
         """
         if self._is_time_invalid: self.init_time()
-        self.data = self.data.append(pd.DataFrame([[time.monotonic() - self._time, cycle, droplet.angle_l, droplet.angle_r, droplet.base_diam, 0.0]], columns=self._header))
+        id = self.ui.materialIDEdit.text() if self.ui.materialIDEdit.text() != "" else "-"
+        self.data = self.data.append(pd.DataFrame([[time.monotonic() - self._time, cycle, droplet.angle_l, droplet.angle_r, droplet.base_diam, 0.0, id,  self._meas_start_datetime]], columns=self._header))
         thr = threading.Thread(target=self.redraw_table)
         thr.start()
         # self.redraw_table()
@@ -128,11 +130,11 @@ class DataControl(QTableWidget):
         - Replaces \'!pos!\' in filename with current magnet pos.
         - Replaces \'!ID!\' in filename with current material ID.
         """
-        date = datetime.now().strftime('%y_%m_%d_%H-%M')
+        self._meas_start_datetime = datetime.now().strftime('%y_%m_%d_%H-%M')
         if self.ui.fileNameEdit.text() == "": raise ValueError("No File specified!")
-        self._cur_filename = self.ui.fileNameEdit.text().replace('!now!', f'{date}')
-        self._cur_filename = self._cur_filename.replace('!pos!', f'{self.window().ui.posSpinBox.value()}')
-        self._cur_filename = self._cur_filename.replace('!ID!', f'{self.window().ui.materialIDEdit.text()}')
+        self._cur_filename = self.ui.fileNameEdit.text().replace('!now!', f'{ self._meas_start_datetime}')
+        self._cur_filename = self._cur_filename.replace('!pos!', f'{self.ui.posSpinBox.value()}')
+        self._cur_filename = self._cur_filename.replace('!ID!', f'{self.ui.materialIDEdit.text()}')
         open(self._cur_filename, 'w').close()
 
     def save_data(self):
@@ -141,6 +143,7 @@ class DataControl(QTableWidget):
         Overwrites everything.
         """
         self.export_data_csv(self._cur_filename)
+        logging.info(f"saved data {self._cur_filename}")
 
     def import_data_csv(self, filename):
         """ Import data and display it.
