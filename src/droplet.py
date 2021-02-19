@@ -190,7 +190,11 @@ class Droplet(Singleton):
 
 
 class RollingAverager:
-    """ rolling average filter """
+    """ 
+    rolling average filter of variable length
+    
+    :param length: length of the filter
+    """
     def __init__(self, length=300):
         # lenght of filter
         self.length = length
@@ -199,6 +203,9 @@ class RollingAverager:
         self.first_number = True
 
     def _rotate(self):
+        """
+        shift  internal index to next position
+        """
         # increase current index by 1 or loop back to 0
         if self.counter == (self.length - 1):
             self.counter = 0
@@ -206,6 +213,10 @@ class RollingAverager:
             self.counter += 1
 
     def _put(self, value):
+        """ set value at current index
+
+        :param float value: the new value to set
+        """ 
         if self.first_number:
             # initialize buffer with first value
             self.buffer = [value]*self.length
@@ -221,8 +232,13 @@ class RollingAverager:
         return sum(self.buffer) / self.length
 
     def set_length(self, value):
+        """
+        set the length of the filter, if new length is smaller the already exisitng values are cut off, if it is longer the current average is used to fille the ne spots
+
+        :param int value: the new filter length
+        """
         if value > self.length:
-            # append delta len to exisiting buffer
+            # append delta len to exisiting buffer, fill w/ current average
             self.buffer = self.buffer + [self.average]*(value - self.length)
         else:
             # keep last numbers
@@ -230,3 +246,4 @@ class RollingAverager:
             # roll counter over if too large
             if self.counter > (value -1 ): self.counter = 0
         self.length = value
+        logging.info(f"set filter length to {value}")

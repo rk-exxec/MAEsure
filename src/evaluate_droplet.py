@@ -35,7 +35,9 @@ USE_GPU = False
 
 
 def evaluate_droplet(img, y_base) -> Droplet:
-    """ Analyze an image for a droplet and determine the contact angles
+    """ 
+    Analyze an image for a droplet and determine the contact angles
+
     :param img: the image to be evaluated as np.ndarray
     :param y_base: the y coordinate of the surface the droplet sits on
     :returns: a Droplet() object with all the informations
@@ -158,6 +160,7 @@ def evaluate_droplet(img, y_base) -> Droplet:
 def calc_intersection_line_ellipse(ellipse_pars, line_pars):
     """
     calculates intersection(s) of an ellipse with a horizontal line
+
     :param ellipse_pars: tuple of (x0,y0,a,b,phi): x0,y0 center of ellipse; a,b sem-axis of ellipse; phi tilt rel to x axis
     :param line_pars: tuple of (m,t): m is the slope and t is intercept of the intersecting line
     :returns: x-coordinate(s) of intesection as list or float or none if none found
@@ -186,6 +189,7 @@ def calc_intersection_line_ellipse(ellipse_pars, line_pars):
 def calc_slope_of_ellipse(ellipse_pars, x, y):
     """
     calculates slope of tangent at point x,y, the point needs to be on the ellipse!
+
     :param ellipse_params: tuple of (x0,y0,a,b,phi): x0,y0 center of ellipse; a,b sem-axis of ellipse; phi tilt rel to x axis
     :param x: x-coord where the slope will be calculated
     :returns: the slope of the tangent
@@ -207,6 +211,13 @@ def calc_slope_of_ellipse(ellipse_pars, x, y):
     return m_tan
 
 def calc_area_of_droplet(line_intersections, ellipse_pars, y_int) -> float:
+    """
+    calculate the are of the droplet by approximating the area of the ellipse cut off at the baseline
+
+    :param ellipse_params: tuple of (x0,y0,a,b,phi): x0,y0 center of ellipse; a,b sem-axis of ellipse; phi tilt rel to x axis
+    :param y_int: y coordinate of baseline
+    :returns: area of droplet in px^2 
+    """
     (x0, y0, a, b, phi) = ellipse_pars
     (x1,x2) = line_intersections
     # calculate the angles of the vectors from ellipse origin to the intersections
@@ -236,6 +247,13 @@ def calc_area_of_droplet(line_intersections, ellipse_pars, y_int) -> float:
     return area
 
 def calc_height_of_droplet(ellipse_pars, y_base) -> float:
+    """
+    calculate the height of the droplet by measuring distance between baseline and top of ellipse
+
+    :param ellipse_params: tuple of (x0,y0,a,b,phi): x0,y0 center of ellipse; a,b sem-axis of ellipse; phi tilt rel to x axis
+    :param y_base: y coordinate of baseline
+    :returns: height of ellipse in px
+    """
     (x0, y0, a, b, phi) = ellipse_pars
     # https://math.stackexchange.com/questions/91132/how-to-get-the-limits-of-rotated-ellipse
     # lowspot of ellipse ( topspot in image ), ell_origin - ell_height
@@ -244,7 +262,7 @@ def calc_height_of_droplet(ellipse_pars, y_base) -> float:
     droplt_height = y_base - y_low
     return droplt_height
 
-
+# for testing purposes:
 if __name__ == "__main__":
     im = cv2.imread('untitled1.png')
     try:

@@ -63,9 +63,11 @@ class CustomCallbackTimer(QTimer):
 # TODO test new decorator
 
 class MagnetControl(QGroupBox):
-    """A widget to control the motor via lt_control
+    """
+    A widget to control the motor via the module `lt_control`_.
 
-    Use instead of QGroupBox
+    .. seealso:: :class:`LightWidget<light_widget.LightWidget>`
+    .. _lt_control: https://github.com/rk-exxec/linear_stage_control
     """
     def __init__(self, parent=None) -> None:
         super(MagnetControl, self).__init__(parent)

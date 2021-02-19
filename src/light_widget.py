@@ -20,6 +20,10 @@ from PySide2.QtCore import Signal, Slot, Qt
 from PySide2.QtGui import QPaintEvent, QPainter
  
 class LightColor(Enum):
+    """ helper class to enumerate colors for lamp widget
+
+    .. seealso:: :class:`LightWidget`
+    """
     RED = auto() #Qt.red
     GREEN = auto() #Qt.green
     ERROR = auto() #Qt.darkRed
@@ -28,7 +32,9 @@ class LightColor(Enum):
 
 class LightWidget(QWidget):
     """
-    provides a round status lamp as widget with 4 colors to indicata states ok, warning, stop and error
+    provides a round status lamp as widget with 4 colors to indicate status ok, warning, stop and error
+
+    .. seealso:: :class:`LightColor`
     """
     def __init__(self, parent=None):
         super(LightWidget, self).__init__(parent)
@@ -69,5 +75,3 @@ class LightWidget(QWidget):
             painter.setBrush(Qt.gray)
         painter.drawEllipse(2,2,self.width()-4, self.height()-4)
         painter.end()
-
-
