@@ -909,6 +909,19 @@ Surface Diam:
       <string>ID of material</string>
      </property>
     </widget>
+    <widget class="QLineEdit" name="ironContentEdit">
+     <property name="geometry">
+      <rect>
+       <x>130</x>
+       <y>20</y>
+       <width>51</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="placeholderText">
+      <string>Fe Vol.%</string>
+     </property>
+    </widget>
    </widget>
    <widget class="PumpControl" name="pump_control">
     <property name="geometry">

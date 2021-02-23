@@ -37,7 +37,7 @@ class DataControl(QTableWidget):
         self._time = 0
         self.data: pd.DataFrame = None
         self._block_painter = False
-        self._header = ['Time', 'Cycle', 'Left_Angle', 'Right_Angle', 'Base_Width', 'Substate_Surface_Energy', 'ID', 'DateTime']
+        self._header = ['Time', 'Cycle', 'Left_Angle', 'Right_Angle', 'Base_Width', 'Substate_Surface_Energy', 'Magn_Pos', 'Magn_Unit' 'Fe_Vol_P', 'ID', 'DateTime']
         self.setHorizontalHeaderLabels(self._header)
         self._is_time_invalid = False
         self._first_show = True
@@ -74,7 +74,22 @@ class DataControl(QTableWidget):
         """
         if self._is_time_invalid: self.init_time()
         id = self.ui.materialIDEdit.text() if self.ui.materialIDEdit.text() != "" else "-"
-        self.data = self.data.append(pd.DataFrame([[time.monotonic() - self._time, cycle, droplet.angle_l, droplet.angle_r, droplet.base_diam, 0.0, id,  self._meas_start_datetime]], columns=self._header))
+        percent = self.ui.ironContentEdit.text()
+        self.data = self.data.append(
+            pd.DataFrame([[
+                time.monotonic() - self._time, 
+                cycle, 
+                droplet.angle_l, 
+                droplet.angle_r, 
+                droplet.base_diam, 
+                "-", 
+                self.ui.posSpinBox.value(),
+                self.ui.unitComboBox.currentText(),
+                percent, 
+                id, 
+                self._meas_start_datetime
+            ]], columns=self._header)
+        )
         thr = threading.Thread(target=self.redraw_table)
         thr.start()
         # self.redraw_table()
