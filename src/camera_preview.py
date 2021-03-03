@@ -23,10 +23,12 @@ from PySide2 import QtGui
 from PySide2.QtWidgets import QLabel, QOpenGLWidget
 from PySide2.QtCore import  Qt, QPoint, QRect, QSize, Slot
 from PySide2.QtGui import QBrush, QImage, QPaintEvent, QPainter, QPen, QPixmap, QTransform
+from needle_mask import DynamicNeedleMask
 
 from resizable_rubberband import ResizableRubberBand
 from baseline import Baseline
-from evaluate_droplet import Droplet, evaluate_droplet
+from evaluate_droplet import evaluate_droplet, ContourError
+from droplet import Droplet
 
 class CameraPreview(QOpenGLWidget):
     """ 
@@ -40,6 +42,8 @@ class CameraPreview(QOpenGLWidget):
         self._image_size = (1,1)
         self._image_size_invalid = True
         self._roi_rubber_band = ResizableRubberBand(self)
+        self._needle_mask = DynamicNeedleMask(self)
+        #self._needle_mask.show()
         self._baseline = Baseline(self)
         self._droplet = Droplet()
         logging.debug("initialized camera preview")
@@ -105,6 +109,7 @@ class CameraPreview(QOpenGLWidget):
         if event.button() == Qt.LeftButton:
             # create new rubberband rectangle
             self.roi_origin = QPoint(event.pos())
+            self._roi_rubber_band.hide()
             self._roi_rubber_band.setGeometry(QRect(self.roi_origin, QSize()))
             self._roi_rubber_band.show()
 
@@ -154,6 +159,8 @@ class CameraPreview(QOpenGLWidget):
                 try:
                     self._droplet.is_valid = False
                     evaluate_droplet(cv_img, self.get_baseline_y())
+                except ContourError:
+                    pass
                 except Exception as ex:
                     logging.exception("Exception thrown in %s", "fcn:evaluate_droplet", exc_info=ex)
             else:

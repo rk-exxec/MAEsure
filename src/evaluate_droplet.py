@@ -33,6 +33,9 @@ DEBUG = DBG_NONE
 
 USE_GPU = False
 
+class ContourError(Exception):
+    pass
+
 
 def evaluate_droplet(img, y_base) -> Droplet:
     """ 
@@ -69,7 +72,7 @@ def evaluate_droplet(img, y_base) -> Droplet:
     # contours, hierarchy = cv2.findContours(bw_edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
     contours, hierarchy = cv2.findContours(bw_edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     if len(contours) == 0:
-        raise ValueError('No contours found!')
+        raise ContourError('No contours found!')
     edge = max(contours, key=cv2.contourArea)
 
     if USE_GPU:
@@ -103,7 +106,7 @@ def evaluate_droplet(img, y_base) -> Droplet:
     # calculate intersections of ellipse with baseline
     intersection = calc_intersection_line_ellipse((x0,y0,a,b,phi),(0,y_base))
     if intersection is None:
-        raise ValueError('No intersections found')
+        raise ContourError('No intersections found')
     x_int_l = min(intersection)
     x_int_r = max(intersection)
 

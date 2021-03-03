@@ -37,7 +37,24 @@ class DataControl(QTableWidget):
         self._time = 0
         self.data: pd.DataFrame = None
         self._block_painter = False
-        self._header = ['Time', 'Cycle', 'Left_Angle', 'Right_Angle', 'Base_Width', 'Substate_Surface_Energy', 'Magn_Pos', 'Magn_Unit' 'Fe_Vol_P', 'ID', 'DateTime']
+        """this represents the header for the table and the csv file
+
+        .. note::
+            - **Time**: actual point in time the dataset was aquired
+            - **T_Time**: point in time, where the dataset should have been aquired (target time)
+            - **Cycle**: if measurement is repeated, current number of repeats
+            - **Left_Angle**: angle of left droplet side
+            - **Right_Angle**: angle of right droplet side
+            - **Base_Width**: Width of the droplet
+            - **Substrate_Surface_Energy**: calculated surface energy of substrate from angles
+            - **Magn_Pos**: position of magnet
+            - **Magn_Unit**: unit of magnet pos (mm or steps or Tesla)
+            - **Fe_Vol_P**: iron content in sample in Vol.% 
+            - **ID**: ID of sample
+            - **DateTime**: date and time at begin of measurement
+        
+        """
+        self._header = ['Time', 'T_Time', 'Cycle', 'Left_Angle', 'Right_Angle', 'Base_Width', 'Substate_Surface_Energy', 'Magn_Pos', 'Magn_Unit', 'Fe_Vol_P', 'ID', 'DateTime']
         self.setHorizontalHeaderLabels(self._header)
         self._is_time_invalid = False
         self._first_show = True
@@ -78,6 +95,7 @@ class DataControl(QTableWidget):
         self.data = self.data.append(
             pd.DataFrame([[
                 time.monotonic() - self._time, 
+                target_time,
                 cycle, 
                 droplet.angle_l, 
                 droplet.angle_r, 
@@ -110,6 +128,7 @@ class DataControl(QTableWidget):
                     val = str(val)
                 self.setItem(r, c, QTableWidgetItem(val))
         self._block_painter = False
+        self.scrollToBottom()
         #self.viewport().update()
 
     def export_data_csv(self, filename):
