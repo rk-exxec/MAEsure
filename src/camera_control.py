@@ -24,8 +24,8 @@ from datetime import datetime
 from moviepy.video.io.ffmpeg_writer import FFMPEG_VideoWriter as VidWriter
 import cv2
 from PySide2 import QtGui
-from PySide2.QtWidgets import QFileDialog, QGroupBox, QInputDialog
-from PySide2.QtCore import QSettings, QSignalBlocker, Signal, Slot
+from PySide2.QtWidgets import QCheckBox, QFileDialog, QGroupBox, QInputDialog
+from PySide2.QtCore import QSettings, QSignalBlocker, Qt, Signal, Slot
 
 
 from droplet import Droplet
@@ -113,6 +113,7 @@ class CameraControl(QGroupBox):
         self.ui.startCamBtn.clicked.connect(self.prev_start_pushed)
         self.ui.setROIBtn.clicked.connect(self.apply_roi)
         self.ui.resetROIBtn.clicked.connect(self.cam.reset_roi)
+        self.ui.syr_mask_chk.stateChanged.connect(self.needle_mask_changed)
         # action menu signals
         self.ui.actionVideo_Path.triggered.connect(self.set_video_path)
         self.ui.actionKalibrate_Size.triggered.connect(self.calib_size)
@@ -124,6 +125,20 @@ class CameraControl(QGroupBox):
         :returns: True if camera is streaming, otherwise False
         """
         return self.cam.is_running
+
+    @Slot(int)
+    def needle_mask_changed(self, state):
+        """called when needel mask checkbox is clicked  
+        enables or disables masking of syringe
+
+        :param state: check state of checkbox
+        :type state: int
+        """
+        if (state == Qt.Unchecked):
+            self.ui.camera_prev.hide_mask()
+        else:
+            self.ui.camera_prev.show_mask()
+
 
     @Slot()
     def prev_start_pushed(self, event):

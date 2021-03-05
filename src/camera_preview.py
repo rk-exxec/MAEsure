@@ -43,9 +43,10 @@ class CameraPreview(QOpenGLWidget):
         self._image_size_invalid = True
         self._roi_rubber_band = ResizableRubberBand(self)
         self._needle_mask = DynamicNeedleMask(self)
-        #self._needle_mask.show()
+        self._needle_mask.update_mask_signal.connect(self.update_mask)
         self._baseline = Baseline(self)
         self._droplet = Droplet()
+        self._mask = None
         logging.debug("initialized camera preview")
 
     def prepare(self):
@@ -143,6 +144,25 @@ class CameraPreview(QOpenGLWidget):
             self._abort_roi()
             self.update()
 
+    def hide_mask(self):
+        """hides and disables the needle mask
+        """
+        self._needle_mask.hide()
+        self._mask = None
+
+    def show_mask(self):
+        """shows the needle mask
+        """
+        self._needle_mask.show()
+        self.update_mask()
+
+    def update_mask(self):
+        """update mask from widget
+        """
+        mask_rect = self._needle_mask.get_mask_geometry()
+        (x,y) = self.mapToImage(*mask_rect[0:1])
+        (w,h) = self.mapToImage(*mask_rect[2:3])
+
     @Slot(np.ndarray, bool)
     def update_image(self, cv_img: np.ndarray, eval: bool = True):
         """ 
@@ -158,7 +178,7 @@ class CameraPreview(QOpenGLWidget):
             if eval:
                 try:
                     self._droplet.is_valid = False
-                    evaluate_droplet(cv_img, self.get_baseline_y())
+                    evaluate_droplet(cv_img, self.get_baseline_y(), self._mask)
                 except ContourError:
                     pass
                 except Exception as ex:

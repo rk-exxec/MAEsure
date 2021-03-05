@@ -16,18 +16,20 @@
 
 # This Python file uses the following encoding: utf-8
 
+from typing import Tuple
 from PySide2.QtWidgets import QWidget, QHBoxLayout, QSizeGrip, QRubberBand
 from PySide2.QtGui import QPainter, QPen, QResizeEvent
-from PySide2.QtCore import Qt, QPoint, QRect
+from PySide2.QtCore import Qt, QPoint, QRect, Signal
 
 class DynamicNeedleMask(QWidget):
     """ 
     provides a rectangle with fixed centerline and x-symmetric resizability
     """
     _gripSize = 8
+    update_mask_signal = Signal()
     def __init__(self, parent=None):
         super(DynamicNeedleMask, self).__init__(parent)
-        self._first_show = False
+        self._first_show = True
         self.setWindowFlag(Qt.SubWindow)
         self.setFocusPolicy(Qt.ClickFocus)
         self.layout = QHBoxLayout(self)
@@ -35,8 +37,7 @@ class DynamicNeedleMask(QWidget):
         self.setCursor(Qt.SizeAllCursor)
         self.setGeometry(self.parent().width()/2-10, 0, 20, self.parent().height())
         self._old_geo = self.geometry()
-
-        
+        self._locked = False
         self.origin = QPoint(0,0)
         self.rubberband = QRubberBand(QRubberBand.Rectangle, self)
 
@@ -56,6 +57,24 @@ class DynamicNeedleMask(QWidget):
         # alternatively, widget.raise_() can be used
         self.cornerGrips = [QSizeGrip(self) for i in range(4)]
 
+    def get_mask_geometry(self) -> Tuple[int,int,int,int]:
+        """Return the geometry of the mask
+
+        :returns: the geometry of the mask as x,y,w,h tuple
+        """
+        return self.geometry().normalized().getRect()
+
+    def lock(self):
+        """lock resizing
+        """
+        self._locked = True
+
+    def unlock(self):
+        """unlock resizing
+        """
+        self._locked = False
+
+
     def showEvent(self, event):
         """
         custom show event
@@ -63,7 +82,7 @@ class DynamicNeedleMask(QWidget):
         initializes geometry for first show
         """
         if self._first_show:
-            self.setGeometry(self.parent().geometry().width()/4, 0, self.parent().geometry().width()/2, self.parent().geometry().height())
+            self.setGeometry(self.parent().width()*15/32, 0, self.parent().width()/16, self.parent().height())
             self._first_show = False
 
     @property
@@ -98,19 +117,37 @@ class DynamicNeedleMask(QWidget):
 
     def resizeEvent(self, event: QResizeEvent):
         x,y,w,h = self.geometry().normalized().getRect()
-        ox,oy,ow,oh = self._old_geo.normalized().getRect()
-        if(ox != x):
-            # resize left side
-            x = ox + round((x - ox)/2)
+
+        if(self._locked):
+            self.setGeometry(*self._old_geo.getRect())
         else:
-            # resize right side
-            x = x - round((w - ow)/2) # keep middle line steady
-        y = 0
-        self.setGeometry(min(x,self.parent().width()), y, min(w, self.parent().width() - x), self.parent().height())
-        self.updateGrips()
-        self.rubberband.resize(self.size())
-        self._old_geo = self.geometry()
-        
+            # limit size to parent boundaries
+            if (x < 0):
+                # remove width that has been added by leftward dragging if x is at leftmost edge
+                w += x
+            x = max(0, min(x, self.parent().width()))
+            w = min(w, self.parent().width() - x)
+            
+            self.setGeometry(x, y, w, self.parent().height())
+            self.updateGrips()
+            self.rubberband.resize(self.size())
+            self._old_geo = self.geometry()
+
+    def mousePressEvent(self, event):
+        if event.buttons() == Qt.LeftButton:
+            self.origin = event.globalPos() - self.pos()
+
+    def mouseMoveEvent(self, event):
+        if event.buttons() == Qt.LeftButton:
+            x,y,w,h = self.geometry().normalized().getRect()
+            new_x = event.globalPos().x() - self.origin.x()
+            # keep inside parent boundaries
+            new_x = max(0, min(new_x, self.parent().width()-w))
+            self.move(new_x, 0)
+
+    def mouseReleaseEvent(self, event: PySide2.QtGui.QMouseEvent):
+        self.update_mask_signal.emit()
+        return super().mouseReleaseEvent(event)
         
     def updateGrips(self):
         self.setContentsMargins(*[self.gripSize] * 4)
@@ -147,22 +184,6 @@ class DynamicNeedleMask(QWidget):
         self.sideGrips[3].setGeometry(
             self.gripSize, inRect.top() + inRect.height(), 
             inRect.width(), self.gripSize)
-
-    # def moveEvent(self, event: QMoveEvent):
-    #     self.rubberband.move(event.pos())
-
-    def mousePressEvent(self, event):
-        if event.buttons() == Qt.LeftButton:
-            self.origin = event.globalPos() - self.pos()
-
-    def mouseMoveEvent(self, event):
-        if event.buttons() == Qt.LeftButton:
-            self.move(event.globalPos().x() - self.origin.x(),0)
-
-
-    # def show(self):
-    #     self.rubberband.show()
-    #     super().show()
 
 # https://stackoverflow.com/questions/62807295/how-to-resize-a-window-from-the-edges-after-adding-the-property-qtcore-qt-framel
 class SideGrip(QWidget):
