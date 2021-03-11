@@ -20,6 +20,7 @@
 # ideally to the whole contour before fitting the ellipse
 
 from math import acos, cos, sin, pi, sqrt, atan2, radians, degrees
+from typing import Tuple
 import cv2
 import numpy as np
 
@@ -37,7 +38,7 @@ class ContourError(Exception):
     pass
 
 
-def evaluate_droplet(img, y_base, mask=None) -> Droplet:
+def evaluate_droplet(img, y_base, mask: Tuple[int,int,int,int] = None) -> Droplet:
     """ 
     Analyze an image for a droplet and determine the contact angles
 
@@ -65,19 +66,16 @@ def evaluate_droplet(img, y_base, mask=None) -> Droplet:
     # FIXME adjust canny params, detect too much edges
     bw_edges = cv2.Canny(crop_img, thresh_low, thresh_high)
     
-    # FIXME block detection of syringe
+    # block detection of syringe
     if (not mask is None):
         x,y,w,h = mask
-        bw_edges[y:y+h, x:x+w] = 0
+        bw_edges[:, x:x+w] = 0
+        img[:, x:x+w] = 0
+        masked = True
+    else:
+        masked = False
 
-    #find all contours in image and select the "longest", https://docs.opencv.org/3.4/d3/dc0/group__imgproc__shape.html#ga17ed9f5d79ae97bd4c7cf18403e1689a
-    # https://docs.opencv.org/3.4/d9/d8b/tutorial_py_contours_hierarchy.html 
-    # https://docs.opencv.org/3.4/d3/dc0/group__imgproc__shape.html#ga4303f45752694956374734a03c54d5ff
-    # contours, hierarchy = cv2.findContours(bw_edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-    contours, hierarchy = cv2.findContours(bw_edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    if len(contours) == 0:
-        raise ContourError('No contours found!')
-    edge = max(contours, key=cv2.contourArea)
+    edge = find_contour(bw_edges, masked)
 
     if USE_GPU:
         # fetch contours from gpu memory
@@ -163,6 +161,40 @@ def evaluate_droplet(img, y_base, mask=None) -> Droplet:
         img = cv2.putText(img, '<' + str(round(angle_r*180/pi,1)), (width - 80,y_int-5), cv2.FONT_HERSHEY_COMPLEX, .5, (0,0,0))
 
     #return drplt#, img
+
+def find_contour(img, is_masked):
+    """searches for contours and returns the ones with largest bounding rect
+
+    :param img: grayscale or bw image
+    :param is_masked: if image was masked
+    :type is_masked: bool
+    :raises ContourError: if no contours are detected
+    :return: if is_maked: contour with largest bounding rect  
+                else: the two contours with largest bounding rect merged
+    :rtype: [type]
+    """
+    # find all contours in image, https://docs.opencv.org/3.4/d3/dc0/group__imgproc__shape.html#ga17ed9f5d79ae97bd4c7cf18403e1689a
+    # https://docs.opencv.org/3.4/d9/d8b/tutorial_py_contours_hierarchy.html 
+    # https://docs.opencv.org/3.4/d3/dc0/group__imgproc__shape.html#ga4303f45752694956374734a03c54d5ff
+    # contours, hierarchy = cv2.findContours(bw_edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    contours, hierarchy = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    if len(contours) == 0:
+        raise ContourError('No contours found!')
+    # edge = max(contours, key=cv2.contourArea)
+
+    cont_area_list = []
+    for cont in contours:
+        x,y,w,h = cv2.boundingRect(cont)
+        cont_area_list.append((cont, w*h))
+    
+    cont_areas_sorted = sorted(cont_area_list, key=lambda item: item[1])
+    # largest 2 contours, assumes mask splits largest conrou in the middle
+    if is_masked:
+        largest_conts = [elem[0] for elem in cont_areas_sorted[-2:]]
+        contour = np.concatenate((largest_conts[0], largest_conts[1]))
+    else:
+        contour = cont_areas_sorted[-1][0]
+    return contour
 
 def calc_intersection_line_ellipse(ellipse_pars, line_pars):
     """
@@ -273,8 +305,9 @@ def calc_height_of_droplet(ellipse_pars, y_base) -> float:
 if __name__ == "__main__":
     im = cv2.imread('untitled1.png', cv2.IMREAD_GRAYSCALE)
     im = np.reshape(im, im.shape + (1,) )
+    (h,w,d) = np.shape(im)
     try:
-        drp = evaluate_droplet(im, 250, (10,10,50,50))
+        drp = evaluate_droplet(im, 250, (int(w/2-40), 0, 80, h))
     except Exception as ex:
         print(ex)
     cv2.imshow('Test',im)

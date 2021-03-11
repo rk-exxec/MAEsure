@@ -160,8 +160,9 @@ class CameraPreview(QOpenGLWidget):
         """update mask from widget
         """
         mask_rect = self._needle_mask.get_mask_geometry()
-        (x,y) = self.mapToImage(*mask_rect[0:1])
-        (w,h) = self.mapToImage(*mask_rect[2:3])
+        (x,y) = self.mapToImage(*mask_rect[:2])
+        (w,h) = self.mapToImage(*mask_rect[2:])
+        self._mask = (x,y,w,h)
 
     @Slot(np.ndarray, bool)
     def update_image(self, cv_img: np.ndarray, eval: bool = True):

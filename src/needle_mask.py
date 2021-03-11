@@ -132,6 +132,7 @@ class DynamicNeedleMask(QWidget):
             self.updateGrips()
             self.rubberband.resize(self.size())
             self._old_geo = self.geometry()
+            self.update_mask_signal.emit()
 
     def mousePressEvent(self, event):
         if event.buttons() == Qt.LeftButton:
@@ -144,8 +145,9 @@ class DynamicNeedleMask(QWidget):
             # keep inside parent boundaries
             new_x = max(0, min(new_x, self.parent().width()-w))
             self.move(new_x, 0)
+            self.update_mask_signal.emit()
 
-    def mouseReleaseEvent(self, event: PySide2.QtGui.QMouseEvent):
+    def mouseReleaseEvent(self, event):
         self.update_mask_signal.emit()
         return super().mouseReleaseEvent(event)
         
