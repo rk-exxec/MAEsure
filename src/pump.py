@@ -1,5 +1,5 @@
 #     MAEsure is a program to measure the surface energy of MAEs via contact angle
-#     Copyright (C) 2020  Raphael Kriegl
+#     Copyright (C) 2021  Raphael Kriegl
 
 #     This program is free software: you can redistribute it and/or modify
 #     it under the terms of the GNU General Public License as published by
