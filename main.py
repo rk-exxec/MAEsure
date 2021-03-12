@@ -88,25 +88,33 @@ def initialize_logger(out_dir):
     #handler.setFormatter(formatter)
     logger.addHandler(handler)
 
+class App(QApplication):
+
+    def __init__(self, *args, **kwargs):
+        super(App,self).__init__(*args, **kwargs)
+        pic = QPixmap('qt_resources/maesure.png')
+        splash = QSplashScreen(pic)#, Qt.WindowStaysOnTopHint)
+        #splash.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
+        splash.setMask(pic.mask())
+        splash.show()
+        self.window = MainWindow()
+        self.ui = self.window.ui
+        splash.finish(self.window)
+
 if __name__ == "__main__":
-    # compile python qt form into python file
+    # compile python qt form.ui into python file
     os.system('pyside2-uic -o src/ui_form.py qt_resources/form.ui')
+
     # setup logging
-    #logging.basicConfig(filename='app.log', filemode='w', level=logging.DEBUG)
     initialize_logger("./log")
+
     # pysde2 settings config
     QCoreApplication.setOrganizationName("OTH Regensburg")
     QCoreApplication.setApplicationName("MAEsure")
+
     # init application
-    app = QApplication(sys.argv)
-    pic = QPixmap('qt_resources/maesure.png')
-    splash = QSplashScreen(pic)#, Qt.WindowStaysOnTopHint)
-    #splash.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
-    splash.setMask(pic.mask())
-    splash.show()
+    app = App(sys.argv)
     app.processEvents()
-    widget = MainWindow()
-    #widget.show()
-    splash.finish(widget)
+
     # execute qt main loop
     sys.exit(app.exec_())

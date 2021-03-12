@@ -22,8 +22,8 @@ import time
 from datetime import datetime
 import numpy as np
 import pandas as pd
-from PySide2.QtWidgets import QFileDialog, QMessageBox, QTableWidget, QTableWidgetItem
-from PySide2.QtCore import Signal, Slot, Qt
+from PySide2.QtWidgets import QFileDialog, QMessageBox, QTableWidget, QTableWidgetItem, QWidget
+from PySide2.QtCore import QCoreApplication, Signal, Slot, Qt
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -31,9 +31,10 @@ if TYPE_CHECKING:
 
 class DataControl(QTableWidget):
     """ class for data and file control """
+    update_plot_signal = Signal(float,float)
     def __init__(self, parent=None) -> None:
         super(DataControl, self).__init__(parent)
-        self.ui: Ui_main = self.window().ui
+        self.ui: Ui_main = None # set post init bc of parent relationship not automatically applied on creation in generated script
         self._time = 0
         self.data: pd.DataFrame = None
         self._block_painter = False
@@ -67,6 +68,7 @@ class DataControl(QTableWidget):
     def showEvent(self, event):
         #super().showEvent()
         if self._first_show:
+            self.ui = self.window().ui
             # try to use Home drive, if not, use Documents folder
             if os.path.exists("G:/Messungen/Angle_Measurements"):
                 self.ui.fileNameEdit.setText(os.path.expanduser(f'G:/Messungen/Angle_Measurements/{self._initial_filename}.dat'))
@@ -110,6 +112,7 @@ class DataControl(QTableWidget):
         )
         thr = threading.Thread(target=self.redraw_table)
         thr.start()
+        self.update_plot_signal.emit(target_time,(droplet.angle_l + droplet.angle_r)/2)
         # self.redraw_table()
 
     def redraw_table(self):
