@@ -23,11 +23,22 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 from PySide2.QtWidgets import QFileDialog, QMessageBox, QTableWidget, QTableWidgetItem, QWidget
-from PySide2.QtCore import QCoreApplication, Signal, Slot, Qt
+from PySide2.QtCore import QCoreApplication, QThread, QThreadPool, Signal, Slot, Qt, QRunnable
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from ui_form import Ui_main
+
+class Worker(QThread):
+    def __init__(self, fn, *args, **kwargs):
+        super(Worker, self).__init__()
+        self.args = args
+        self.kwargs = kwargs
+        self.fn = fn
+
+    @Slot()
+    def run(self):
+        self.fn(*self.args, **self.kwargs)
 
 class DataControl(QTableWidget):
     """ class for data and file control """
@@ -37,6 +48,7 @@ class DataControl(QTableWidget):
         self.ui: Ui_main = None # set post init bc of parent relationship not automatically applied on creation in generated script
         self._time = 0
         self.data: pd.DataFrame = None
+        self.threadpool = QThreadPool()
         self._block_painter = False
         """this represents the header for the table and the csv file
 
@@ -94,9 +106,10 @@ class DataControl(QTableWidget):
         if self._is_time_invalid: self.init_time()
         id = self.ui.materialIDEdit.text() if self.ui.materialIDEdit.text() != "" else "-"
         percent = self.ui.ironContentEdit.text()
+        curtime = time.monotonic() - self._time
         self.data = self.data.append(
             pd.DataFrame([[
-                time.monotonic() - self._time, 
+                curtime, 
                 target_time,
                 cycle, 
                 droplet.angle_l, 
@@ -110,9 +123,10 @@ class DataControl(QTableWidget):
                 self._meas_start_datetime
             ]], columns=self._header)
         )
-        thr = threading.Thread(target=self.redraw_table)
+        logging.debug("starte thread zum redrawing vom table")
+        thr = Worker(self.redraw_table)
         thr.start()
-        self.update_plot_signal.emit(target_time,(droplet.angle_l + droplet.angle_r)/2)
+        self.update_plot_signal.emit(curtime,(droplet.angle_l + droplet.angle_r)/2)
         # self.redraw_table()
 
     def redraw_table(self):

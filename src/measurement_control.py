@@ -30,11 +30,45 @@ from threading import Thread, Event
 
 from PySide2 import QtGui
 from PySide2.QtWidgets import QApplication, QGroupBox, QMessageBox
-from PySide2.QtCore import Signal, Slot, Qt
+from PySide2.QtCore import QDeadlineTimer, QObject, QRunnable, QThread, QThreadPool, QTimer, Signal, Slot, Qt
 
 from typing import List, TYPE_CHECKING
 if TYPE_CHECKING:
     from ui_form import Ui_main
+
+class IntervalTimer:
+    """Creates a timer array from an array of time intervals
+    each interval is represented by one timer
+    allows fro precise time control
+    """
+    def __init__(self, parent, intervals:List[float], target, done_callback):
+        self.target = target
+        self.parent = parent
+        self.callback = done_callback
+        self.intervals = intervals
+        self.timers: List[QTimer] = []
+        self.set_intervals(intervals)
+
+    def set_intervals(self, intervals):
+        self.timers.clear()
+        self.intervals = intervals
+        for val in intervals:
+            timer = QTimer(self.parent)
+            timer.setSingleShot(True)
+            timer.setInterval(val*1000)
+            timer.setTimerType(Qt.PreciseTimer)
+            timer.timeout.connect(self.target)
+            if (val == intervals[-1]): timer.timeout.connect(self.callback)
+            self.timers.append(timer)
+
+    def start(self):
+        for t in self.timers:
+            t.start()
+
+    def stop(self):
+        for t in self.timers:
+            t.stop()     
+
 
 class MeasurementControl(QGroupBox):
     """
@@ -42,6 +76,7 @@ class MeasurementControl(QGroupBox):
     """
     new_datapoint_signal = Signal(float, Droplet, int)
     save_data_signal = Signal()
+    start_measurement_signal = Signal()
     def __init__(self, parent=None) -> None:
         super(MeasurementControl, self).__init__(parent)
         self.ui: Ui_main = self.window().ui
@@ -50,8 +85,10 @@ class MeasurementControl(QGroupBox):
         self._repeat_after = 0 # 0 is time, 1 is magnet
         self._method = 0 # sessile
         self._cycles = 1
-        self._stop_meas_event = Event()
-        self._meas_thread = Thread(target=self.measure)
+        self._cycle = 0
+        self.aborted = False
+        self.stopped = True
+        self.timer: IntervalTimer = None
         self._first_show = True
         self._meas_aborted = False
 
@@ -61,10 +98,12 @@ class MeasurementControl(QGroupBox):
             self._first_show = False
 
     def connect_signals(self):
-        self.new_datapoint_signal.connect(self.ui.dataControl.new_data_point)
-        self.save_data_signal.connect(self.ui.dataControl.save_data)
         self.ui.startMeasBtn.clicked.connect(self.start_measurement)
         self.ui.cancelMeasBtn.clicked.connect(self.stop_measurement)
+        self.new_datapoint_signal.connect(self.ui.dataControl.new_data_point)
+        self.save_data_signal.connect(self.ui.dataControl.save_data)
+
+    ### gui control fcns ###
 
     @Slot()
     def start_stop_btn_pushed(self):
@@ -89,7 +128,7 @@ class MeasurementControl(QGroupBox):
             QMessageBox.information(self, 'MAEsure Information',' Camera is not running!\nPlease start camera first!', QMessageBox.Ok)
             logging.info('Meas_Start: Camera not running')
             return
-        if self._meas_thread.is_alive():
+        if not self.stopped:
             QMessageBox.information(self, 'MAEsure Information',' Cannot start measurement while already running!', QMessageBox.Ok)
             logging.info('Meas_Start: Measurement already running')
             return
@@ -100,20 +139,15 @@ class MeasurementControl(QGroupBox):
             QMessageBox.warning(self, 'MAEsure Error', f'An error occured:\n{str(ex)}', QMessageBox.Ok)
             logging.exception("measurement control: error", exc_info=ex)
             return
-        self._meas_thread = Thread(target=self.measure)
-        self._stop_meas_event.clear()
-        self._meas_thread.start()
+        self.start_measurement_signal.emit()
+        self.measure_start()
 
     def stop_measurement(self):
         """
         Stops the measurement gracefully, still writing the data.
         """
         logging.info("stopping measurement")
-        self._meas_aborted = False
-        self._stop_meas_event.set()
-        self._meas_thread.join(5)
-        if self._meas_thread.is_alive():
-            logging.error('Meas_Stop: Failed to kill measurement thread')
+        self.measure_stop()
 
     @Slot()
     def abort_measurement(self):
@@ -121,47 +155,52 @@ class MeasurementControl(QGroupBox):
         stops the measurement without saving data
         """
         logging.info("aborting measurement")
-        self._meas_aborted = True
-        self._stop_meas_event.set()
-        self._meas_thread.join(5)
-        if self._meas_thread.is_alive():
-            logging.error('Meas_Stop: Failed to kill measurement thread')
+        self.measure_abort()
+    
+    ### measurement control functions ###
 
-    def measure(self):
-        """ Here the measurement process happens
-        This fcn will not return until done or aborted
+    @Slot()
+    def measure_abort(self):
+        self.timer.stop()
+        self.aborted = True
+        self.stopped = True
+
+    @Slot()
+    def measure_stop(self):
+        self.save_data_signal.emit()
+        self.timer.stop()
+        self.aborted = False
+        self.stopped = True
+
+    def measure_start(self):
+        """ Here the measurement process starts
+        This creates a timer for each measurement interval wich will call the timer_timeout function
         """
         # init vars
-        old_t = 0
+        self.stopped = False
+        self.aborted = False
+        self.timer = IntervalTimer(self, self._time_interval, self.timer_timeout, self.cycle_done)
+        self.timer.start()
 
-        # TODO not nested but flat with one while loop with custom increments and checks
-        # measuring = True
-        # mag = next(self._magnet_interval) if self.ui.sweepMagChk else 0
-        # tim = next(self._time_interval) if self.ui.sweepTimeChk else 0
-
-        # only time based measurement for now
-        #repeat measurement after
-        for cycle in range(self._cycles):
-            #self.ui.pump_control.infuse()
-            #self.ui.dataControl.init_time()
-            for tim in self._time_interval:
-                # FIXME rather use timer and callback fcn?
-                thread_state = self._stop_meas_event.wait(tim - old_t)
-                if thread_state: break
-                old_t = tim
-                # get droplet
-                drplt = self.ui.camera_prev._droplet
-                self.new_datapoint_signal.emit(tim, drplt, cycle)
-                #self.ui.dataControl.new_data_point(tim, drplt)
-
-            #self.ui.pump_control.withdraw()
-            if self._stop_meas_event.is_set():
-                break
-        # still save data when stopped
-        if not self._meas_aborted:
-            self.save_data_signal.emit()
+    @Slot()
+    def cycle_done(self):
+        if self._cycle < self._cycles - 1:
+            self._cycle += 1
+            self.measure_start()
         else:
-            self._meas_aborted = True
+            self.measure_stop()
+
+    #@Slot()
+    def timer_timeout(self):
+        """grab snapshot of sata and save to table
+        """
+        sender:QTimer = self.sender()
+        timer = sender.interval()/1000
+        drplt = self.ui.camera_prev._droplet
+        logging.debug(f"gathered new datapoint: {time},{drplt.angle_r},{self._cycle}")
+        self.new_datapoint_signal.emit(time, drplt, self._cycle)
+
+    ### utility functions ###
 
     def read_intervals(self):
         """ Try to read the time and magnet intervals """

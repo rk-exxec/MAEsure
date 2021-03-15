@@ -225,7 +225,7 @@ Surface Diam:
     <property name="usesScrollButtons">
      <bool>false</bool>
     </property>
-    <widget class="QWidget" name="table_tab" native="true">
+    <widget class="QWidget" name="table_tab">
      <attribute name="title">
       <string>Table</string>
      </attribute>
@@ -250,7 +250,7 @@ Surface Diam:
         <x>9</x>
         <y>9</y>
         <width>531</width>
-        <height>361</height>
+        <height>371</height>
        </rect>
       </property>
      </widget>
