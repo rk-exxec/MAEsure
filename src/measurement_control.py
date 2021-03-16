@@ -20,6 +20,7 @@
 
 # TODO wenn scale gegeben pixel und mm ausgeben
 
+import math
 from evaluate_droplet import Droplet
 import logging
 import os
@@ -30,7 +31,7 @@ from threading import Thread, Event
 
 from PySide2 import QtGui
 from PySide2.QtWidgets import QApplication, QGroupBox, QMessageBox
-from PySide2.QtCore import QDeadlineTimer, QObject, QRunnable, QThread, QThreadPool, QTimer, Signal, Slot, Qt
+from PySide2.QtCore import QTimer, Signal, Slot, Qt
 
 from typing import List, TYPE_CHECKING
 if TYPE_CHECKING:
@@ -188,6 +189,7 @@ class MeasurementControl(QGroupBox):
             self._cycle += 1
             self.measure_start()
         else:
+            QMessageBox.information(self, 'MAEsure', 'Measurement finished!', QMessageBox.Ok)
             self.measure_stop()
 
     #@Slot()
@@ -244,7 +246,8 @@ class MeasurementControl(QGroupBox):
                 range_vals[0] = float(range_vals[0])
                 range_vals[1] = float(range_vals[1])
                 if len(range_vals) == 2:
-                    range_vals.append(10)
+                    # results in point in point per second
+                    range_vals.append(int(abs(range_vals[1]-range_vals[0])))
                 elif len(range_vals) == 3:
                     range_vals[2] = int(range_vals[2])
                 calcd_range += list(np.linspace(range_vals[0], range_vals[1], num=range_vals[2], endpoint=True))
@@ -253,7 +256,8 @@ class MeasurementControl(QGroupBox):
                 range_vals[0] = float(range_vals[0])
                 range_vals[1] = float(range_vals[1])
                 if len(range_vals) == 2:
-                    range_vals.append(10)
+                    # try use point every decade
+                    range_vals.append(int(math.log(abs(range_vals[1]-range_vals[0]))))
                 elif len(range_vals) == 3:
                     range_vals[2] = int(range_vals[2])
                 calcd_range += list(np.logspace(range_vals[0], range_vals[1], num=range_vals[2], endpoint=True))
