@@ -220,7 +220,7 @@ Surface Diam:
      </rect>
     </property>
     <property name="currentIndex">
-     <number>0</number>
+     <number>1</number>
     </property>
     <property name="usesScrollButtons">
      <bool>false</bool>
@@ -234,7 +234,7 @@ Surface Diam:
        <rect>
         <x>10</x>
         <y>10</y>
-        <width>531</width>
+        <width>521</width>
         <height>361</height>
        </rect>
       </property>
@@ -244,13 +244,13 @@ Surface Diam:
      <attribute name="title">
       <string>Plot</string>
      </attribute>
-     <widget class="LivePlot" name="plot" native="true">
+     <widget class="LivePlot" name="livePlotWidget">
       <property name="geometry">
        <rect>
-        <x>9</x>
-        <y>9</y>
-        <width>531</width>
-        <height>371</height>
+        <x>10</x>
+        <y>10</y>
+        <width>521</width>
+        <height>361</height>
        </rect>
       </property>
      </widget>
@@ -656,7 +656,7 @@ Surface Diam:
        </rect>
       </property>
       <property name="toolTip">
-       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enter values separated by comma ','.&lt;/p&gt;&lt;p&gt;Values can be either:&lt;/p&gt;&lt;ul style=&quot;margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; -qt-list-indent: 0.5;&quot;&gt;&lt;li style=&quot; margin-top:12px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Numbers&lt;/li&gt;&lt;li style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Linear range: 'x:y' or 'x:y:z' creates a linear range between x and y with 10 or z number of evenly spaced points.&lt;/li&gt;&lt;li style=&quot; margin-top:0px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Logarithmic range: 'x*y' or 'x*y*z' creates a base 10 logarithmic range between x and y with 10 or z number of points.&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;Numbers, linspaces and logspaces will be merged but not sorted!&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enter values separated by comma ','.&lt;/p&gt;&lt;p&gt;Values can be either:&lt;/p&gt;&lt;ul style=&quot;margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; -qt-list-indent: 1;&quot;&gt;&lt;li style=&quot; margin-top:12px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Numbers&lt;/li&gt;&lt;li style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Linear range: 'x:y' or 'x:y:z' creates a linear range between x and y with y-x or z number of evenly spaced points.&lt;/li&gt;&lt;li style=&quot; margin-top:0px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Logarithmic range: 'x*y' or 'x*y*z' creates a base 10 logarithmic range between x and y with log(y-x) or z number of points.&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;Numbers, linspaces and logspaces will be merged but not sorted!&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
       <property name="text">
        <string>0:10</string>
@@ -1312,16 +1312,15 @@ Surface Diam:
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>LivePlot</class>
-   <extends>QWidget</extends>
-   <header>live_plot</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
    <class>TabControl</class>
    <extends>QTabWidget</extends>
    <header>tab_control</header>
    <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>LivePlot</class>
+   <extends>QGraphicsView</extends>
+   <header>live_plot</header>
   </customwidget>
  </customwidgets>
  <resources/>

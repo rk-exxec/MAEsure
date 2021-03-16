@@ -16,15 +16,11 @@
 
 import random
 import sys
-import matplotlib
-matplotlib.use('Qt5Agg')
 
-from PySide2.QtCore import QCoreApplication, QRunnable, QThreadPool, QTimer, Slot, Qt
-from PySide2.QtWidgets import QVBoxLayout, QWidget
-from droplet import Droplet
+from PySide2.QtCore import QRectF, Slot
+from PySide2.QtWidgets import QGraphicsRectItem
 
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT
-from matplotlib.figure import Figure
+import pyqtgraph as pg
 
 import logging
 
@@ -32,56 +28,28 @@ from typing import List, TYPE_CHECKING
 if TYPE_CHECKING:
     from ui_form import Ui_main
 
-class MPLCanvas(FigureCanvasQTAgg):
-    def __init__(self, parent=None, width=5, height=4, dpi=100):
-        fig = Figure(figsize=(width, height), dpi=dpi, tight_layout=True)
-        self.axes = fig.add_subplot(111,autoscale_on=True)
-        super(MPLCanvas, self).__init__(fig)
-
-class Worker(QRunnable):
-    def __init__(self, fn, *args, **kwargs):
-        super(Worker, self).__init__()
-        self.args = args
-        self.kwargs = kwargs
-        self.fn = fn
-
-    @Slot()
-    def run(self):
-        self.fn(*self.args, **self.kwargs)
-
-
-class LivePlot(QWidget):
+class LivePlot(pg.PlotWidget):
 
     def __init__(self, parent = None):
-        super(LivePlot, self).__init__(parent)
+        super(LivePlot, self).__init__(parent=parent)
 
         self.ui : Ui_main = None # set post init bc of parent relationship not automatically applied on creation in generated script
         self._first_show = True
 
-        self.canvas = MPLCanvas(parent=self, width=5, height=4, dpi=100)
-        self.canvas.axes.set_xlabel("Time [s]")
-        self.canvas.axes.set_ylabel("Angle [rad]")
-        self.canvas.axes.grid('on')
-        self.canvas.axes.autoscale(enable=True, axis='both')
-
-
-        self.toolbar = NavigationToolbar2QT(self.canvas,self)
-        self.setLayout(QVBoxLayout())
-        self.layout().addWidget(self.toolbar)
-        self.layout().addWidget(self.canvas)
-
-        self.threadpool = QThreadPool()
-
-        self.tab_visible = False
-
-        n_data = 50
+        pg.setConfigOptions(antialias=True)
         self.xdata = []
         self.ydata = []
+        self.plotItem.clear()
+        self.plt: pg.PlotDataItem = self.plotItem.plot(y=self.ydata, x=self.xdata)#, symbol='x', symbolPen='y', symbolBrush=0.2)
+        self.plt.setPen('y')
 
-        # We need to store a reference to the plotted line 
-        # somewhere, so we can apply the new data to it.
-        self._plot_ref = None
+        self.setLabel('left', 'Angle', units='°')
+        self.setLabel('bottom', 'Time', units='s')
+        self.showGrid(x=True, y=True)
+        
+        self.plt.setData(y=[], x=[])
 
+        self.tab_visible = False
         self.show()
 
         logging.info("initialized live plot")
@@ -116,37 +84,9 @@ class LivePlot(QWidget):
         :param time: time
         :param angle: the droplet angle
         """
-        # worker = Worker(self.do_update_plot, time, angle)
-        # self.threadpool.start(worker)
-        self.do_update_plot(time, angle)
 
-    def do_update_plot(self, time, angle):
-        """update plot via thread
-
-        :param data: all the data from the pipeline
-        """
-        logging.debug("update plot")
-        # Drop off the first y element, append a new one.
         self.ydata = self.ydata[:] + [angle]
         self.xdata = self.xdata[:] + [time]
 
-        # Note: we no longer need to clear the axis.       
-        # if self._plot_ref is None:
-        #     # First time we have no plot reference, so do a normal plot.
-        #     # .plot returns a list of line <reference>s, as we're
-        #     # only getting one we can take the first element.
-        #     plot_refs = self.canvas.axes.plot(self.xdata, self.ydata, 'b')
-        #     self._plot_ref = plot_refs[0]
-            
-        # else:
-        #     # We have a reference, we can use it to update the data for that line.
-        #     self._plot_ref.set_ydata(self.ydata)
-        #     self._plot_ref.set_xdata(self.xdata)
+        self.plt.setData(y=self.ydata, x=self.xdata)
 
-        self.canvas.axes.plot(self.xdata, self.ydata, 'b')
-
-        # Trigger the canvas to update and redraw.
-        self.canvas.draw()
-
-    def clear(self):
-        pass
