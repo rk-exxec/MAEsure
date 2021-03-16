@@ -73,7 +73,6 @@ class MagnetControl(QGroupBox):
     def __init__(self, parent=None) -> None:
         super(MagnetControl, self).__init__(parent)
         self._lt_ctl = LT()
-        self.workerThread = QThread(self)
         self.ui: Ui_main = self.window().ui
         self._shown = False
         self._mov_dist: float = 0

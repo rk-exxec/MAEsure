@@ -20,6 +20,7 @@ import threading
 from evaluate_droplet import Droplet
 import time
 from datetime import datetime
+from math import degrees
 import numpy as np
 import pandas as pd
 from PySide2.QtWidgets import QFileDialog, QMessageBox, QTableWidget, QTableWidgetItem, QWidget
@@ -48,13 +49,12 @@ class DataControl(QTableWidget):
         self.ui: Ui_main = None # set post init bc of parent relationship not automatically applied on creation in generated script
         self._time = 0
         self.data: pd.DataFrame = None
-        self.threadpool = QThreadPool()
+        self.thr = None
         self._block_painter = False
         """this represents the header for the table and the csv file
 
         .. note::
             - **Time**: actual point in time the dataset was aquired
-            - **T_Time**: point in time, where the dataset should have been aquired (target time)
             - **Cycle**: if measurement is repeated, current number of repeats
             - **Left_Angle**: angle of left droplet side
             - **Right_Angle**: angle of right droplet side
@@ -67,7 +67,7 @@ class DataControl(QTableWidget):
             - **DateTime**: date and time at begin of measurement
         
         """
-        self._header = ['Time', 'T_Time', 'Cycle', 'Left_Angle', 'Right_Angle', 'Base_Width', 'Substate_Surface_Energy', 'Magn_Pos', 'Magn_Unit', 'Fe_Vol_P', 'ID', 'DateTime']
+        self._header = ['Time', 'Cycle', 'Left_Angle', 'Right_Angle', 'Base_Width', 'Substate_Surface_Energy', 'Magn_Pos', 'Magn_Unit', 'Fe_Vol_P', 'ID', 'DateTime']
         self.setHorizontalHeaderLabels(self._header)
         self._is_time_invalid = False
         self._first_show = True
@@ -110,7 +110,6 @@ class DataControl(QTableWidget):
         self.data = self.data.append(
             pd.DataFrame([[
                 curtime, 
-                target_time,
                 cycle, 
                 droplet.angle_l, 
                 droplet.angle_r, 
@@ -123,9 +122,9 @@ class DataControl(QTableWidget):
                 self._meas_start_datetime
             ]], columns=self._header)
         )
-        logging.debug("starte thread zum redrawing vom table")
-        thr = Worker(self.redraw_table)
-        thr.start()
+        #logging.debug("starte thread zum redrawing vom table")
+        self.thr = Worker(self.redraw_table)
+        self.thr.start()
         self.update_plot_signal.emit(curtime,(droplet.angle_l + droplet.angle_r)/2)
         # self.redraw_table()
 
@@ -195,6 +194,7 @@ class DataControl(QTableWidget):
         """
         self.export_data_csv(self._cur_filename)
         logging.info(f"saved data {self._cur_filename}")
+        self.ui.statusbar.showMessage(f"saved data {self._cur_filename}")
 
     def import_data_csv(self, filename):
         """ Import data and display it.
