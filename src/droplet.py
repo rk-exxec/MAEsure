@@ -93,11 +93,11 @@ class Droplet(Singleton):
             # if scalefactor is present, display in metric, else in pixles
             if self.scale_px_to_mm is None or self.scale_px_to_mm <= 0:
                 return 'Angle Left:\n{:.2f}°\nAngle Right:\n{:.2f}°\nSurface Diam:\n{:.2f} px\nArea:\n{:.2f} px2\nHeight:\n{:.2f} px'.format(
-                    round(degrees(self.angle_l),2), round(degrees(self.angle_r),2), round(self.base_diam), round(self.area,2), round(self.height,2)
+                    round(self.angle_l,2), round(self.angle_r,2), round(self.base_diam), round(self.area,2), round(self.height,2)
                 )
             else:
                 return 'Angle Left:\n{:.2f}°\nAngle Right:\n{:.2f}°\nSurface Diam:\n{:.2f} mm\nArea:\n{:.2f} mm2\nHeight:\n{:.2f} mm'.format(
-                    round(degrees(self.angle_l),2), round(degrees(self.angle_r),2), round(self.base_diam_mm,2), round(self.area_mm,2), round(self.height_mm,2)
+                    round(self.angle_l,2), round(self.angle_r,2), round(self.base_diam_mm,2), round(self.area_mm,2), round(self.height_mm,2)
                 )
         else:
             return 'No droplet!'

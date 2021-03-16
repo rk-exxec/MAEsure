@@ -129,8 +129,8 @@ def evaluate_droplet(img, y_base, mask: Tuple[int,int,int,int] = None) -> Drople
     drplt_height = calc_height_of_droplet((x0,y0,a,b,phi), y_base)
     
     # write values to droplet object
-    drplt.angle_l = angle_l
-    drplt.angle_r = angle_r
+    drplt.angle_l = degrees(angle_l)
+    drplt.angle_r = degrees(angle_r)
     drplt.maj = maj_ax
     drplt.min = min_ax
     drplt.center = (x0, y0)
