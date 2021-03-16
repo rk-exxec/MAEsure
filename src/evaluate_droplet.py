@@ -185,13 +185,25 @@ def find_contour(img, is_masked):
     cont_area_list = []
     for cont in contours:
         x,y,w,h = cv2.boundingRect(cont)
-        cont_area_list.append((cont, w*h))
+        # store contour, area of bounding rect and bounding rect in array
+        cont_area_list.append([cont, w*h, x, y, x+w, y+h])
     
     cont_areas_sorted = sorted(cont_area_list, key=lambda item: item[1])
-    # largest 2 contours, assumes mask splits largest conrou in the middle
+    # largest 2 contours, assumes mask splits largest contour in the middle
     if is_masked:
+        rects = [elem[2:] for elem in cont_areas_sorted[-2:]]
         largest_conts = [elem[0] for elem in cont_areas_sorted[-2:]]
-        contour = np.concatenate((largest_conts[0], largest_conts[1]))
+
+        #check if second largest contour is not from inside the droplet by checking overlap of bounding rects
+        BR = rects[-1] # bigest rect
+        SR = rects[0] # slightly smaller rect
+        # check if smaller rect overaps with larger rect
+        if (BR[2] < SR[0] or BR[0] > SR[3] or BR[1] > SR[4] or BR[4] < SR[1]):
+            # if not both rects are valid droplet contours
+            contour = np.concatenate((largest_conts[0], largest_conts[1]))
+        else:
+            # else only biggest is valid droplet contour
+            contour = cont_areas_sorted[-1][0]
     else:
         contour = cont_areas_sorted[-1][0]
     return contour
