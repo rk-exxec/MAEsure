@@ -23,10 +23,10 @@ from datetime import datetime
 from math import degrees
 import numpy as np
 import pandas as pd
-from PySide2.QtWidgets import QFileDialog, QMessageBox, QTableWidget, QTableWidgetItem, QWidget
-from PySide2.QtCore import QCoreApplication, QThread, QThreadPool, Signal, Slot, Qt, QRunnable
+from PySide2.QtWidgets import QFileDialog, QGroupBox, QMessageBox, QTableWidget, QTableWidgetItem, QWidget
+from PySide2.QtCore import QCoreApplication, QObject, QSettings, QThread, QThreadPool, Signal, Slot, Qt, QRunnable
 
-from typing import TYPE_CHECKING
+from typing import Dict, TYPE_CHECKING
 if TYPE_CHECKING:
     from ui_form import Ui_main
 
@@ -41,7 +41,7 @@ class Worker(QThread):
     def run(self):
         self.fn(*self.args, **self.kwargs)
 
-class DataControl(QTableWidget):
+class DataControl(QGroupBox):
     """ class for data and file control """
     update_plot_signal = Signal(float,float)
     def __init__(self, parent=None) -> None:
@@ -67,8 +67,8 @@ class DataControl(QTableWidget):
             - **DateTime**: date and time at begin of measurement
         
         """
-        self._header = ['Time', 'Cycle', 'Left_Angle', 'Right_Angle', 'Base_Width', 'Substate_Surface_Energy', 'Magn_Pos', 'Magn_Unit', 'Fe_Vol_P', 'ID', 'DateTime']
-        self.setHorizontalHeaderLabels(self._header)
+        self.header = ['Time', 'Cycle', 'Left_Angle', 'Right_Angle', 'Base_Width', 'Substate_Surface_Energy', 'Magn_Pos', 'Magn_Unit', 'Fe_Vol_P', 'ID', 'DateTime']
+        
         self._is_time_invalid = False
         self._first_show = True
         self._default_dir = '%USERDATA%'
@@ -76,6 +76,7 @@ class DataControl(QTableWidget):
         self._meas_start_datetime = ''
         self._cur_filename = ''
         self._seps = ['\t',',']
+
 
     def showEvent(self, event):
         #super().showEvent()
@@ -93,6 +94,7 @@ class DataControl(QTableWidget):
 
     def connect_signals(self):
         self.ui.saveFileAsBtn.clicked.connect(self.select_filename)
+        
 
     @Slot(float, Droplet, int)
     def new_data_point(self, target_time:float, droplet:Droplet, cycle:int):
@@ -104,7 +106,7 @@ class DataControl(QTableWidget):
         :param cycle: current cycle in case of repeated measurements
         """
         if self._is_time_invalid: self.init_time()
-        id = self.ui.materialIDEdit.text() if self.ui.materialIDEdit.text() != "" else "-"
+        id = self.ui.idCombo.currentText() if self.ui.idCombo.currentText() != "" else "-"
         percent = self.ui.ironContentEdit.text()
         curtime = time.monotonic() - self._time
         self.data = self.data.append(
@@ -120,7 +122,7 @@ class DataControl(QTableWidget):
                 percent, 
                 id, 
                 self._meas_start_datetime
-            ]], columns=self._header)
+            ]], columns=self.header)
         )
         #logging.debug("starte thread zum redrawing vom table")
         self.thr = Worker(self.redraw_table)
@@ -128,23 +130,7 @@ class DataControl(QTableWidget):
         self.update_plot_signal.emit(curtime,(droplet.angle_l + droplet.angle_r)/2)
         # self.redraw_table()
 
-    def redraw_table(self):
-        """ Redraw table with contents of dataframe """
-        self._block_painter = True
-        self.setHorizontalHeaderLabels(self._header)
-        self.setRowCount(self.data.shape[0])
-        self.setColumnCount(self.data.shape[1])
-        for r in range(self.data.shape[0]):
-            for c in range(self.data.shape[1]):
-                val = self.data.iloc[r, c]
-                #if type(val) is np.float64:
-                if isinstance(val ,float):
-                    val = f'{val:g}'
-                else:
-                    val = str(val)
-                self.setItem(r, c, QTableWidgetItem(val))
-        self._block_painter = False
-        self.scrollToBottom()
+    
         #self.viewport().update()
 
     def export_data_csv(self, filename):
@@ -217,6 +203,6 @@ class DataControl(QTableWidget):
         Create new dataframe with column headers and create new file with current filename.
         Invalidate time variable.
         """
-        self.data = pd.DataFrame(columns=self._header)
+        self.data = pd.DataFrame(columns=self.header)
         self.create_file()
         self._is_time_invalid = True
