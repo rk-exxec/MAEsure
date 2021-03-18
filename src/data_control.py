@@ -125,7 +125,7 @@ class DataControl(QGroupBox):
             ]], columns=self.header)
         )
         #logging.debug("starte thread zum redrawing vom table")
-        self.thr = Worker(self.redraw_table)
+        self.thr = Worker(self.ui.tableControl.redraw_table)
         self.thr.start()
         self.update_plot_signal.emit(curtime,(droplet.angle_l + droplet.angle_r)/2)
         # self.redraw_table()
@@ -170,7 +170,7 @@ class DataControl(QGroupBox):
         if self.ui.fileNameEdit.text() == "": raise ValueError("No File specified!")
         self._cur_filename = self.ui.fileNameEdit.text().replace('!now!', f'{ self._meas_start_datetime}')
         self._cur_filename = self._cur_filename.replace('!pos!', f'{self.ui.posSpinBox.value()}')
-        self._cur_filename = self._cur_filename.replace('!ID!', f'{self.ui.materialIDEdit.text()}')
+        self._cur_filename = self._cur_filename.replace('!ID!', f'{self.ui.idCombo.currentText()}')
         open(self._cur_filename, 'w').close()
 
     def save_data(self):

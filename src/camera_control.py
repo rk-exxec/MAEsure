@@ -101,7 +101,7 @@ class CameraControl(QGroupBox):
         stops camera and video recorder
         """
         # close camera stream and recorder object
-        self.recorder.close()
+        if self.recorder: self.recorder.close()
         self.cam.stop_streaming()
         
 

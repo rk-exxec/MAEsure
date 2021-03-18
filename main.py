@@ -15,6 +15,8 @@
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import sys
+
+from PySide2 import QtWidgets
 sys.path.append('./src')
 import os
 import pydevd
@@ -43,22 +45,23 @@ from light_widget import LightWidget
 class MainWindow(QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
-        self.ui = Ui_main()
-        self.ui.setupUi(self)
+        self.ui: Ui_main = None
         atexit.register(self.cleanup)
-        self.ui.statusbar.showMessage('Welcome!', timeout=5)
-        self._size = self.size()
-        self.show()
+        #self._size = self.size()
 
     def __del__(self):
         del self.ui.camera_prev
 
     def resizeEvent(self, event: QResizeEvent):
         # prevent resizing of window
-        self.setFixedSize(self._size)
+        #self.setFixedSize(self._size)
+        pass
 
     def closeEvent(self, event):
         self.ui.camera_prev.closeEvent(event)
+        self.ui.dataControl.closeEvent(event)
+        self.ui.idCombo.closeEvent(event)
+        return super().closeEvent(event)
 
     def cleanup(self):
         del self
@@ -98,7 +101,11 @@ class App(QApplication):
         splash.setMask(pic.mask())
         splash.show()
         self.window = MainWindow()
-        self.ui = self.window.ui
+        self.ui = Ui_main()
+        self.window.ui = self.ui
+        self.ui.setupUi(self.window)
+        self.window.show()
+        
         splash.finish(self.window)
 
 if __name__ == "__main__":

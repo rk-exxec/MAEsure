@@ -15,6 +15,7 @@
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
+from PySide2.QtCore import Signal
 from PySide2.QtWidgets import QTableWidget, QTableWidgetItem
 
 from typing import TYPE_CHECKING
@@ -22,7 +23,7 @@ if TYPE_CHECKING:
     from ui_form import Ui_main
 
 class TableControl(QTableWidget):
-
+    redraw_table_signal = Signal()
     def __init__(self, parent=None):
         super().__init__(parent)
         self.ui: Ui_main = None  
@@ -33,17 +34,19 @@ class TableControl(QTableWidget):
             self.ui = self.window().ui
             self.setHorizontalHeaderLabels(self.ui.dataControl.header)
             self._first_show = False
+            self.redraw_table_signal.connect(self.redraw_table)
         return super().showEvent(event)
 
     def redraw_table(self):
         """ Redraw table with contents of dataframe """
+        data = self.ui.dataControl.data
         self._block_painter = True
-        self.setHorizontalHeaderLabels(self._header)
-        self.setRowCount(self.data.shape[0])
-        self.setColumnCount(self.data.shape[1])
-        for r in range(self.data.shape[0]):
-            for c in range(self.data.shape[1]):
-                val = self.data.iloc[r, c]
+        #self.setHorizontalHeaderLabels(self._header)
+        self.setRowCount(data.shape[0])
+        self.setColumnCount(data.shape[1])
+        for r in range(data.shape[0]):
+            for c in range(data.shape[1]):
+                val = data.iloc[r, c]
                 #if type(val) is np.float64:
                 if isinstance(val ,float):
                     val = f'{val:g}'
