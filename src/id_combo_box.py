@@ -28,7 +28,7 @@ class IdComboBox(QComboBox):
         self._first_show = True
         self.ui: Ui_main = None
         settings_obj = self.settings.value("id_combo_control/ids")
-        self._ids: Dict[str, str] = settings_obj.toPyObject() if settings_obj != None else {}
+        self._ids: Dict[str, str] = settings_obj if settings_obj != None else {}
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         
     def closeEvent(self, event):

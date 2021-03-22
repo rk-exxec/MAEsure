@@ -154,6 +154,7 @@ if HAS_VIMBA:
             #self._vimba.enable_log(LOG_CONFIG_TRACE_FILE_ONLY)
             self._init_camera()
             self._setup_camera()
+            self._cur_roi_origin = (0,0) # keep track of ROI pos to support nested ROI selection
 
         def __del__(self):
             self.stop_streaming()
@@ -181,6 +182,7 @@ if HAS_VIMBA:
 
         def reset_roi(self):
             #self.set_roi(0,0, 2064, 1544)
+            self._cur_roi_origin = (0,0)
             was_running = self._is_running
             self.stop_streaming()
             with self._vimba:
@@ -203,12 +205,16 @@ if HAS_VIMBA:
 
         def set_roi(self, x, y, w, h):
             # x, y, width and height need be multiple of 8
-            x = int(8 * round(x/8))
-            y = int(8 * round(y/8))
-            w = int(8 * round(w/8))
-            h = int(8 * round(h/8))
+            x = int(8 * int(round(x/8)))
+            y = int(8 * int(round(y/8)))
+            w = int(8 * int(round(w/8)))
+            h = int(8 * int(round(h/8)))
             if h > 1542:
                 h = 1542
+            if self._cur_roi_origin != (0,0):
+                x += self._cur_roi_origin[0]
+                y += self._cur_roi_origin[1]
+            self._cur_roi_origin = (x,y)
             was_running = self._is_running
             self.stop_streaming()
             with self._vimba:

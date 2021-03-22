@@ -36,7 +36,7 @@ class CameraPreview(QOpenGLWidget):
     """
     def __init__(self, parent=None):
         super(CameraPreview, self).__init__(parent)
-        self.roi_origin = QPoint()
+        self.roi_origin = QPoint(0,0)
         self._pixmap: QPixmap = QPixmap(480, 360)
         self._double_buffer: QImage = None
         self._image_size = (1,1)
@@ -160,9 +160,7 @@ class CameraPreview(QOpenGLWidget):
         """update mask from widget
         """
         mask_rect = self._needle_mask.get_mask_geometry()
-        (x,y) = self.mapToImage(*mask_rect[:2])
-        (w,h) = self.mapToImage(*mask_rect[2:])
-        self._mask = (x,y,w,h)
+        self._mask = self.mapToImage(*mask_rect[:])
 
     @Slot(np.ndarray, bool)
     def update_image(self, cv_img: np.ndarray, eval: bool = True):
@@ -237,7 +235,7 @@ class CameraPreview(QOpenGLWidget):
         int_r = self.mapFromImage(*droplet.int_r)
         return tangent_l, tangent_r, int_l, int_r, center, maj, min
 
-    def mapToImage(self, x=None, y=None) -> Union[Tuple[int,int],int]:
+    def mapToImage(self, x=None, y=None, w=None, h=None):
         """ 
         Convert QLabel coordinates to image pixel coordinates
 
@@ -245,21 +243,24 @@ class CameraPreview(QOpenGLWidget):
         :param y: y coordinate to be transformed
         :returns: x or y or Tuple (x,y) of the transformed coordinates, depending on what parameters where given
         """
-        pix_rect = self._pixmap.size()
+        scale_x, scale_y, offset_x, offset_y = self.get_from_image_transform()
         res: List[int] = []
         if x is not None:
-            # calculate scale
-            scale_x = self._image_size[1] / pix_rect.width()
             # subtract half the width delta, then scale
-            tr_x = int(round((x - (abs(pix_rect.width() - self.width())/2)) * scale_x))
+            tr_x = int(round((x - offset_x) / scale_x))
             res.append(tr_x)
         if y is not None:
-            scale_y = self._image_size[0] / pix_rect.height()
-            tr_y = int(round((y - (abs(pix_rect.height() - self.height())/2)) * scale_y))
+            tr_y = int(round((y - offset_y) / scale_y))
             res.append(tr_y)
+        if w is not None:
+            tr_w = int(round(w / scale_x))
+            res.append(tr_w)
+        if h is not None:
+            tr_h = int(round(h / scale_y))
+            res.append(tr_h)
         return tuple(res) if len(res)>1 else res[0]
 
-    def mapFromImage(self, x=None, y=None) -> Union[Tuple[int,int],int]:
+    def mapFromImage(self, x=None, y=None, w=None, h=None):
         """ 
         Convert Image pixel coordinates to QLabel coordinates
 
@@ -275,6 +276,12 @@ class CameraPreview(QOpenGLWidget):
         if y is not None:
             tr_y = int(round((y * scale_y) + offset_y))
             res.append(tr_y)
+        if w is not None:
+            tr_w = int(round(w  * scale_x))
+            res.append(tr_w)
+        if h is not None:
+            tr_h = int(round(h  * scale_y))
+            res.append(tr_h)
         return tuple(res) if len(res)>1 else res[0]
 
     def get_from_image_transform(self):
@@ -283,11 +290,13 @@ class CameraPreview(QOpenGLWidget):
 
         :returns: 4-Tuple: Scale factors for x and y as tuple, Offset as tuple (x,y)
         """
-        pix_rect = self._pixmap.size()
-        scale_x = float(pix_rect.width() / self._image_size[1])
-        offset_x = abs(pix_rect.width() - self.width())/2
-        scale_y = float(pix_rect.height() / self._image_size[0])
-        offset_y = abs(pix_rect.height() - self.height())/2
+        pw, ph = self._pixmap.size().toTuple()              # scaled image size
+        ih, iw = self._image_size[0], self._image_size[1]   # original size of image
+        cw, ch = self.size().toTuple()                      # display container size
+        scale_x = float(pw / iw)
+        offset_x = abs(pw - cw)/2
+        scale_y = float(ph / ih)
+        offset_y = abs(ph -  ch)/2
         return scale_x, scale_y, offset_x, offset_y
 
     def show_baseline(self):
@@ -324,8 +333,8 @@ class CameraPreview(QOpenGLWidget):
         x,y = self._roi_rubber_band.mapToParent(QPoint(0,0)).toTuple()
         w,h = self._roi_rubber_band.size().toTuple()
         self.hide_rubberband()
-        x,y = self.mapToImage(x=x, y=y)
-        w,h = self.mapToImage(x=w, y=h)
+        x,y,w,h = self.mapToImage(x,y,w,h)
+        #w,h = self.mapToImage(x=w, y=h)
         return x,y,w,h
 
     def _abort_roi(self):

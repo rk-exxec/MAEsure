@@ -198,7 +198,7 @@ def find_contour(img, is_masked):
         BR = rects[-1] # bigest rect
         SR = rects[0] # slightly smaller rect
         # check if smaller rect overaps with larger rect
-        if (BR[2] < SR[0] or BR[0] > SR[3] or BR[1] > SR[4] or BR[4] < SR[1]):
+        if (BR[2] < SR[0] or BR[0] > SR[2] or BR[1] > SR[3] or BR[3] < SR[1]):
             # if not both rects are valid droplet contours
             contour = np.concatenate((largest_conts[0], largest_conts[1]))
         else:
