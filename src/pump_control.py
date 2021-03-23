@@ -18,7 +18,7 @@
 from PySide2.QtWidgets import QGroupBox
 import pumpy
 import logging
-from pump import Microliter
+from pumpy import Microliter
 from serial.tools.list_ports_windows import comports
 
 from typing import TYPE_CHECKING
