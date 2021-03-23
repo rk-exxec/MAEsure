@@ -16,30 +16,21 @@
 
 import logging
 import os
-import threading
-from evaluate_droplet import Droplet
+
 import time
 from datetime import datetime
 from math import degrees
 import numpy as np
 import pandas as pd
-from PySide2.QtWidgets import QFileDialog, QGroupBox, QMessageBox, QTableWidget, QTableWidgetItem, QWidget
-from PySide2.QtCore import QCoreApplication, QObject, QSettings, QThread, QThreadPool, Signal, Slot, Qt, QRunnable
+from PySide2.QtWidgets import QFileDialog, QGroupBox, QMessageBox
+from PySide2.QtCore import Signal, Slot
+
+from evaluate_droplet import Droplet
+from qthread_worker import Worker
 
 from typing import Dict, TYPE_CHECKING
 if TYPE_CHECKING:
     from ui_form import Ui_main
-
-class Worker(QThread):
-    def __init__(self, fn, *args, **kwargs):
-        super(Worker, self).__init__()
-        self.args = args
-        self.kwargs = kwargs
-        self.fn = fn
-
-    @Slot()
-    def run(self):
-        self.fn(*self.args, **self.kwargs)
 
 class DataControl(QGroupBox):
     """ class for data and file control """

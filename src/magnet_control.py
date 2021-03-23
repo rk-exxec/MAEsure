@@ -26,29 +26,20 @@ import numpy as np
 import pandas as pd
 from scipy import interpolate
 
-from PySide2.QtCore import QTimer, Signal, Slot, Qt, QThread
+from PySide2.QtCore import QTimer, Slot, Qt
 from PySide2.QtGui import QShowEvent
-from PySide2.QtWidgets import QGroupBox, QLabel, QMainWindow, QMessageBox, QPushButton
+from PySide2.QtWidgets import QGroupBox, QMessageBox
 from scipy.interpolate.interpolate import interp1d
 
 from light_widget import LightWidget
 from lt_control.lt_control import LT
 
+from qthread_worker import CallbackWorker
+
 # import for type hinting not evaluated at runtime to avoid cyclic imports
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from ui_form import Ui_main
-
-class WaitMovementThread(QThread):
-    """ Thread with callback function on exit """
-    def __init__(self, target, slotOnFinished=None):
-        super(WaitMovementThread, self).__init__()
-        self.target = target
-        if slotOnFinished:
-            self.finished.connect(slotOnFinished)
-
-    def run(self, *args, **kwargs):
-        self.target(*args, **kwargs)
 
 class CustomCallbackTimer(QTimer):
     """ Timer with custom callback function """
@@ -79,7 +70,7 @@ class MagnetControl(QGroupBox):
         self._mov_unit: str = 'steps'
         self._old_unit: str = 'steps'
         self._invalid = False
-        self.wait_movement_thread = WaitMovementThread(self.wait_movement, self.finished_moving)
+        self.wait_movement_thread = CallbackWorker(self.wait_movement, self.finished_moving)
         self.update_pos_timer = CustomCallbackTimer(self.update_pos, 250)
         self._calibration_table: pd.DataFrame = None
         self.mag_to_mm_interp: interpolate.interp1d = None
