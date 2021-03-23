@@ -18,8 +18,11 @@
 from PySide2.QtWidgets import QGroupBox
 import pumpy
 import logging
-from pumpy import Microliter
 from serial.tools.list_ports_windows import comports
+
+from pumpy import Microliter
+from qthread_worker import Worker, CallbackWorker
+
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -45,6 +48,7 @@ class PumpControl(QGroupBox):
         except Exception as ex:
            self._pump = None
            logging.warning('Pump Error:' + str(ex))
+        self.worker: Worker = Worker(None)
 
     def showEvent(self, event):
         self._pump.stop()
@@ -66,8 +70,11 @@ class PumpControl(QGroupBox):
         **Caution!** only use if limitswitches are properly setup to avoid damage to syringe
         """
         logging.info("filling syringe")
-        self._pump.settargetvolume(1000)
-        self._pump.withdraw()
+        if self.worker.isRunning():
+            logging.error("pump: error! pump not ready")
+            return
+        self.worker = CallbackWorker(self._pump.settargetvolume, 1000, slotOnFinished=self.do_withdraw)
+        self.worker.start()
 
     def empty(self):
         """ Pump will empty syringe completely  
@@ -75,22 +82,45 @@ class PumpControl(QGroupBox):
         **Caution!** only use if limitswitches are properly setup to avoid damage to syringe
         """
         logging.info("emptying syringe")
-        self._pump.settargetvolume(1000)
-        self._pump.infuse()
+        if self.worker.isRunning():
+            logging.error("pump: error! pump not ready")
+            return
+        self.worker = CallbackWorker(self._pump.settargetvolume, 1000, slotOnFinished=self.do_infuse)
+        self.worker.start()
 
     def infuse(self):
         """ Pump will move plunger down until specified volume is displaced """
         amount = self.ui.amountSpinBox.value()
         logging.info(f"pump: infusing {amount} ul")
-        self._pump.settargetvolume(amount)
-        self._pump.infuse()
+        if self.worker.isRunning():
+            logging.error("pump: error! pump not ready")
+            return
+        self.worker = CallbackWorker(self._pump.settargetvolume, amount, slotOnFinished=self.do_infuse)
+        self.worker.start()
 
     def withdraw(self):
         """ Pump will move plunge up until specified volume is gained """
         amount = self.ui.amountSpinBox.value()
         logging.info(f"pump: withdrawing {amount} ul")
-        self._pump.settargetvolume(amount)
-        self._pump.withdraw()
+        if self.worker.isRunning():
+            logging.error("pump: error! pump not ready")
+            return
+        self.worker = CallbackWorker(self._pump.settargetvolume, amount, slotOnFinished=self.do_withdraw)
+        self.worker.start()
+
+    def do_withdraw(self):
+        if self.worker.isRunning():
+            logging.error("pump: error! pump not ready")
+            return
+        self.worker = Worker(self._pump.withdraw)
+        self.worker.start()
+
+    def do_infuse(self):
+        if self.worker.isRunning():
+            logging.error("pump: error! pump not ready")
+            return
+        self.worker = Worker(self._pump.infuse)
+        self.worker.start()
 
     def apply_settings(self):
         """ read the values from the ui and apply them to the pump """
