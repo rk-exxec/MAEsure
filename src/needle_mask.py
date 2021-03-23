@@ -19,7 +19,7 @@
 from typing import Tuple
 from PySide2.QtWidgets import QWidget, QHBoxLayout, QSizeGrip, QRubberBand
 from PySide2.QtGui import QPainter, QPen, QResizeEvent
-from PySide2.QtCore import Qt, QPoint, QRect, Signal
+from PySide2.QtCore import QSettings, Qt, QPoint, QRect, Signal
 
 class DynamicNeedleMask(QWidget):
     """ 
@@ -29,6 +29,7 @@ class DynamicNeedleMask(QWidget):
     update_mask_signal = Signal()
     def __init__(self, parent=None):
         super(DynamicNeedleMask, self).__init__(parent)
+        self.settings = QSettings()
         self._first_show = True
         self.setWindowFlag(Qt.SubWindow)
         self.setFocusPolicy(Qt.ClickFocus)
@@ -74,7 +75,6 @@ class DynamicNeedleMask(QWidget):
         """
         self._locked = False
 
-
     def showEvent(self, event):
         """
         custom show event
@@ -82,7 +82,11 @@ class DynamicNeedleMask(QWidget):
         initializes geometry for first show
         """
         if self._first_show:
-            self.setGeometry(self.parent().width()*15/32, 0, self.parent().width()/16, self.parent().height())
+            geo = self.load_geo()
+            if geo:
+                self.setGeometry(*geo)
+            else:
+                self.setGeometry(self.parent().width()*15/32, 0, self.parent().width()/16, self.parent().height())
             self._first_show = False
 
     @property
@@ -149,7 +153,14 @@ class DynamicNeedleMask(QWidget):
 
     def mouseReleaseEvent(self, event):
         self.update_mask_signal.emit()
+        self.save_geo()
         return super().mouseReleaseEvent(event)
+
+    def save_geo(self):
+        self.settings.setValue("needle_mask/geometry", self.geometry().getRect())
+    
+    def load_geo(self):
+        return self.settings.value("needle_mask/geometry")
         
     def updateGrips(self):
         self.setContentsMargins(*[self.gripSize] * 4)
@@ -240,3 +251,4 @@ class SideGrip(QWidget):
 
     def mouseReleaseEvent(self, event):
         self.mousePos = None
+        self.parent().mouseReleaseEvent(event)
