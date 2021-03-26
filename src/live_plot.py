@@ -35,12 +35,14 @@ class LivePlot(pg.PlotWidget):
 
         self.ui : Ui_main = None # set post init bc of parent relationship not automatically applied on creation in generated script
         self._first_show = True
+        self.color_cnt = 0
+        self.color = pg.intColor(self.color_cnt)
 
         pg.setConfigOptions(antialias=True)
         self.xdata = []
         self.ydata = []
         self.plotItem.clear()
-        self.plt: pg.PlotDataItem = self.plotItem.plot(y=self.ydata, x=self.xdata)#, symbol='x', symbolPen='y', symbolBrush=0.2)
+        self.plt: pg.PlotDataItem = self.plotItem.plot(y=self.ydata, x=self.xdata, pen=self.color) #, symbol='x', symbolPen='y', symbolBrush=0.2)
         self.plt.setPen('y')
 
         self.setLabel('left', 'Angle', units='°')
@@ -66,15 +68,27 @@ class LivePlot(pg.PlotWidget):
         self.ui.dataControl.update_plot_signal.connect(self.update_plot)
         self.ui.measurementControl.start_measurement_signal.connect(self.prepare_plot)
 
-    @Slot()
-    def prepare_plot(self):
+    @Slot(bool)
+    def prepare_plot(self, hold=False):
         """prepares the plot
-
-        :param xsize,ysize: expected size of axes
-        :param group: grouping column name, defaults to None
         """
+        if hold:
+            self.color_cnt += 1
+        else:
+            self.color_cnt = 0
+            self.plotItem.clear()
         self.ydata = []
         self.xdata = []
+        self.color = pg.intColor(self.color_cnt)
+        self.plt = self.plotItem.plot(y=self.ydata, x=self.xdata, pen=self.color)
+
+    def clear(self):
+        self.color_cnt = 0
+        self.plotItem.clear()
+        self.ydata = []
+        self.xdata = []
+        self.color = pg.intColor(self.color_cnt)
+        self.plt = self.plotItem.plot(y=self.ydata, x=self.xdata, pen=self.color)
 
 
     @Slot(float, float)

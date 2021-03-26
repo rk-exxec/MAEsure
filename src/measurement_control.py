@@ -77,7 +77,7 @@ class MeasurementControl(QGroupBox):
     """
     new_datapoint_signal = Signal(float, Droplet, int)
     save_data_signal = Signal()
-    start_measurement_signal = Signal()
+    start_measurement_signal = Signal(bool)
     def __init__(self, parent=None) -> None:
         super(MeasurementControl, self).__init__(parent)
         self.ui: Ui_main = self.window().ui
@@ -101,6 +101,7 @@ class MeasurementControl(QGroupBox):
     def connect_signals(self):
         self.ui.startMeasBtn.clicked.connect(self.start_measurement)
         self.ui.cancelMeasBtn.clicked.connect(self.stop_measurement)
+        self.ui.avgModeCombo.currentIndexChanged.connect(self.change_avg_mode)
         self.new_datapoint_signal.connect(self.ui.dataControl.new_data_point)
         self.save_data_signal.connect(self.ui.dataControl.save_data)
 
@@ -140,7 +141,7 @@ class MeasurementControl(QGroupBox):
             QMessageBox.warning(self, 'MAEsure Error', f'An error occured:\n{str(ex)}', QMessageBox.Ok)
             logging.exception("measurement control: error", exc_info=ex)
             return
-        self.start_measurement_signal.emit()
+        self.start_measurement_signal.emit(self.ui.plotHoldChk.isChecked())
         self.measure_start()
 
     def stop_measurement(self):
@@ -189,9 +190,9 @@ class MeasurementControl(QGroupBox):
             self._cycle += 1
             self.measure_start()
         else:
-            QMessageBox.information(self, 'MAEsure', 'Measurement finished!', QMessageBox.Ok)
             self.measure_stop()
-
+            QMessageBox.information(self, 'MAEsure', 'Measurement finished!', QMessageBox.Ok)
+            
     #@Slot()
     def timer_timeout(self):
         """grab snapshot of sata and save to table
@@ -203,6 +204,10 @@ class MeasurementControl(QGroupBox):
         self.new_datapoint_signal.emit(time, drplt, self._cycle)
 
     ### utility functions ###
+    @Slot(int)
+    def change_avg_mode(self, index):
+        drplt = Droplet()
+        drplt.change_filter_mode(index)
 
     def read_intervals(self):
         """ Try to read the time and magnet intervals """
