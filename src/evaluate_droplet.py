@@ -70,7 +70,7 @@ def evaluate_droplet(img, y_base, mask: Tuple[int,int,int,int] = None) -> Drople
     if (not mask is None):
         x,y,w,h = mask
         bw_edges[:, x:x+w] = 0
-        img[:, x:x+w] = 0
+        #img[:, x:x+w] = 0
         masked = True
     else:
         masked = False
@@ -247,15 +247,15 @@ def calc_slope_of_ellipse(ellipse_pars, x, y):
     """
     (x0, y0, a, b, phi) = ellipse_pars
     # transform to non-rotated ellipse centered to origin
-    x_rot = (x - x0)*cos(phi) - (y - y0)*sin(phi)
-    y_rot = (x - x0)*sin(phi) + (y - y0)*cos(phi)
+    x_rot = (x - x0)*cos(phi) + (y - y0)*sin(phi)
+    y_rot = (y - y0)*cos(phi) - (x - x0)*sin(phi)
     # general line equation for tangent Ax + By = C
     tan_a = x_rot/a**2
     tan_b = y_rot/b**2
     # tan_c = 1
     #rotate tangent line back to angle of the rotated ellipse
-    tan_a_r = tan_a*cos(phi) + tan_b*sin(phi)
-    tan_b_r = tan_b*cos(phi) - tan_a*sin(phi)
+    tan_a_r = tan_a*cos(phi) - tan_b*sin(phi)
+    tan_b_r = tan_b*cos(phi) + tan_a*sin(phi)
     #calc slope of tangent m = -A/B
     m_tan = - (tan_a_r / tan_b_r)
 

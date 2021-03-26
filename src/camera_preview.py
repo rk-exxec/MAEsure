@@ -75,25 +75,42 @@ class CameraPreview(QOpenGLWidget):
         db_painter.setPen(QPen(Qt.black,0))
         db_painter.drawPixmap(offset_x, offset_y, self._pixmap)
         pen = QPen(Qt.magenta,2)
+        pen_fine = QPen(Qt.blue,1)
         pen.setCosmetic(True)
         db_painter.setPen(pen)
         # draw droplet outline and tangent only if evaluate_droplet was successful
         if self._droplet.is_valid:
             try:
                 # transforming true image coordinates to scaled pixmap coordinates
-                transform = QTransform()
-                transform.translate(offset_x, offset_y)
-                transform.scale(scale_x, scale_y)
-                db_painter.setTransform(transform)
+                db_painter.translate(offset_x, offset_y)
+                db_painter.scale(scale_x, scale_y)
+
                 # drawing tangents and baseline
                 db_painter.drawLine(*self._droplet.line_l)
                 db_painter.drawLine(*self._droplet.line_r)
                 db_painter.drawLine(*self._droplet.int_l, *self._droplet.int_r)
-                # draw ellipse around origin, then move and rotate
-                transform.translate(*self._droplet.center)
-                transform.rotate(self._droplet.tilt_deg)
-                db_painter.setTransform(transform)
-                db_painter.drawEllipse(QPoint(0,0), self._droplet.maj/2, self._droplet.min/2)
+
+                # move origin to ellipse origin
+                db_painter.translate(*self._droplet.center)
+
+                # draw diagnostics
+                # db_painter.setPen(pen_fine)
+                # #  lines parallel to coordinate axes
+                # db_painter.drawLine(0,0,20*scale_x,0)
+                # db_painter.drawLine(0,0,0,20*scale_y)
+                # # angle arc
+                # db_painter.drawArc(-5*scale_x, -5*scale_y, 10*scale_x, 10*scale_y, 0, -self._droplet.tilt_deg*16)
+
+                # rotate coordinates to ellipse tilt
+                db_painter.rotate(self._droplet.tilt_deg)
+
+                # draw ellipse
+                db_painter.setPen(pen)
+                db_painter.drawEllipse(-self._droplet.maj/2, -self._droplet.min/2, self._droplet.maj, self._droplet.min)
+                
+                # # major and minor axis for diagnostics
+                # db_painter.drawLine(0, 0, self._droplet.maj/2, 0)
+                # db_painter.drawLine(0, 0, 0, self._droplet.min/2)
             except Exception as ex:
                 print(ex)
         db_painter.end()

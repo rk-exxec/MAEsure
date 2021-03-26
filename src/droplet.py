@@ -187,7 +187,23 @@ class Droplet(Singleton):
         self._height_avg.set_length(value)
         self._area_avg.set_length(value)
 
+    def reset_filters(self):
+        """reset the filters for special modes
+        """
+        self._angle_l_avg.reset()
+        self._angle_r_avg.reset()
+        self._height_avg.reset()
+        self._area_avg.reset()
 
+    def change_filter_mode(self, mode):
+        """change the filter modes
+
+        :param mode: modes: 0 default; 1 average until read
+        """
+        self._angle_l_avg.change_mode(mode)
+        self._angle_r_avg.change_mode(mode)
+        self._height_avg.change_mode(mode)
+        self._area_avg.change_mode(mode)
 
 class RollingAverager:
     """ 
@@ -198,38 +214,49 @@ class RollingAverager:
     def __init__(self, length=300):
         # lenght of filter
         self.length = length
+        self.default_len = length
         self.buffer = [0.0]*length
         self.counter = 0
+        self.mode = 0
         self.first_number = True
 
     def _rotate(self):
         """
         shift  internal index to next position
         """
-        # increase current index by 1 or loop back to 0
-        if self.counter == (self.length - 1):
-            self.counter = 0
-        else:
-            self.counter += 1
+        if self.mode == 0:
+            # increase current index by 1 or loop back to 0
+            if self.counter == (self.length - 1):
+                self.counter = 0
+            else:
+                self.counter += 1
 
     def _put(self, value):
         """ set value at current index
 
         :param float value: the new value to set
         """ 
-        if self.first_number:
-            # initialize buffer with first value
-            self.buffer = [value]*self.length
-            self.first_number = False
+        if self.mode == 1:
+            self.buffer.append(value)
+            self.length += 1
         else:
-            # add value to current line then rotate index
-            self.buffer[self.counter] = value
-        self._rotate()
+            if self.first_number:
+                # initialize buffer with first value
+                self.buffer = [value]*self.length
+                self.first_number = False
+            else:
+                # add value to current line then rotate index
+                self.buffer[self.counter] = value
+            self._rotate()
 
     @property
     def average(self) -> float:
         """ Return the averaged value """
-        return sum(self.buffer) / self.length
+        avg = sum(self.buffer) / self.length
+        if self.mode == 1: 
+            self.buffer = []
+            self.length = 0
+        return avg
 
     def set_length(self, value):
         """
@@ -247,3 +274,21 @@ class RollingAverager:
             if self.counter > (value -1 ): self.counter = 0
         self.length = value
         logging.info(f"set filter length to {value}")
+
+    def reset(self):
+        self.mode == 0
+        self.counter = 0
+        self.set_length(self.default_len)
+
+    def change_mode(self, mode):
+        self.mode = mode
+        if mode == 0:
+            self.reset()
+        elif mode == 1:
+            self.buffer = []
+            self.length = 0
+        elif mode == 2:
+            self.set_length(1)
+
+        
+
