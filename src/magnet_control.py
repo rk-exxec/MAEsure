@@ -70,7 +70,7 @@ class MagnetControl(QGroupBox):
         self._mov_unit: str = 'steps'
         self._old_unit: str = 'steps'
         self._invalid = False
-        self.wait_movement_thread = CallbackWorker(self.wait_movement, self.finished_moving)
+        self.wait_movement_thread = CallbackWorker(self.wait_movement, slotOnFinished=self.finished_moving)
         self.update_pos_timer = CustomCallbackTimer(self.update_pos, 250)
         self._calibration_table: pd.DataFrame = None
         self.mag_to_mm_interp: interpolate.interp1d = None
