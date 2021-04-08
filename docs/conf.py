@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.abspath('../src'))
 # -- Project information -----------------------------------------------------
 
 project = 'MAEsure'
-copyright = '2021, Raphael Kriegl'
+copyright = 'GNU GPLv3'
 author = 'Raphael Kriegl'
 
 
