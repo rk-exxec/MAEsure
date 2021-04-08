@@ -27,14 +27,8 @@ from PySide2.QtGui import QResizeEvent, QPixmap
 from PySide2.QtWidgets import QMainWindow, QApplication, QSplashScreen
 from PySide2.QtCore import QCoreApplication, QSettings
 
-from ui_form import Ui_main
-
 from camera_control import CameraControl
-from magnet_control import MagnetControl
-# from pump_control import PumpControl
 from data_control import DataControl
-#from measurement_control import MeasurementControl
-from light_widget import LightWidget
 
 # TODO use QSettings to store settings ( also maybe put some stuff in dialog boxes)
 
@@ -45,7 +39,7 @@ from light_widget import LightWidget
 class MainWindow(QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
-        self.ui: Ui_main = None
+        self.ui = None
         atexit.register(self.cleanup)
         #self._size = self.size()
 
@@ -111,6 +105,8 @@ class App(QApplication):
 if __name__ == "__main__":
     # compile python qt form.ui into python file
     os.system('pyside2-uic -o src/ui_form.py qt_resources/form.ui')
+
+    from ui_form import Ui_main
 
     # setup logging
     initialize_logger("./log")
