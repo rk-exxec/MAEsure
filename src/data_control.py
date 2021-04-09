@@ -108,8 +108,8 @@ class DataControl(QGroupBox):
                 droplet.angle_r, 
                 droplet.base_diam, 
                 "-", 
-                self.ui.posSpinBox.value(),
-                self.ui.unitComboBox.currentText(),
+                self.ui.magnetControl.posSpinBox.value(),
+                self.ui.magnetControl.unitComboBox.currentText(),
                 percent, 
                 id, 
                 self._meas_start_datetime
@@ -160,7 +160,7 @@ class DataControl(QGroupBox):
         self._meas_start_datetime = datetime.now().strftime('%y_%m_%d_%H-%M')
         if self.ui.fileNameEdit.text() == "": raise ValueError("No File specified!")
         self._cur_filename = self.ui.fileNameEdit.text().replace('!now!', f'{ self._meas_start_datetime}')
-        self._cur_filename = self._cur_filename.replace('!pos!', f'{self.ui.posSpinBox.value()}')
+        self._cur_filename = self._cur_filename.replace('!pos!', f'{self.ui.magnetControl.posSpinBox.value()}')
         self._cur_filename = self._cur_filename.replace('!ID!', f'{self.ui.idCombo.currentText()}')
         open(self._cur_filename, 'w').close()
 
