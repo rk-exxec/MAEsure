@@ -35,5 +35,5 @@ six==1.15.0
 tifffile==2020.10.1
 toml==0.10.1
 typed-ast==1.4.1
-VimbaPython @ https://github.com/alliedvision/VimbaPython.git@releases/1.0.1#egg=VimbaPython
+VimbaPython @ git+https://github.com/alliedvision/VimbaPython.git@v1.0.1#egg=VimbaPython
 wrapt==1.12.1
