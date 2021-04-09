@@ -31,7 +31,7 @@ from PySide2.QtGui import QShowEvent
 from PySide2.QtWidgets import QGroupBox, QMessageBox
 from scipy.interpolate.interpolate import interp1d
 
-from lt_control import StageControl
+from lt_control import LinearStageControlGUI
 
 from qthread_worker import CallbackWorker
 
@@ -53,10 +53,15 @@ class CustomCallbackTimer(QTimer):
 # TODO retry failed serial port in timer and update motor status once connected again
 # TODO test new decorator
 
-class MagnetControl(StageControl):
+class MagnetControl(LinearStageControlGUI):
+    """
+    A widget to control a magnet with the stage control widget
 
+    .. seealso:: :class:`StageControl<https://github.com/rk-exxec/linear_stage_control/blob/master/stage_control.py#L52>`
+    """
     def __init__(self, parent) -> None:
         super().__init__(parent=parent)
+        self.ui : Ui_main = None
         self._calibration_table: pd.DataFrame = None
         self.mag_to_mm_interp: interpolate.interp1d = None
         self.mm_to_mag_interp: interpolate.interp1d = None
@@ -64,6 +69,7 @@ class MagnetControl(StageControl):
 
     def showEvent(self, event: QShowEvent):
         if super().showEvent(event):
+            self.ui = self.window().ui
             try:
                 self.load_calib_file('./MagnetCalibration.csv')
                 #self.unlock_mag_unit()
@@ -76,30 +82,30 @@ class MagnetControl(StageControl):
         """ update slider and spin box if the movement units has changes """
         self._mov_unit = unit.strip()
         if unit == 'mm':
-            self.ui.posSlider.setMaximum(3906) #max mm are 39.0625
-            self.ui.posSlider.setTickInterval(100)
-            self.ui.posSpinBox.setDecimals(2)
+            self.posSlider.setMaximum(3906) #max mm are 39.0625
+            self.posSlider.setTickInterval(100)
+            self.posSpinBox.setDecimals(2)
             if self._old_unit == 'steps':
-                self.ui.posSpinBox.setValue(self._lt_ctl.steps_to_mm(self.ui.posSpinBox.value()))
+                self.posSpinBox.setValue(self.ls_ctl.steps_to_mm(self.posSpinBox.value()))
             elif self._old_unit == 'mT':
                 #/1000 bc interpolation works with tesla, while we work with mT
-                self.ui.posSpinBox.setValue(self.mag_to_mm_interp(self.ui.posSpinBox.value()/1000))
+                self.posSpinBox.setValue(self.mag_to_mm_interp(self.posSpinBox.value()/1000))
         elif unit == 'steps':
-            self.ui.posSlider.setMaximum(50000)
-            self.ui.posSlider.setTickInterval(1000)
-            self.ui.posSpinBox.setDecimals(0)
+            self.posSlider.setMaximum(50000)
+            self.posSlider.setTickInterval(1000)
+            self.posSpinBox.setDecimals(0)
             if self._old_unit == 'mm':
-                self.ui.posSpinBox.setValue(self._lt_ctl.mm_to_steps(self.ui.posSpinBox.value()))
+                self.posSpinBox.setValue(self.ls_ctl.mm_to_steps(self.posSpinBox.value()))
             elif self._old_unit == 'mT':
-                self.ui.posSpinBox.setValue(self._lt_ctl.mm_to_steps(self.mag_to_mm_interp(self.ui.posSpinBox.value()/1000)))
+                self.posSpinBox.setValue(self.ls_ctl.mm_to_steps(self.mag_to_mm_interp(self.posSpinBox.value()/1000)))
         elif unit == 'mT':
-            self.ui.posSlider.setMaximum(max(self._calibration_table['Field(T)'])*1000)
-            self.ui.posSlider.setTickInterval(10)
-            self.ui.posSpinBox.setDecimals(0)
+            self.posSlider.setMaximum(max(self._calibration_table['Field(T)'])*1000)
+            self.posSlider.setTickInterval(10)
+            self.posSpinBox.setDecimals(0)
             if self._old_unit == 'mm':
-                self.ui.posSpinBox.setValue(self.mm_to_mag_interp(self.ui.posSpinBox.value())*1000)
+                self.posSpinBox.setValue(self.mm_to_mag_interp(self.posSpinBox.value())*1000)
             elif self._old_unit == 'steps':
-                self.ui.posSpinBox.setValue(self.mm_to_mag_interp(self._lt_ctl.steps_to_mm(self.ui.posSpinBox.value()))*1000)
+                self.posSpinBox.setValue(self.mm_to_mag_interp(self.ls_ctl.steps_to_mm(self.posSpinBox.value()))*1000)
         else:
             return
         logging.info(f"magnet control: movement unit changed from {self._old_unit} to {self._mov_unit}")
@@ -115,30 +121,30 @@ class MagnetControl(StageControl):
     @Slot()
     def move_pos(self):
         """ move motor to specified position """
-        with self._lt_ctl:
+        with self.ls_ctl:
             if self._mov_unit == 'mm':
-                self._lt_ctl.move_absolute_mm(self._mov_dist)
+                self.ls_ctl.move_absolute_mm(self._mov_dist)
             elif self._mov_unit == 'steps':
-                self._lt_ctl.move_absolute(int(self._mov_dist))
+                self.ls_ctl.move_absolute(int(self._mov_dist))
             elif self._mov_unit == 'mT':
-                self._lt_ctl.move_absolute_mm(self.mag_to_mm_interp(self._mov_dist/1000))
+                self.ls_ctl.move_absolute_mm(self.mag_to_mm_interp(self._mov_dist/1000))
         self.lock_movement_buttons()
         logging.info(f"magnet control: start movement to {self._mov_dist}{self._mov_unit}")
         self.wait_movement_thread.start()
 
     def wait_movement(self):
         """ wait unitl movement stops """
-        with self._lt_ctl:
-            self._lt_ctl.wait_movement()
+        with self.ls_ctl:
+            self.ls_ctl.wait_movement()
 
     def unlock_mag_unit(self):
         """ mag unit is now available """
-        self.ui.unitComboBox.addItem('mT')
+        self.unitComboBox.addItem('mT')
 
     def lock_mag_unit(self):
         """ mag unit is not available """
-        self.ui.unitComboBox.clear()
-        self.ui.unitComboBox.addItems(['steps','mm'])
+        self.unitComboBox.clear()
+        self.unitComboBox.addItems(['steps','mm'])
 
     def load_calib_file(self, file):
         """ load magnet to mm calibration file """
@@ -167,7 +173,7 @@ class MagnetControl(StageControl):
             f.write('Steps\tDistance(mm)\tField(T)\n')
             #print('Steps\tDistance(mm)\tField(T)')
             for i in np.arange(0, 35, .5):
-                self._lt_ctl.move_absolute_mm(i)
+                self.ls_ctl.move_absolute_mm(i)
                 time.sleep(1)
                 mult = gaussmeter.query('FIELDM?').strip()
                 if len(mult) == 0:
@@ -175,13 +181,13 @@ class MagnetControl(StageControl):
                 else:
                     mult = _prefix[mult]
                 tesla = abs(float(gaussmeter.query('FIELD?'))*mult)
-                steps = self._lt_ctl.get_position()
+                steps = self.ls_ctl.get_position()
                 #df = df.append(pd.DataFrame([[steps, self._lt_ctl.steps_to_mm(steps), tesla]]))
                 #df.at[i,'Steps'] = steps
                 #df.at[i,'Field(T)'] = tesla
                 #df.at[i,'Distance(m)'] = steps*(1.25e-3/1600)
                 #print('{0:d}\t{1:.3E} mm\t{2:.3E} T'.format(steps, self._lt_ctl.steps_to_mm(steps), tesla))
-                f.write('{0:d}\t{1:.3E}\t{2:.3E}\n'.format(steps, self._lt_ctl.steps_to_mm(steps), tesla))
+                f.write('{0:d}\t{1:.3E}\t{2:.3E}\n'.format(steps, self.ls_ctl.steps_to_mm(steps), tesla))
         self.load_calib_file(path)
         self.unlock_mag_unit()
         #self._lt_ctl.move_absolute(0)
