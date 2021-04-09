@@ -74,7 +74,7 @@ class CameraPreview(QOpenGLWidget):
         db_painter.setBackground(QBrush(Qt.black))
         db_painter.setPen(QPen(Qt.black,0))
         db_painter.drawPixmap(offset_x, offset_y, self._pixmap)
-        pen = QPen(Qt.magenta,2)
+        pen = QPen(Qt.magenta,1)
         pen_fine = QPen(Qt.blue,1)
         pen.setCosmetic(True)
         db_painter.setPen(pen)
@@ -105,14 +105,14 @@ class CameraPreview(QOpenGLWidget):
                 db_painter.rotate(self._droplet.tilt_deg)
 
                 # draw ellipse
-                db_painter.setPen(pen)
+                # db_painter.setPen(pen)
                 db_painter.drawEllipse(-self._droplet.maj/2, -self._droplet.min/2, self._droplet.maj, self._droplet.min)
                 
                 # # major and minor axis for diagnostics
                 # db_painter.drawLine(0, 0, self._droplet.maj/2, 0)
                 # db_painter.drawLine(0, 0, 0, self._droplet.min/2)
             except Exception as ex:
-                print(ex)
+                logging.error(ex)
         db_painter.end()
         # painting the buffer pixmap to screen
         painter.drawImage(0, 0, self._double_buffer)
