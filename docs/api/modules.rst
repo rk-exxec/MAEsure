@@ -13,7 +13,6 @@ src
    evaluate_droplet
    light_widget
    magnet_control
-   main_window
    measurement_control
    pump
    pump_control
