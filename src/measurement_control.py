@@ -27,24 +27,29 @@ import os
 
 import numpy as np
 import time
-from threading import Thread, Event
+from qthread_worker import CallbackWorker
 
 from PySide2 import QtGui
 from PySide2.QtWidgets import QApplication, QGroupBox, QMessageBox
-from PySide2.QtCore import QTimer, Signal, Slot, Qt
+from PySide2.QtCore import QObject, QTimer, Signal, Slot, Qt
 
 from typing import List, TYPE_CHECKING
 if TYPE_CHECKING:
     from ui_form import Ui_main
 
-class IntervalTimer:
-    """Creates a timer array from an array of time intervals
-    each interval is represented by one timer
-    allows fro precise time control
+class IntervalTimer(QObject):
+    """Creates a timer for each entry in an array of time intervals; 
+    every timer will call the target function, last timer calls done_callback; 
+    allows for precise time control  
+
+    :param parent: containing Qt object
+    :param intervals: list of floats representing times in seconds
+    :param target: target function to execute after each interval
+    :param done_callback: callback function after all timers are finished
     """
     def __init__(self, parent, intervals:List[float], target, done_callback):
+        super(IntervalTimer,self).__init__(parent=parent)
         self.target = target
-        self.parent = parent
         self.callback = done_callback
         self.intervals = intervals
         self.timers: List[QTimer] = []
@@ -54,7 +59,7 @@ class IntervalTimer:
         self.timers.clear()
         self.intervals = intervals
         for val in intervals:
-            timer = QTimer(self.parent)
+            timer = QTimer(self)
             timer.setSingleShot(True)
             timer.setInterval(val*1000)
             timer.setTimerType(Qt.PreciseTimer)
@@ -75,7 +80,7 @@ class MeasurementControl(QGroupBox):
     """
     class that provides a groupbox with UI to control the measurement process
     """
-    new_datapoint_signal = Signal(float, Droplet, int)
+    new_datapoint_signal = Signal(Droplet, int)
     save_data_signal = Signal()
     start_measurement_signal = Signal(bool)
     def __init__(self, parent=None) -> None:
@@ -83,13 +88,14 @@ class MeasurementControl(QGroupBox):
         self.ui: Ui_main = self.window().ui
         self._time_interval = []
         self._magnet_interval = []
-        self._repeat_after = 0 # 0 is time, 1 is magnet
+        self._cur_magnet_int_idx = 0
         self._method = 0 # sessile
         self._cycles = 1
         self._cycle = 0
         self.aborted = False
         self.stopped = True
         self.timer: IntervalTimer = None
+        self.thread: CallbackWorker = None
         self._first_show = True
         self._meas_aborted = False
 
@@ -134,6 +140,10 @@ class MeasurementControl(QGroupBox):
             QMessageBox.information(self, 'MAEsure Information',' Cannot start measurement while already running!', QMessageBox.Ok)
             logging.info('Meas_Start: Measurement already running')
             return
+        if self.ui.magnetControl.needs_reference():
+            QMessageBox.information(self, 'MAEsure Information',' Cannot start measurement without referencing motor!', QMessageBox.Ok)
+            logging.info('Meas_Start: Motor not referenced!')
+            return
         try:
             self.read_intervals()
             self.ui.dataControl.init_data()
@@ -163,14 +173,16 @@ class MeasurementControl(QGroupBox):
 
     @Slot()
     def measure_abort(self):
-        self.timer.stop()
+        if self.timer: self.timer.stop()
+        if self.thread: self.thread.terminate()
         self.aborted = True
         self.stopped = True
 
     @Slot()
     def measure_stop(self):
         self.save_data_signal.emit()
-        self.timer.stop()
+        if self.timer: self.timer.stop()
+        if self.thread: self.thread.terminate()
         self.aborted = False
         self.stopped = True
 
@@ -181,27 +193,89 @@ class MeasurementControl(QGroupBox):
         # init vars
         self.stopped = False
         self.aborted = False
-        self.timer = IntervalTimer(self, self._time_interval, self.timer_timeout, self.cycle_done)
-        self.timer.start()
+        self.start_sweep()
+
+    def start_sweep(self):
+        """ start measurement by driving to initial magnet position if supplied 
+        order of running:
+        --
+        start_mag_step
+        do_mag_step
+        mag_step_done
+        start_time_sweep
+        time_sweep_done
+        -- repeat all above until all sweeps are done
+        sweep_done
+        """
+        if self.stopped or self.aborted:
+            return
+        if self.ui.sweepMagChk.isChecked():
+            self.start_mag_step()
+        elif self.ui.sweepTimeChk.isChecked():
+            self.start_time_sweep()
+        else:
+            logging.error("sweep not started: nothing selected!")
+            return
+
+    def start_mag_step(self):
+        """ drive motor to next selected magnet value """
+        if self.stopped or self.aborted:
+            return
+        self.thread = CallbackWorker(target=self.do_mag_step, slotOnFinished=self.mag_step_done)
+        self.thread.start()
+        
+    def do_mag_step(self):
+        """ drive magnet to next interval pos and wait for movement to finish """
+        self.ui.magnetControl.move_pos(pos=self._magnet_interval[self._cur_magnet_int_idx], unit=self.ui.magMeasUnitCombo.currentText(), blocking=True)
 
     @Slot()
-    def cycle_done(self):
+    def mag_step_done(self):
+        """ one magnet step finished, start new time sweep or cycle """
+        if self.stopped or self.aborted:
+            return
+        self._cur_magnet_int_idx += 1   # next magnet interval
+        self.start_time_sweep()
+
+    def start_time_sweep(self):
+        """ starts the sweep by checking if time is to be sweeped , if not it will skip"""
+        if self.stopped or self.aborted:
+            return
+        if self.ui.sweepTimeChk.isChecked():
+            self.ui.dataControl.invalidate_time()
+            self.timer = IntervalTimer(self, self._time_interval, self.collect_data, self.time_sweep_done)
+            self.timer.start()
+        else:
+            self.collect_data()
+            self.time_sweep_done()
+
+    @Slot()
+    def time_sweep_done(self):
+        """ after timer has finished or was skipped, moves to next mag step if desired else next cycle """
+        if self.stopped or self.aborted:
+            return
+        if self.ui.sweepMagChk.isChecked() and self._cur_magnet_int_idx < len(self._magnet_interval):
+            self.start_mag_step()
+        else:
+            self.sweep_done()
+
+    @Slot()
+    def sweep_done(self):
+        """ when timer and magnet sweep has finished """
         if self._cycle < self._cycles - 1:
             self._cycle += 1
             self.measure_start()
         else:
             self.measure_stop()
             QMessageBox.information(self, 'MAEsure', 'Measurement finished!', QMessageBox.Ok)
+
             
     #@Slot()
-    def timer_timeout(self):
-        """grab snapshot of sata and save to table
+    def collect_data(self):
+        """grab snapshot of data and save to table
         """
-        sender:QTimer = self.sender()
-        timer = sender.interval()/1000
         drplt = self.ui.camera_prev._droplet
-        logging.debug(f"gathered new datapoint: {time},{drplt.angle_r},{self._cycle}")
-        self.new_datapoint_signal.emit(time, drplt, self._cycle)
+        logging.debug(f"gathered new datapoint: {drplt.angle_r},{self._cycle}")
+        self.new_datapoint_signal.emit(drplt, self._cycle)
 
     ### utility functions ###
     @Slot(int)
