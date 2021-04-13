@@ -29,6 +29,7 @@ from PySide2.QtCore import QCoreApplication, QSettings
 
 from camera_control import CameraControl
 from data_control import DataControl
+from additional_gui_elements import AboutDialog
 
 # TODO use QSettings to store settings ( also maybe put some stuff in dialog boxes)
 
@@ -118,6 +119,8 @@ if __name__ == "__main__":
     # init application
     app = App(sys.argv)
     app.processEvents()
+
+    app.ui.actionAbout_MAEsure.triggered.connect(lambda : AboutDialog(app.window))
 
     # execute qt main loop
     sys.exit(app.exec_())
