@@ -38,8 +38,7 @@ class DataControl(QGroupBox):
     def __init__(self, parent=None) -> None:
         super(DataControl, self).__init__(parent)
         self.ui: Ui_main = None # set post init bc of parent relationship not automatically applied on creation in generated script
-        self._time = 0
-        self.data: pd.DataFrame = None
+        self._time = 0   
         self.thr = None
         self._block_painter = False
         """this represents the header for the table and the csv file
@@ -59,7 +58,8 @@ class DataControl(QGroupBox):
         
         """
         self.header = ['Time', 'Cycle', 'Left_Angle', 'Right_Angle', 'Base_Width', 'Substate_Surface_Energy', 'Magn_Pos', 'Magn_Unit', 'Fe_Vol_P', 'ID', 'DateTime']
-        
+        self.data = pd.DataFrame(columns=self.header)
+
         self._is_time_invalid = False
         self._first_show = True
         self._default_dir = '%USERDATA%'
@@ -73,6 +73,10 @@ class DataControl(QGroupBox):
         #super().showEvent()
         if self._first_show:
             self.ui = self.window().ui
+            self.ui.tableControl.setHorizontalHeaderLabels(self.header)
+            # self.thr = Worker(self.ui.tableControl.redraw_table)
+            # self.thr.start()
+            self.ui.tableControl.redraw_table_signal.emit()
             # try to use Home drive, if not, use Documents folder
             if os.path.exists("G:/Messungen/Angle_Measurements"):
                 self.ui.fileNameEdit.setText(os.path.expanduser(f'G:/Messungen/Angle_Measurements/{self._initial_filename}.dat'))
@@ -87,8 +91,8 @@ class DataControl(QGroupBox):
         self.ui.saveFileAsBtn.clicked.connect(self.select_filename)
         
 
-    @Slot(float, Droplet, int)
-    def new_data_point(self, target_time:float, droplet:Droplet, cycle:int):
+    @Slot(Droplet, int)
+    def new_data_point(self, droplet:Droplet, cycle:int):
         """ 
         add new datapoint to dataframe and invoke redrawing of table
         
@@ -116,13 +120,10 @@ class DataControl(QGroupBox):
             ]], columns=self.header)
         )
         #logging.debug("starte thread zum redrawing vom table")
-        self.thr = Worker(self.ui.tableControl.redraw_table)
-        self.thr.start()
+        # self.thr = Worker(self.ui.tableControl.redraw_table)
+        # self.thr.start()
+        self.ui.tableControl.redraw_table_signal.emit()
         self.update_plot_signal.emit(curtime,(droplet.angle_l + droplet.angle_r)/2)
-        # self.redraw_table()
-
-    
-        #self.viewport().update()
 
     def export_data_csv(self, filename):
         """ Export data as csv with selected separator
@@ -187,6 +188,9 @@ class DataControl(QGroupBox):
         """
         self._time = time.monotonic()
         self._is_time_invalid = False
+
+    def invalidate_time(self):
+        self._is_time_invalid = True
 
     def init_data(self):
         """ Initialize the date before measurement.
