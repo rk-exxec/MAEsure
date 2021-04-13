@@ -17,7 +17,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>main</string>
+   <string>MAEsure</string>
   </property>
   <property name="unifiedTitleAndToolBarOnMac">
    <bool>true</bool>
@@ -51,10 +51,10 @@
       </rect>
      </property>
      <property name="text">
-      <string>Start</string>
+      <string>Start Running</string>
      </property>
     </widget>
-    <widget class="QPushButton" name="resetCamBtn">
+    <widget class="QPushButton" name="oneshotEvalBtn">
      <property name="geometry">
       <rect>
        <x>14</x>
@@ -64,7 +64,7 @@
       </rect>
      </property>
      <property name="text">
-      <string>Reset</string>
+      <string>One Shot</string>
      </property>
     </widget>
     <widget class="CameraPreview" name="camera_prev">
@@ -238,6 +238,32 @@ Surface Diam:
         <height>361</height>
        </rect>
       </property>
+      <property name="alternatingRowColors">
+       <bool>true</bool>
+      </property>
+      <property name="wordWrap">
+       <bool>false</bool>
+      </property>
+      <property name="rowCount">
+       <number>0</number>
+      </property>
+      <property name="columnCount">
+       <number>11</number>
+      </property>
+      <attribute name="horizontalHeaderShowSortIndicator" stdset="0">
+       <bool>true</bool>
+      </attribute>
+      <column/>
+      <column/>
+      <column/>
+      <column/>
+      <column/>
+      <column/>
+      <column/>
+      <column/>
+      <column/>
+      <column/>
+      <column/>
      </widget>
     </widget>
     <widget class="QWidget" name="plot_tab">
@@ -517,19 +543,6 @@ Surface Diam:
        <string>200:50</string>
       </property>
      </widget>
-     <widget class="QLabel" name="label_10">
-      <property name="geometry">
-       <rect>
-        <x>200</x>
-        <y>70</y>
-        <width>47</width>
-        <height>21</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>mT</string>
-      </property>
-     </widget>
      <widget class="QSpinBox" name="numRepeat">
       <property name="geometry">
        <rect>
@@ -619,6 +632,26 @@ Surface Diam:
       <property name="text">
        <string>Sweep Type</string>
       </property>
+     </widget>
+     <widget class="QComboBox" name="magMeasUnitCombo">
+      <property name="geometry">
+       <rect>
+        <x>200</x>
+        <y>70</y>
+        <width>51</width>
+        <height>22</height>
+       </rect>
+      </property>
+      <item>
+       <property name="text">
+        <string>mm</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>mT</string>
+       </property>
+      </item>
      </widget>
     </widget>
     <widget class="QComboBox" name="avgModeCombo">
@@ -1076,12 +1109,23 @@ Surface Diam:
     <property name="title">
      <string>Menu</string>
     </property>
+    <addaction name="actionReset_Camera"/>
     <addaction name="actionVideo_Path"/>
+    <addaction name="separator"/>
     <addaction name="actionSyringe_Settings"/>
     <addaction name="actionCSV_Settings"/>
+    <addaction name="separator"/>
     <addaction name="actionKalibrate_Size"/>
+    <addaction name="actionDelete_Size_Calibration"/>
+   </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <addaction name="actionAbout_MAEsure"/>
    </widget>
    <addaction name="menuMenu"/>
+   <addaction name="menuHelp"/>
   </widget>
   <widget class="QStatusBar" name="statusbar">
    <property name="sizeGripEnabled">
@@ -1105,10 +1149,31 @@ Surface Diam:
   </action>
   <action name="actionKalibrate_Size">
    <property name="text">
-    <string>Kalibrate Size</string>
+    <string>Calibrate Size</string>
    </property>
    <property name="toolTip">
     <string>Calibrate the pixel to mm ratio with object of known size. Place obect in front of camera and make sure it is detected properly by the droplet algorithm.</string>
+   </property>
+  </action>
+  <action name="actionReset_Camera">
+   <property name="text">
+    <string>Reset Camera</string>
+   </property>
+   <property name="toolTip">
+    <string>resets the camera</string>
+   </property>
+  </action>
+  <action name="actionDelete_Size_Calibration">
+   <property name="text">
+    <string>Delete Size Calibration</string>
+   </property>
+   <property name="toolTip">
+    <string>invalidates the size calibration and uses pixel units again</string>
+   </property>
+  </action>
+  <action name="actionAbout_MAEsure">
+   <property name="text">
+    <string>About  MAEsure</string>
    </property>
   </action>
  </widget>
