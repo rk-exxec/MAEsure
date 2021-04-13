@@ -4,6 +4,7 @@ src
 .. toctree::
    :maxdepth: 4
 
+   additional_gui_elements
    baseline
    camera
    camera_control
@@ -11,10 +12,13 @@ src
    data_control
    droplet
    evaluate_droplet
-   light_widget
+   id_combo_box
+   live_plot
    magnet_control
    measurement_control
-   pump
+   needle_mask
    pump_control
+   qthread_worker
    resizable_rubberband
-   ui_form
+   tab_control
+   table_control

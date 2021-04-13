@@ -169,8 +169,9 @@ def find_contour(img, is_masked):
     :param is_masked: if image was masked
     :type is_masked: bool
     :raises ContourError: if no contours are detected
-    :return: if is_maked: contour with largest bounding rect  
-                else: the two contours with largest bounding rect merged
+    :return: if not is_masked: contour with largest bounding rect
+
+            else: the two contours with largest bounding rect merged
     :rtype: [type]
     """
     # find all contours in image, https://docs.opencv.org/3.4/d3/dc0/group__imgproc__shape.html#ga17ed9f5d79ae97bd4c7cf18403e1689a

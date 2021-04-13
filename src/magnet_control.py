@@ -55,7 +55,7 @@ class MagnetControl(LinearStageControlGUI):
     """
     A widget to control a magnet with the stage control widget
 
-    .. seealso:: https://github.com/rk-exxec/linear_stage_control/blob/master/ls_gui.py
+    .. seealso:: `LinearStageControlGUI <https://linear-stage-control.rtfd.io>`_
     """
     def __init__(self, parent) -> None:
         super().__init__(parent=parent)
