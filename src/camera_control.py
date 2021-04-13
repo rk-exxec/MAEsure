@@ -111,12 +111,14 @@ class CameraControl(QGroupBox):
         self.update_image_signal.connect(self.ui.camera_prev.update_image)
         # button signals
         self.ui.startCamBtn.clicked.connect(self.prev_start_pushed)
+        self.ui.oneshotEvalBtn.clicked.connect(self.oneshot_eval)
         self.ui.setROIBtn.clicked.connect(self.apply_roi)
         self.ui.resetROIBtn.clicked.connect(self.cam.reset_roi)
         self.ui.syr_mask_chk.stateChanged.connect(self.needle_mask_changed)
         # action menu signals
         self.ui.actionVideo_Path.triggered.connect(self.set_video_path)
         self.ui.actionKalibrate_Size.triggered.connect(self.calib_size)
+        self.ui.actionDelete_Size_Calibration.triggered.connect(self.remove_size_calib)
 
     def is_streaming(self) -> bool:
         """ 
@@ -183,6 +185,10 @@ class CameraControl(QGroupBox):
             self.cam.snapshot()
             self.ui.frameInfoLbl.setText('Stopped')
             self.ui.drpltDataLbl.setText(str(self.ui.camera_prev._droplet))
+
+    def oneshot_eval(self):
+        self._oneshot_eval = True
+        self.cam.snapshot()
 
     def start_video_recorder(self):
         """
@@ -288,3 +294,8 @@ class CameraControl(QGroupBox):
         self.cam.snapshot()
         droplt.set_scale(res / droplt._height)
         logging.info(f"set image to real scae to {res / droplt._height}")
+
+    @Slot()
+    def remove_size_calib(self):
+        drplt = Droplet()
+        drplt.set_scale(None)
