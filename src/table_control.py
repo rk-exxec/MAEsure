@@ -18,6 +18,8 @@
 from PySide2.QtCore import Signal
 from PySide2.QtWidgets import QTableWidget, QTableWidgetItem
 
+from pandas import DataFrame
+
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from ui_form import Ui_main
@@ -32,16 +34,15 @@ class TableControl(QTableWidget):
     def showEvent(self, event):
         if self._first_show:
             self.ui = self.window().ui
-            self.setHorizontalHeaderLabels(self.ui.dataControl.header)
             self._first_show = False
             self.redraw_table_signal.connect(self.redraw_table)
         return super().showEvent(event)
 
     def redraw_table(self):
         """ Redraw table with contents of dataframe """
-        data = self.ui.dataControl.data
+        data : DataFrame = self.ui.dataControl.data
         self._block_painter = True
-        #self.setHorizontalHeaderLabels(self._header)
+        self.setHorizontalHeaderLabels(data.head())
         self.setRowCount(data.shape[0])
         self.setColumnCount(data.shape[1])
         for r in range(data.shape[0]):
