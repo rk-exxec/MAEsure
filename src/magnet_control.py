@@ -18,7 +18,6 @@
 
 # TODO maybe do StageControl class and expand it with the magnet stuff??
 
-import functools
 import pyvisa
 import time
 import logging
@@ -28,7 +27,6 @@ from scipy import interpolate
 
 from PySide2.QtCore import QTimer, Slot, Qt
 from PySide2.QtGui import QShowEvent
-from PySide2.QtWidgets import QGroupBox, QMessageBox
 from scipy.interpolate.interpolate import interp1d
 
 from lt_control import LinearStageControlGUI
@@ -57,7 +55,7 @@ class MagnetControl(LinearStageControlGUI):
     """
     A widget to control a magnet with the stage control widget
 
-    .. seealso:: :class:`StageControl<https://github.com/rk-exxec/linear_stage_control/blob/master/stage_control.py#L52>`
+    .. seealso:: https://github.com/rk-exxec/linear_stage_control/blob/master/ls_gui.py
     """
     def __init__(self, parent) -> None:
         super().__init__(parent=parent)
@@ -118,19 +116,35 @@ class MagnetControl(LinearStageControlGUI):
         else:
             return super().get_position()
 
-    @Slot()
-    def move_pos(self):
-        """ move motor to specified position """
+    def needs_reference(self):
         with self.ls_ctl:
-            if self._mov_unit == 'mm':
-                self.ls_ctl.move_absolute_mm(self._mov_dist)
-            elif self._mov_unit == 'steps':
-                self.ls_ctl.move_absolute(int(self._mov_dist))
-            elif self._mov_unit == 'mT':
-                self.ls_ctl.move_absolute_mm(self.mag_to_mm_interp(self._mov_dist/1000))
+            return not self.ls_ctl.is_referenced()
+
+    @Slot()
+    def move_pos(self, pos=None, unit=None, blocking=False):
+        """ move motor to specified position """
+        # select movement unit and pos independent of widget settings by optional parameter
+        if unit == None:
+            unit = self._mov_unit
+        if pos == None:
+            pos = self._mov_dist
+        with self.ls_ctl:
+            if not self.ls_ctl.is_referenced():
+                logging.error(f"magnet control: motor not referenced")
+                return
+            if unit == 'mm':
+                self.ls_ctl.move_absolute_mm(pos)
+            elif unit == 'steps':
+                self.ls_ctl.move_absolute(int(pos))
+            elif unit == 'mT':
+                self.ls_ctl.move_absolute_mm(self.mag_to_mm_interp(pos/1000))
         self.lock_movement_buttons()
-        logging.info(f"magnet control: start movement to {self._mov_dist}{self._mov_unit}")
-        self.wait_movement_thread.start()
+        logging.info(f"magnet control: start movement to {pos} {unit}")
+        if blocking:
+            self.wait_movement()
+            self.finished_moving()
+        else:
+            self.wait_movement_thread.start()
 
     def wait_movement(self):
         """ wait unitl movement stops """
@@ -144,7 +158,7 @@ class MagnetControl(LinearStageControlGUI):
     def lock_mag_unit(self):
         """ mag unit is not available """
         self.unitComboBox.clear()
-        self.unitComboBox.addItems(['steps','mm'])
+        self.unitComboBox.addItems(['mm','steps'])
 
     def load_calib_file(self, file):
         """ load magnet to mm calibration file """
