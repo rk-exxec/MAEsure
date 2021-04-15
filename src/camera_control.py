@@ -16,16 +16,18 @@
 
 # This Python file uses the following encoding: utf-8
 
-from threading import Thread
+import os
 import numpy as np
 import logging
+import userpaths
 from datetime import datetime
 
 from moviepy.video.io.ffmpeg_writer import FFMPEG_VideoWriter as VidWriter
 import cv2
 from PySide2 import QtGui
-from PySide2.QtWidgets import QCheckBox, QFileDialog, QGroupBox, QInputDialog
+from PySide2.QtWidgets import QCheckBox, QDial, QDialog, QFileDialog, QGroupBox, QInputDialog, QMessageBox
 from PySide2.QtCore import QSettings, QSignalBlocker, Qt, Signal, Slot
+from vimba.frame import BAYER_PIXEL_FORMATS
 
 
 from droplet import Droplet
@@ -119,6 +121,7 @@ class CameraControl(QGroupBox):
         self.ui.actionVideo_Path.triggered.connect(self.set_video_path)
         self.ui.actionKalibrate_Size.triggered.connect(self.calib_size)
         self.ui.actionDelete_Size_Calibration.triggered.connect(self.remove_size_calib)
+        self.ui.actionSave_Image.triggered.connect(self.save_image_dialog)
 
     def is_streaming(self) -> bool:
         """ 
@@ -188,7 +191,7 @@ class CameraControl(QGroupBox):
 
     def oneshot_eval(self):
         self._oneshot_eval = True
-        self.cam.snapshot()
+        if not self.cam.is_running: self.cam.snapshot()
 
     def start_video_recorder(self):
         """
@@ -238,7 +241,8 @@ class CameraControl(QGroupBox):
         blocker = QSignalBlocker(self.cam)
         if self.cam.is_running:
             # evaluate droplet if checkbox checked
-            eval = self.ui.evalChk.isChecked()
+            eval = self.ui.evalChk.isChecked() or self._oneshot_eval
+            self._oneshot_eval = False
             # display current fps
             self.ui.frameInfoLbl.setText('Running | FPS: ' + str(self.cam.get_framerate()))
             # save image frame if recording
@@ -299,3 +303,37 @@ class CameraControl(QGroupBox):
     def remove_size_calib(self):
         drplt = Droplet()
         drplt.set_scale(None)
+
+    @Slot()
+    def save_image_dialog(self):
+        raw_image = False
+
+        checkBox = QCheckBox("Save raw image")
+        checkBox.setChecked(True)
+        msgBox = QMessageBox(self)
+        msgBox.setWindowTitle("Save Image")
+        msgBox.setText("Save the image displayed in the preview or the raw image from the camera")
+        msgBox.setIcon(QMessageBox.Question)
+        msgBox.addButton(QMessageBox.Ok)
+        msgBox.addButton(QMessageBox.Cancel)
+        msgBox.setDefaultButton(QMessageBox.Cancel)
+        msgBox.setCheckBox(checkBox)
+
+        val = msgBox.exec()
+        if val == QMessageBox.Cancel:
+            return
+        
+        raw_image = msgBox.checkBox().isChecked()
+        now = datetime.now().strftime("%y-%m-%d_%H-%M")
+        save_path,filter = QFileDialog.getSaveFileName(self,"Choose save file", f"{userpaths.get_my_pictures()}/screenshot_{now}.png","Images (*.png *.jpg *.bmp)")
+        if save_path is None:
+            return
+
+        qimg = self.ui.camera_prev.grab_image(raw=raw_image)
+        if qimg is None:
+            return
+
+        qimg.save(save_path, quality=100)
+
+
+

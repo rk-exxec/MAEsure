@@ -94,6 +94,9 @@
      <property name="focusPolicy">
       <enum>Qt::ClickFocus</enum>
      </property>
+     <property name="contextMenuPolicy">
+      <enum>Qt::NoContextMenu</enum>
+     </property>
      <property name="autoFillBackground">
       <bool>true</bool>
      </property>
@@ -1117,6 +1120,8 @@ Surface Diam:
     <addaction name="separator"/>
     <addaction name="actionKalibrate_Size"/>
     <addaction name="actionDelete_Size_Calibration"/>
+    <addaction name="separator"/>
+    <addaction name="actionSave_Image"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -1174,6 +1179,14 @@ Surface Diam:
   <action name="actionAbout_MAEsure">
    <property name="text">
     <string>About  MAEsure</string>
+   </property>
+  </action>
+  <action name="actionSave_Image">
+   <property name="text">
+    <string>Save Image ...</string>
+   </property>
+   <property name="toolTip">
+    <string>Save the image from the camera with or without overlay</string>
    </property>
   </action>
  </widget>

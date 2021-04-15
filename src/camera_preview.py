@@ -39,6 +39,7 @@ class CameraPreview(QOpenGLWidget):
         self.roi_origin = QPoint(0,0)
         self._pixmap: QPixmap = QPixmap(480, 360)
         self._double_buffer: QImage = None
+        self._raw_image : np.ndarray = None
         self._image_size = (1,1)
         self._image_size_invalid = True
         self._roi_rubber_band = ResizableRubberBand(self)
@@ -62,14 +63,22 @@ class CameraPreview(QOpenGLWidget):
         """
         # completely override super.paintEvent() to use double buffering
         painter = QPainter(self)
+        
+        buf = self.doubleBufferPaint(self._double_buffer)
+        # painting the buffer pixmap to screen
+        painter.drawImage(0, 0, buf)
+        painter.end()
+
+    def doubleBufferPaint(self, buffer=None):
+        self.blockSignals(True)
         #self.drawFrame(painter)
-        if self._double_buffer is None:
-            self._double_buffer = QImage(self.width(), self.height(), QImage.Format_RGB888)
-        self._double_buffer.fill(Qt.black)
+        if buffer is None:
+            buffer = QImage(self.width(), self.height(), QImage.Format_RGB888)
+        buffer.fill(Qt.black)
         # calculate offset and scale of droplet image pixmap
         scale_x, scale_y, offset_x, offset_y = self.get_from_image_transform()
 
-        db_painter = QPainter(self._double_buffer)
+        db_painter = QPainter(buffer)
         db_painter.setRenderHints(QPainter.Antialiasing | QPainter.NonCosmeticDefaultPen)
         db_painter.setBackground(QBrush(Qt.black))
         db_painter.setPen(QPen(Qt.black,0))
@@ -114,9 +123,8 @@ class CameraPreview(QOpenGLWidget):
             except Exception as ex:
                 logging.error(ex)
         db_painter.end()
-        # painting the buffer pixmap to screen
-        painter.drawImage(0, 0, self._double_buffer)
-        painter.end()
+        self.blockSignals(False)
+        return buffer
 
     def mousePressEvent(self,event):
         """
@@ -189,13 +197,14 @@ class CameraPreview(QOpenGLWidget):
 
         .. seealso:: :py:meth:`camera_control.CameraControl.update_image`
         """
+        self._raw_image = cv_img
         try:
             # evaluate droplet only if camera is running or if a oneshot eval is requested
             if eval:
                 try:
                     self._droplet.is_valid = False
                     evaluate_droplet(cv_img, self.get_baseline_y(), self._mask)
-                except ContourError:
+                except (ContourError, cv2.error, TypeError):
                     pass
                 except Exception as ex:
                     logging.exception("Exception thrown in %s", "fcn:evaluate_droplet", exc_info=ex)
@@ -208,24 +217,34 @@ class CameraPreview(QOpenGLWidget):
                 self.set_new_baseline_constraints()
                 self._image_size_invalid = False
             self.update()
-            del cv_img
+            # del cv_img
         except Exception as ex:
             logging.exception("Exception thrown in %s", "class:camera_preview fcn:update_image", exc_info=ex)
 
-    def _convert_cv_qt(self, cv_img: np.ndarray):
+    def grab_image(self, raw=False):
+        if raw:
+            return self._convert_cv_qt(self._raw_image, False)
+        else:
+            return self.doubleBufferPaint(self._double_buffer)
+
+    def _convert_cv_qt(self, cv_img: np.ndarray, scaled=True):
         """
         Convert from an opencv image to QPixmap
         
         :param cv_img: opencv image as numpy array
-        :returns: opencv image as QPixmap scaled to widget dimensions
+        :param scaled: if true or omitted returns an image scaled to widget dimensions
+        :returns: opencv image as full size QImage or QPixmap scaled to widget dimensions
         """
         #rgb_image = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
         #h, w, ch = rgb_image.shape
         h, w, ch = cv_img.shape
         bytes_per_line = ch * w
-        convert_to_Qt_format = QtGui.QImage(cv_img, w, h, bytes_per_line, QtGui.QImage.Format_Grayscale8)
-        p = convert_to_Qt_format.scaled(self.size(), Qt.KeepAspectRatio)
-        return QPixmap.fromImage(p)
+        qimg = QtGui.QImage(cv_img, w, h, bytes_per_line, QtGui.QImage.Format_Grayscale8)
+        if scaled: 
+            qimg_scaled = qimg.scaled(self.size(), Qt.KeepAspectRatio)
+            return QPixmap.fromImage(qimg_scaled)
+        else:
+            return qimg
 
     def map_droplet_drawing_vals(self, droplet: Droplet):
         """ 
