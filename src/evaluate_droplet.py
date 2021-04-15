@@ -107,8 +107,9 @@ def evaluate_droplet(img, y_base, mask: Tuple[int,int,int,int] = None) -> Drople
 
     # calculate intersections of ellipse with baseline
     intersection = calc_intersection_line_ellipse((x0,y0,a,b,phi),(0,y_base))
-    if intersection is None:
-        raise ContourError('No intersections found')
+
+    if intersection is None or not isinstance(intersection, list):
+        raise ContourError('No valid intersections found')
     x_int_l = min(intersection)
     x_int_r = max(intersection)
 
@@ -118,7 +119,7 @@ def evaluate_droplet(img, y_base, mask: Tuple[int,int,int,int] = None) -> Drople
     m_t_l = calc_slope_of_ellipse((x0,y0,a,b,phi), x_int_l, y_base)
     m_t_r = calc_slope_of_ellipse((x0,y0,a,b,phi), x_int_r, y_base)
 
-    # calc angle of inclination of tangents
+    # calc angle from inclination of tangents
     angle_l = (pi - atan2(m_t_l,1)) % pi
     angle_r = (atan2(m_t_r,1) + pi) % pi
 
@@ -183,30 +184,32 @@ def find_contour(img, is_masked):
         raise ContourError('No contours found!')
     # edge = max(contours, key=cv2.contourArea)
 
-    cont_area_list = []
+    cntr_area_list = []
     for cont in contours:
         x,y,w,h = cv2.boundingRect(cont)
         # store contour, area of bounding rect and bounding rect in array
-        cont_area_list.append([cont, w*h, x, y, x+w, y+h])
+        cntr_area_list.append([cont, w*h, x, y, x+w, y+h])
+    # sort contours by bounding rect area
+    cntr_area_list_sorted = sorted(cntr_area_list, key=lambda item: item[1])
     
-    cont_areas_sorted = sorted(cont_area_list, key=lambda item: item[1])
-    # largest 2 contours, assumes mask splits largest contour in the middle
     if is_masked:
-        rects = [elem[2:] for elem in cont_areas_sorted[-2:]]
-        largest_conts = [elem[0] for elem in cont_areas_sorted[-2:]]
+        # select largest 2 non overlapping contours, assumes mask splits largest contour in the middle
+        rects = [elem[2:] for elem in cntr_area_list_sorted[-2:]]
+        largest_conts = [elem[0] for elem in cntr_area_list_sorted[-2:]]
 
         #check if second largest contour is not from inside the droplet by checking overlap of bounding rects
-        BR = rects[-1] # bigest rect
+        BR = rects[-1] # biggest rect
         SR = rects[0] # slightly smaller rect
         # check if smaller rect overaps with larger rect
         if (BR[2] < SR[0] or BR[0] > SR[2] or BR[1] > SR[3] or BR[3] < SR[1]):
-            # if not both rects are valid droplet contours
+            # if not both rects are valid droplet contours, merge them
             contour = np.concatenate((largest_conts[0], largest_conts[1]))
         else:
             # else only biggest is valid droplet contour
-            contour = cont_areas_sorted[-1][0]
+            contour = cntr_area_list_sorted[-1][0]
     else:
-        contour = cont_areas_sorted[-1][0]
+        # contour with largest area
+        contour = cntr_area_list_sorted[-1][0]
     return contour
 
 def calc_intersection_line_ellipse(ellipse_pars, line_pars):
