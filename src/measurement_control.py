@@ -102,14 +102,17 @@ class MeasurementControl(QGroupBox):
     def showEvent(self, event):
         if self._first_show:
             self.connect_signals()
+            self.ui.waitForUserLbl.setVisible(False)
             self._first_show = False
 
     def connect_signals(self):
-        self.ui.startMeasBtn.clicked.connect(self.start_measurement)
-        self.ui.cancelMeasBtn.clicked.connect(self.stop_measurement)
+        self.ui.startMeasBtn.clicked.connect(self.start_stop_btn_pushed)
+        self.ui.cancelMeasBtn.clicked.connect(self.abort_measurement)
         self.ui.avgModeCombo.currentIndexChanged.connect(self.change_avg_mode)
         self.new_datapoint_signal.connect(self.ui.dataControl.new_data_point)
         self.save_data_signal.connect(self.ui.dataControl.save_data)
+        self.ui.continueButton.clicked.connect(self.continue_measurement)
+        
 
     ### gui control fcns ###
 
@@ -119,12 +122,11 @@ class MeasurementControl(QGroupBox):
         Starts or stops the measurement and updates the UI
         """
         if self.ui.startMeasBtn.text() == "Start":
-            self.ui.startMeasBtn.setText("Stop")
             QApplication.processEvents()
             self.start_measurement()
         else:
             self.stop_measurement()
-            self.ui.startMeasBtn.setText("Start")
+            
 
     def start_measurement(self):
         """
@@ -152,14 +154,25 @@ class MeasurementControl(QGroupBox):
             logging.exception("measurement control: error", exc_info=ex)
             return
         self.start_measurement_signal.emit(self.ui.plotHoldChk.isChecked())
+        self.stopped = False
+        self.aborted = False
+        self._cur_magnet_int_idx = 0
+        self.ui.startMeasBtn.setText("Stop")
         self.measure_start()
 
+
+    @Slot()
     def stop_measurement(self):
         """
         Stops the measurement gracefully, still writing the data.
         """
         logging.info("stopping measurement")
-        self.measure_stop()
+        self.save_data_signal.emit()
+        if self.timer: self.timer.stop()
+        if self.thread: self.thread.terminate()
+        self.aborted = False
+        self.stopped = True
+        self.ui.startMeasBtn.setText("Start")
 
     @Slot()
     def abort_measurement(self):
@@ -167,35 +180,22 @@ class MeasurementControl(QGroupBox):
         stops the measurement without saving data
         """
         logging.info("aborting measurement")
-        self.measure_abort()
-    
-    ### measurement control functions ###
-
-    @Slot()
-    def measure_abort(self):
         if self.timer: self.timer.stop()
         if self.thread: self.thread.terminate()
         self.aborted = True
         self.stopped = True
+        self.ui.startMeasBtn.setText("Start")
 
     @Slot()
-    def measure_stop(self):
-        self.save_data_signal.emit()
-        if self.timer: self.timer.stop()
-        if self.thread: self.thread.terminate()
-        self.aborted = False
-        self.stopped = True
+    def continue_measurement(self):
+        """ continue measurement from waiting state """
+        self.ui.continueButton.setEnabled(False)
+        self.ui.waitForUserLbl.setVisible(False)
+        self.do_mag_step()
+    
+    ### measurement control functions ###
 
     def measure_start(self):
-        """ Here the measurement process starts
-        This creates a timer for each measurement interval wich will call the timer_timeout function
-        """
-        # init vars
-        self.stopped = False
-        self.aborted = False
-        self.start_sweep()
-
-    def start_sweep(self):
         """ start measurement by driving to initial magnet position if supplied 
         order of running:
         --
@@ -221,12 +221,18 @@ class MeasurementControl(QGroupBox):
         """ drive motor to next selected magnet value """
         if self.stopped or self.aborted:
             return
-        self.thread = CallbackWorker(target=self.do_mag_step, slotOnFinished=self.mag_step_done)
-        self.thread.start()
+        if self.ui.waitAfterMagChck.isChecked():
+            # if wait checkbox is acitve, ti unlock the contiune button, the button then starts the mag step process
+            self.ui.continueButton.setEnabled(True)
+            self.ui.waitForUserLbl.setVisible(True)
+        else:
+            self.do_mag_step()
         
     def do_mag_step(self):
         """ drive magnet to next interval pos and wait for movement to finish """
-        self.ui.magnetControl.move_pos(pos=self._magnet_interval[self._cur_magnet_int_idx], unit=self.ui.magMeasUnitCombo.currentText(), blocking=True)
+        self.thread = CallbackWorker(target=self.ui.magnetControl.move_pos, pos=self._magnet_interval[self._cur_magnet_int_idx], unit=self.ui.magMeasUnitCombo.currentText(), blocking=True, slotOnFinished=self.mag_step_done)
+        self.thread.start()
+        #self.ui.magnetControl.move_pos(pos=self._magnet_interval[self._cur_magnet_int_idx], unit=self.ui.magMeasUnitCombo.currentText(), blocking=True)
 
     @Slot()
     def mag_step_done(self):
@@ -265,7 +271,7 @@ class MeasurementControl(QGroupBox):
             self._cycle += 1
             self.measure_start()
         else:
-            self.measure_stop()
+            self.stop_measurement()
             QMessageBox.information(self, 'MAEsure', 'Measurement finished!', QMessageBox.Ok)
 
             
@@ -304,7 +310,7 @@ class MeasurementControl(QGroupBox):
         except ValueError as ve:
             QMessageBox.critical(self, 'MAEsure Error!', 'No magnet values specified! Aborting!', QMessageBox.Ok)
             logging.error('Magnet inteval error: ' + str(ve))
-        self._repeat_after = self.ui.repWhenCombo.currentIndex()
+        #self._repeat_after = self.ui.repWhenCombo.currentIndex()
 
     def parse_intervals(self, expr:str):
         """ Parses string of values to float list
