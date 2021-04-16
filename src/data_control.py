@@ -89,6 +89,7 @@ class DataControl(QGroupBox):
 
     def connect_signals(self):
         self.ui.saveFileAsBtn.clicked.connect(self.select_filename)
+        self.ui.saveFileBtn.clicked.connect(self.save_data)
         
 
     @Slot(Droplet, int)
