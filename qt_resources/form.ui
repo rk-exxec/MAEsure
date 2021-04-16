@@ -355,93 +355,12 @@ Surface Diam:
       <string>Cancel</string>
      </property>
     </widget>
-    <widget class="QGroupBox" name="groupBox_4">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>110</y>
-       <width>171</width>
-       <height>71</height>
-      </rect>
-     </property>
-     <property name="title">
-      <string>Droplet Measurement Method</string>
-     </property>
-     <widget class="QRadioButton" name="dynDrpltChk">
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>20</y>
-        <width>131</width>
-        <height>17</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Dynamic Drop Method</string>
-      </property>
-     </widget>
-     <widget class="QRadioButton" name="sessDrpltChk">
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>40</y>
-        <width>131</width>
-        <height>17</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Sessile Drop Method</string>
-      </property>
-      <property name="checked">
-       <bool>true</bool>
-      </property>
-     </widget>
-    </widget>
-    <widget class="QLineEdit" name="drpltVol">
-     <property name="geometry">
-      <rect>
-       <x>100</x>
-       <y>80</y>
-       <width>51</width>
-       <height>20</height>
-      </rect>
-     </property>
-     <property name="placeholderText">
-      <string/>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_5">
-     <property name="geometry">
-      <rect>
-       <x>160</x>
-       <y>80</y>
-       <width>47</width>
-       <height>21</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>ul</string>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_6">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>80</y>
-       <width>81</width>
-       <height>21</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>Liquid Amount:</string>
-     </property>
-    </widget>
     <widget class="QGroupBox" name="groupBox_3">
      <property name="geometry">
       <rect>
        <x>190</x>
        <y>10</y>
-       <width>291</width>
+       <width>271</width>
        <height>171</height>
       </rect>
      </property>
@@ -460,26 +379,6 @@ Surface Diam:
       <property name="text">
        <string>Magnetic Field</string>
       </property>
-     </widget>
-     <widget class="QComboBox" name="repWhenCombo">
-      <property name="geometry">
-       <rect>
-        <x>140</x>
-        <y>130</y>
-        <width>131</width>
-        <height>22</height>
-       </rect>
-      </property>
-      <item>
-       <property name="text">
-        <string>After Time Sweep</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>After Magnet Sweep</string>
-       </property>
-      </item>
      </widget>
      <widget class="QLineEdit" name="timeInt">
       <property name="geometry">
@@ -500,7 +399,7 @@ Surface Diam:
      <widget class="QCheckBox" name="repeatChk">
       <property name="geometry">
        <rect>
-        <x>10</x>
+        <x>150</x>
         <y>130</y>
         <width>121</width>
         <height>21</height>
@@ -555,9 +454,9 @@ Surface Diam:
      <widget class="QSpinBox" name="numRepeat">
       <property name="geometry">
        <rect>
-        <x>70</x>
+        <x>220</x>
         <y>130</y>
-        <width>51</width>
+        <width>41</width>
         <height>22</height>
        </rect>
       </property>
@@ -590,27 +489,14 @@ Surface Diam:
      <widget class="QLabel" name="label_7">
       <property name="geometry">
        <rect>
-        <x>70</x>
-        <y>110</y>
+        <x>200</x>
+        <y>106</y>
         <width>61</width>
-        <height>16</height>
+        <height>20</height>
        </rect>
       </property>
       <property name="text">
        <string>Repetitions</string>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label_8">
-      <property name="geometry">
-       <rect>
-        <x>140</x>
-        <y>110</y>
-        <width>47</width>
-        <height>13</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>When</string>
       </property>
      </widget>
      <widget class="Line" name="line_2">
@@ -666,20 +552,23 @@ Surface Diam:
     <widget class="QComboBox" name="avgModeCombo">
      <property name="geometry">
       <rect>
-       <x>90</x>
-       <y>50</y>
-       <width>91</width>
+       <x>10</x>
+       <y>120</y>
+       <width>81</width>
        <height>21</height>
       </rect>
      </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Rolling: Uses a rolling average with a filter length that is equal to the camera framerate, resulting in values averaged over a 1s window&lt;/p&gt;&lt;p&gt;Cumulative: Average of all values between two measurements&lt;/p&gt;&lt;p&gt;None: No averaging&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
      <item>
       <property name="text">
-       <string>Continuous</string>
+       <string>Rolling (1s)</string>
       </property>
      </item>
      <item>
       <property name="text">
-       <string>Until measured</string>
+       <string>Cumlative</string>
       </property>
      </item>
      <item>
@@ -691,14 +580,213 @@ Surface Diam:
     <widget class="QLabel" name="label_12">
      <property name="geometry">
       <rect>
-       <x>90</x>
-       <y>30</y>
+       <x>10</x>
+       <y>100</y>
        <width>81</width>
        <height>16</height>
       </rect>
      </property>
      <property name="text">
       <string>Avg. Mode:</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="continueButton">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>100</x>
+       <y>50</y>
+       <width>75</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Continue</string>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="waitAfterMagChck">
+     <property name="geometry">
+      <rect>
+       <x>100</x>
+       <y>10</y>
+       <width>81</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Wait after
+mag step</string>
+     </property>
+    </widget>
+    <widget class="QGroupBox" name="groupBox_4">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>100</x>
+       <y>120</y>
+       <width>81</width>
+       <height>61</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Method</string>
+     </property>
+     <widget class="QRadioButton" name="dynDrpltChk">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>131</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Dynamic</string>
+      </property>
+     </widget>
+     <widget class="QRadioButton" name="sessDrpltChk">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>40</y>
+        <width>131</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Sessile</string>
+      </property>
+      <property name="checked">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QLabel" name="waitForUserLbl">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>80</y>
+       <width>171</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="palette">
+      <palette>
+       <active>
+        <colorrole role="WindowText">
+         <brush brushstyle="SolidPattern">
+          <color alpha="255">
+           <red>255</red>
+           <green>0</green>
+           <blue>0</blue>
+          </color>
+         </brush>
+        </colorrole>
+        <colorrole role="Text">
+         <brush brushstyle="SolidPattern">
+          <color alpha="255">
+           <red>255</red>
+           <green>0</green>
+           <blue>0</blue>
+          </color>
+         </brush>
+        </colorrole>
+        <colorrole role="PlaceholderText">
+         <brush brushstyle="SolidPattern">
+          <color alpha="128">
+           <red>255</red>
+           <green>0</green>
+           <blue>0</blue>
+          </color>
+         </brush>
+        </colorrole>
+       </active>
+       <inactive>
+        <colorrole role="WindowText">
+         <brush brushstyle="SolidPattern">
+          <color alpha="255">
+           <red>255</red>
+           <green>0</green>
+           <blue>0</blue>
+          </color>
+         </brush>
+        </colorrole>
+        <colorrole role="Text">
+         <brush brushstyle="SolidPattern">
+          <color alpha="255">
+           <red>255</red>
+           <green>0</green>
+           <blue>0</blue>
+          </color>
+         </brush>
+        </colorrole>
+        <colorrole role="PlaceholderText">
+         <brush brushstyle="SolidPattern">
+          <color alpha="128">
+           <red>255</red>
+           <green>0</green>
+           <blue>0</blue>
+          </color>
+         </brush>
+        </colorrole>
+       </inactive>
+       <disabled>
+        <colorrole role="WindowText">
+         <brush brushstyle="SolidPattern">
+          <color alpha="255">
+           <red>120</red>
+           <green>120</green>
+           <blue>120</blue>
+          </color>
+         </brush>
+        </colorrole>
+        <colorrole role="Text">
+         <brush brushstyle="SolidPattern">
+          <color alpha="255">
+           <red>120</red>
+           <green>120</green>
+           <blue>120</blue>
+          </color>
+         </brush>
+        </colorrole>
+        <colorrole role="PlaceholderText">
+         <brush brushstyle="SolidPattern">
+          <color alpha="128">
+           <red>0</red>
+           <green>0</green>
+           <blue>0</blue>
+          </color>
+         </brush>
+        </colorrole>
+       </disabled>
+      </palette>
+     </property>
+     <property name="font">
+      <font>
+       <family>Segoe UI</family>
+       <pointsize>9</pointsize>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::Box</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Plain</enum>
+     </property>
+     <property name="text">
+      <string>Waiting for user</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
      </property>
     </widget>
    </widget>
@@ -737,7 +825,7 @@ Surface Diam:
       </rect>
      </property>
      <property name="text">
-      <string>Load</string>
+      <string>Load Table</string>
      </property>
     </widget>
     <widget class="QLineEdit" name="fileNameEdit">
@@ -857,6 +945,19 @@ Surface Diam:
      </property>
      <property name="text">
       <string>Record image series</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="saveFileBtn">
+     <property name="geometry">
+      <rect>
+       <x>90</x>
+       <y>110</y>
+       <width>75</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Save Table</string>
      </property>
     </widget>
    </widget>
