@@ -67,7 +67,7 @@ def initialize_logger(out_dir):
      
     # create console handler and set level to info
     handler = logging.StreamHandler()
-    handler.setLevel(logging.DEBUG)
+    handler.setLevel(logging.INFO)
     #formatter = logging.Formatter("%(levelname)s - %(message)s")
     #handler.setFormatter(formatter)
     logger.addHandler(handler)
@@ -81,7 +81,7 @@ def initialize_logger(out_dir):
  
     # create debug file handler and set level to debug
     handler = logging.FileHandler(os.path.join(out_dir, "all.log"),"w")
-    handler.setLevel(logging.DEBUG)
+    handler.setLevel(logging.INFO)
     #formatter = logging.Formatter("%(levelname)s - %(message)s")
     #handler.setFormatter(formatter)
     logger.addHandler(handler)
