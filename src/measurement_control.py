@@ -27,6 +27,7 @@ import os
 
 import numpy as np
 import time
+from statemachine import State, StateMachine
 from qthread_worker import CallbackWorker
 
 from PySide2 import QtGui
@@ -74,6 +75,17 @@ class IntervalTimer(QObject):
     def stop(self):
         for t in self.timers:
             t.stop()     
+
+
+class MeasureStateMachine(StateMachine):
+    idle = State('idle', initial=True)
+    start = State('start')
+    time_meas = State('Time')
+    mag_step = State('MagStep')
+    wait_mag_step = State('MagStepWait')
+    done = State('done')
+    fetch_data = State('DataFetch')
+    stop = State('stop')
 
 
 class MeasurementControl(QGroupBox):
