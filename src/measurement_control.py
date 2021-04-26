@@ -27,12 +27,11 @@ import os
 
 import numpy as np
 import time
-from statemachine import State, StateMachine
 from qthread_worker import CallbackWorker
 
 from PySide2 import QtGui
 from PySide2.QtWidgets import QApplication, QGroupBox, QMessageBox
-from PySide2.QtCore import QObject, QTimer, Signal, Slot, Qt
+from PySide2.QtCore import QMutex, QObject, QTimer, QWaitCondition, Signal, Slot, Qt
 
 from typing import List, TYPE_CHECKING
 if TYPE_CHECKING:
@@ -77,17 +76,6 @@ class IntervalTimer(QObject):
             t.stop()     
 
 
-class MeasureStateMachine(StateMachine):
-    idle = State('idle', initial=True)
-    start = State('start')
-    time_meas = State('Time')
-    mag_step = State('MagStep')
-    wait_mag_step = State('MagStepWait')
-    done = State('done')
-    fetch_data = State('DataFetch')
-    stop = State('stop')
-
-
 class MeasurementControl(QGroupBox):
     """
     class that provides a groupbox with UI to control the measurement process
@@ -95,6 +83,7 @@ class MeasurementControl(QGroupBox):
     new_datapoint_signal = Signal(Droplet, int)
     save_data_signal = Signal()
     start_measurement_signal = Signal(bool)
+    save_image_signal = Signal(int)
     def __init__(self, parent=None) -> None:
         super(MeasurementControl, self).__init__(parent)
         self.ui: Ui_main = self.window().ui
@@ -110,6 +99,8 @@ class MeasurementControl(QGroupBox):
         self.thread: CallbackWorker = None
         self._first_show = True
         self._meas_aborted = False
+        self._mutex = QMutex()
+        self._wait_condition = QWaitCondition()
 
     def showEvent(self, event):
         if self._first_show:
@@ -122,6 +113,7 @@ class MeasurementControl(QGroupBox):
         self.ui.cancelMeasBtn.clicked.connect(self.abort_measurement)
         self.ui.avgModeCombo.currentIndexChanged.connect(self.change_avg_mode)
         self.new_datapoint_signal.connect(self.ui.dataControl.new_data_point)
+        self.save_image_signal.connect(self.ui.dataControl.save_image)
         self.save_data_signal.connect(self.ui.dataControl.save_data)
         self.ui.continueButton.clicked.connect(self.continue_measurement)
         
@@ -165,11 +157,17 @@ class MeasurementControl(QGroupBox):
             QMessageBox.warning(self, 'MAEsure Error', f'An error occured:\n{str(ex)}', QMessageBox.Ok)
             logging.exception("measurement control: error", exc_info=ex)
             return
+
+        # prepare live plot for new data
         self.start_measurement_signal.emit(self.ui.plotHoldChk.isChecked())
+        # init local vars
         self.stopped = False
         self.aborted = False
         self._cur_magnet_int_idx = 0
+        self._cycles = self.ui.numRepeat.value()
+        self._cycle = 0
         self.ui.startMeasBtn.setText("Stop")
+
         self.measure_start()
 
 
@@ -185,6 +183,8 @@ class MeasurementControl(QGroupBox):
         self.aborted = False
         self.stopped = True
         self.ui.startMeasBtn.setText("Start")
+        self.ui.continueButton.setEnabled(False)
+        self.ui.waitForUserLbl.setVisible(False)
 
     @Slot()
     def abort_measurement(self):
@@ -197,54 +197,57 @@ class MeasurementControl(QGroupBox):
         self.aborted = True
         self.stopped = True
         self.ui.startMeasBtn.setText("Start")
+        self.ui.continueButton.setEnabled(False)
+        self.ui.waitForUserLbl.setVisible(False)
 
     @Slot()
     def continue_measurement(self):
         """ continue measurement from waiting state """
         self.ui.continueButton.setEnabled(False)
         self.ui.waitForUserLbl.setVisible(False)
-        self.do_mag_step()
+        self._wait_condition.wakeAll()
     
     ### measurement control functions ###
 
     def measure_start(self):
         """ start measurement by driving to initial magnet position if supplied 
         order of running:
-        --
+        -->
         start_mag_step
+        (continue_measurement)
         do_mag_step
         mag_step_done
+        -->>
+        check_continue
+        (wait_continue)
         start_time_sweep
         time_sweep_done
-        -- repeat all above until all sweeps are done
+        <<-- repeat, repetitions per mag step
+        <-- repeat, every mag step
         sweep_done
         """
         if self.stopped or self.aborted:
             return
         if self.ui.sweepMagChk.isChecked():
             self.start_mag_step()
-        elif self.ui.sweepTimeChk.isChecked():
-            self.start_time_sweep()
         else:
-            logging.error("sweep not started: nothing selected!")
-            return
+            self.start_time_sweep()
+        # else:
+        #     logging.error("sweep not started: nothing selected!")
+        #     return
 
     def start_mag_step(self):
-        """ drive motor to next selected magnet value """
+        """ drive motor to next selected magnet value
+         
+        """
         if self.stopped or self.aborted:
             return
-        if self.ui.waitAfterMagChck.isChecked():
-            # if wait checkbox is acitve, ti unlock the contiune button, the button then starts the mag step process
-            self.ui.continueButton.setEnabled(True)
-            self.ui.waitForUserLbl.setVisible(True)
-        else:
-            self.do_mag_step()
+        self.do_mag_step()
         
     def do_mag_step(self):
         """ drive magnet to next interval pos and wait for movement to finish """
         self.thread = CallbackWorker(target=self.ui.magnetControl.move_pos, pos=self._magnet_interval[self._cur_magnet_int_idx], unit=self.ui.magMeasUnitCombo.currentText(), blocking=True, slotOnFinished=self.mag_step_done)
         self.thread.start()
-        #self.ui.magnetControl.move_pos(pos=self._magnet_interval[self._cur_magnet_int_idx], unit=self.ui.magMeasUnitCombo.currentText(), blocking=True)
 
     @Slot()
     def mag_step_done(self):
@@ -252,12 +255,43 @@ class MeasurementControl(QGroupBox):
         if self.stopped or self.aborted:
             return
         self._cur_magnet_int_idx += 1   # next magnet interval
-        self.start_time_sweep()
+        self._cycle = 0
+        self.check_continue(self.start_time_sweep)
+        #self.start_time_sweep()
 
+    def check_continue(self, next_action=None):
+        """check if we need to wait for user input
+
+        if yes, start a wait thread with the next step as callback
+        if no, start the next action immediately
+
+        :param next_action: next action when continuing, defaults to None
+        :type next_action: [type], optional
+        """
+        if self.ui.waitAfterMagChck.isChecked():
+            # if wait checkbox is acitve, unlock the contiune button, the button then continues the mag step process
+            self.ui.continueButton.setEnabled(True)
+            self.ui.waitForUserLbl.setVisible(True)
+            self.thread = CallbackWorker(self.wait_continue, slotOnFinished=next_action)
+            self.thread.start()
+        else:
+            next_action()
+
+    def wait_continue(self):
+        """wait for continue button pressed
+        """
+        self._mutex.lock()
+        self._wait_condition.wait(self._mutex)
+        self._mutex.unlock()
+
+    @Slot()
     def start_time_sweep(self):
         """ starts the sweep by checking if time is to be sweeped , if not it will skip"""
         if self.stopped or self.aborted:
             return
+
+        # try to save droplet image if option selected
+        self.save_image_signal.emit(self._cycle)
         if self.ui.sweepTimeChk.isChecked():
             self.ui.dataControl.invalidate_time()
             self.timer = IntervalTimer(self, self._time_interval, self.collect_data, self.time_sweep_done)
@@ -271,7 +305,11 @@ class MeasurementControl(QGroupBox):
         """ after timer has finished or was skipped, moves to next mag step if desired else next cycle """
         if self.stopped or self.aborted:
             return
-        if self.ui.sweepMagChk.isChecked() and self._cur_magnet_int_idx < len(self._magnet_interval):
+        if (self._cycle < self._cycles - 1):
+            # restart time sweep if repetitions are requested
+            self._cycle += 1
+            self.check_continue(self.start_time_sweep)
+        elif self.ui.sweepMagChk.isChecked() and self._cur_magnet_int_idx < len(self._magnet_interval):
             self.start_mag_step()
         else:
             self.sweep_done()
@@ -279,13 +317,9 @@ class MeasurementControl(QGroupBox):
     @Slot()
     def sweep_done(self):
         """ when timer and magnet sweep has finished """
-        if self._cycle < self._cycles - 1:
-            self._cycle += 1
-            self.measure_start()
-        else:
-            self.stop_measurement()
-            QMessageBox.information(self, 'MAEsure', 'Measurement finished!', QMessageBox.Ok)
 
+        self.stop_measurement()
+        QMessageBox.information(self, 'MAEsure', 'Measurement finished!', QMessageBox.Ok)
             
     #@Slot()
     def collect_data(self):
