@@ -379,6 +379,9 @@ Surface Diam:
       <property name="text">
        <string>Magnetic Field</string>
       </property>
+      <property name="checked">
+       <bool>true</bool>
+      </property>
      </widget>
      <widget class="QLineEdit" name="timeInt">
       <property name="geometry">
@@ -394,19 +397,6 @@ Surface Diam:
       </property>
       <property name="text">
        <string>0:240:120</string>
-      </property>
-     </widget>
-     <widget class="QCheckBox" name="repeatChk">
-      <property name="geometry">
-       <rect>
-        <x>150</x>
-        <y>130</y>
-        <width>121</width>
-        <height>21</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Repeat</string>
       </property>
      </widget>
      <widget class="QLabel" name="label_4">
@@ -448,23 +438,23 @@ Surface Diam:
        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enter values separated by comma ','.&lt;/p&gt;&lt;p&gt;Values can be either:&lt;/p&gt;&lt;ul style=&quot;margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; -qt-list-indent: 0.5;&quot;&gt;&lt;li style=&quot; margin-top:12px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Numbers&lt;/li&gt;&lt;li style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Linear range: 'x:y' or 'x:y:z' creates a linear range between x and y with 10 or z number of evenly spaced points.&lt;/li&gt;&lt;li style=&quot; margin-top:0px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Logarithmic range: 'x*y' or 'x*y*z' creates a base 10 logarithmic range between x and y with 10 or z number of points.&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;Numbers, linspaces and logspaces will be merged but not sorted!&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
       <property name="text">
-       <string>200:50</string>
+       <string>20:10</string>
       </property>
      </widget>
      <widget class="QSpinBox" name="numRepeat">
       <property name="geometry">
        <rect>
-        <x>220</x>
+        <x>10</x>
         <y>130</y>
         <width>41</width>
         <height>22</height>
        </rect>
       </property>
       <property name="minimum">
-       <number>0</number>
+       <number>1</number>
       </property>
       <property name="value">
-       <number>0</number>
+       <number>1</number>
       </property>
      </widget>
      <widget class="QCheckBox" name="sweepTimeChk">
@@ -483,20 +473,20 @@ Surface Diam:
        <string>Time</string>
       </property>
       <property name="checked">
-       <bool>true</bool>
+       <bool>false</bool>
       </property>
      </widget>
      <widget class="QLabel" name="label_7">
       <property name="geometry">
        <rect>
-        <x>200</x>
+        <x>10</x>
         <y>106</y>
-        <width>61</width>
+        <width>251</width>
         <height>20</height>
        </rect>
       </property>
       <property name="text">
-       <string>Repetitions</string>
+       <string>Measurements / time sweeps per magnet level</string>
       </property>
      </widget>
      <widget class="Line" name="line_2">
@@ -789,6 +779,20 @@ mag step</string>
       <set>Qt::AlignCenter</set>
      </property>
     </widget>
+    <widget class="QCheckBox" name="saveImgsChk">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>150</y>
+       <width>121</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Save image
+every cycle</string>
+     </property>
+    </widget>
    </widget>
    <widget class="DataControl" name="dataControl">
     <property name="geometry">
@@ -852,12 +856,17 @@ mag step</string>
      </property>
      <item>
       <property name="text">
+       <string>,</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
        <string>Tab</string>
       </property>
      </item>
      <item>
       <property name="text">
-       <string>,</string>
+       <string>;</string>
       </property>
      </item>
     </widget>
@@ -932,19 +941,6 @@ mag step</string>
      </property>
      <property name="text">
       <string>Plot Hold</string>
-     </property>
-    </widget>
-    <widget class="QCheckBox" name="record_img_chk">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>140</y>
-       <width>121</width>
-       <height>16</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>Record image series</string>
      </property>
     </widget>
     <widget class="QPushButton" name="saveFileBtn">
