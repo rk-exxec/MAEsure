@@ -19,6 +19,7 @@
 import os
 import numpy as np
 import logging
+from numpy.lib.npyio import save
 import userpaths
 from datetime import datetime
 
@@ -328,12 +329,14 @@ class CameraControl(QGroupBox):
         save_path,filter = QFileDialog.getSaveFileName(self,"Choose save file", f"{userpaths.get_my_pictures()}/screenshot_{now}.png","Images (*.png *.jpg *.bmp)")
         if save_path is None:
             return
-
-        qimg = self.ui.camera_prev.grab_image(raw=raw_image)
+        self.save_image(save_path,raw_image)
+        
+    def save_image(self, path:str, raw=True):
+        qimg = self.ui.camera_prev.grab_image(raw=raw)
         if qimg is None:
             return
 
-        qimg.save(save_path, quality=100)
+        qimg.save(path, quality=100)
 
 
 

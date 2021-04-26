@@ -17,6 +17,8 @@
 import logging
 import os
 
+from pathlib import Path, PurePath
+
 import time
 from datetime import datetime
 from math import degrees
@@ -45,7 +47,7 @@ class DataControl(QGroupBox):
 
         .. note::
             - **Time**: actual point in time the dataset was aquired
-            - **Cycle**: if measurement is repeated, current number of repeats
+            - **Repetition**: if measurement is repeated, current number of repeats
             - **Left_Angle**: angle of left droplet side
             - **Right_Angle**: angle of right droplet side
             - **Base_Width**: Width of the droplet
@@ -57,7 +59,7 @@ class DataControl(QGroupBox):
             - **DateTime**: date and time at begin of measurement
         
         """
-        self.header = ['Time', 'Cycle', 'Left_Angle', 'Right_Angle', 'Base_Width', 'Substate_Surface_Energy', 'Magn_Pos', 'Magn_Unit', 'Fe_Vol_P', 'ID', 'DateTime']
+        self.header = ['Time', 'Repetition', 'Left_Angle', 'Right_Angle', 'Base_Width', 'Substate_Surface_Energy', 'Magn_Pos', 'Magn_Unit', 'Fe_Vol_P', 'ID', 'DateTime']
         self.data = pd.DataFrame(columns=self.header)
 
         self._is_time_invalid = False
@@ -79,10 +81,10 @@ class DataControl(QGroupBox):
             self.ui.tableControl.redraw_table_signal.emit()
             # try to use Home drive, if not, use Documents folder
             if os.path.exists("G:/Messungen/Angle_Measurements"):
-                self.ui.fileNameEdit.setText(os.path.expanduser(f'G:/Messungen/Angle_Measurements/{self._initial_filename}.dat'))
+                self.ui.fileNameEdit.setText(os.path.expanduser(f'G:/Messungen/Angle_Measurements/{self._initial_filename}.csv'))
                 self._default_dir = 'G:/Messungen/Angle_Measurements'
             else:
-                self.ui.fileNameEdit.setText(os.path.expanduser(f'~/Documents/{self._initial_filename}.dat'))
+                self.ui.fileNameEdit.setText(os.path.expanduser(f'~/Documents/{self._initial_filename}.csv'))
                 self._default_dir = '~/Documents'
             self.connect_signals()
             self._first_show = False
@@ -126,6 +128,21 @@ class DataControl(QGroupBox):
         self.ui.tableControl.redraw_table_signal.emit()
         self.update_plot_signal.emit(curtime,(droplet.angle_l + droplet.angle_r)/2)
 
+    @Slot(int)
+    def save_image(self, cycle:int):
+        """try to save droplet image if option selected
+
+        :param cycle: current cycle for filename indexing
+        :type cycle: int
+        """
+        if self.ui.saveImgsChk.isChecked():
+            path = Path(self._cur_filename).with_suffix('')
+            path.mkdir(exist_ok=True)
+            mag_step = str(self.ui.magnetControl.posSpinBox.value()) + '_' + self.ui.magnetControl.unitComboBox.currentText()
+            self.ui.camera_ctl.save_image(str(path / f'img_mag_{mag_step}_cycle_{cycle}.png'))
+            
+
+
     def export_data_csv(self, filename):
         """ Export data as csv with selected separator
 
@@ -161,10 +178,16 @@ class DataControl(QGroupBox):
         """
         self._meas_start_datetime = datetime.now().strftime('%y_%m_%d_%H-%M')
         if self.ui.fileNameEdit.text() == "": raise ValueError("No File specified!")
-        self._cur_filename = self.ui.fileNameEdit.text().replace('!now!', f'{ self._meas_start_datetime}')
+        self._cur_filename = self.ui.fileNameEdit.text().replace('!now!', f'{self._meas_start_datetime}')
         self._cur_filename = self._cur_filename.replace('!pos!', f'{self.ui.magnetControl.posSpinBox.value()}')
         self._cur_filename = self._cur_filename.replace('!ID!', f'{self.ui.idCombo.currentText()}')
-        open(self._cur_filename, 'w').close()
+
+        path = Path(self._cur_filename)
+        if path.is_file():
+            path = path.with_stem(path.stem + '_1')
+            self._cur_filename = str(path)
+
+        path.touch(exist_ok=False)
 
     def save_data(self):
         """ Saves all the stored data.
