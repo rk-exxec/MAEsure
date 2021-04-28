@@ -30,6 +30,7 @@ DBG_NONE = 0x0
 DBG_SHOW_CONTOURS = 0x1
 DBG_DRAW_ELLIPSE = 0x2
 DBG_DRAW_TAN_ANGLE = 0x4
+DBG_ALL = 0x7
 DEBUG = DBG_NONE
 
 USE_GPU = False
@@ -235,10 +236,10 @@ def calc_intersection_line_ellipse(ellipse_pars, line_pars):
         if det > 0:
             x1: float = (-b - sqrt(det))/(2*a) + x0
             x2: float = (-b + sqrt(det))/(2*a) + x0
-            return x1,x2
+            return [x1,x2]
         elif det == 0:
             x: float = (-b / (2*a)) + x0
-            return x
+            return [x]
         else:
             return None
     except Exception as ex:
