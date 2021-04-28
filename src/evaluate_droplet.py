@@ -90,6 +90,7 @@ def evaluate_droplet(img, y_base, mask: Tuple[int,int,int,int] = None) -> Drople
     phi = radians(phi_deg)
     a = maj_ax/2
     b = min_ax/2
+    gof = calc_goodness_of_fit((x0,y0,a,b,phi), edge)
 
     # diesen fit vllt zum laufen bringen https://scikit-image.org/docs/0.15.x/api/skimage.measure.html
     #points = edge.reshape(-1,2)
@@ -148,6 +149,7 @@ def evaluate_droplet(img, y_base, mask: Tuple[int,int,int,int] = None) -> Drople
     drplt.base_diam = x_int_r - x_int_l
     drplt.area = area
     drplt.height = drplt_height
+    drplt.gof = gof
     drplt.is_valid = True
 
     if DEBUG & DBG_DRAW_TAN_ANGLE:
@@ -160,6 +162,7 @@ def evaluate_droplet(img, y_base, mask: Tuple[int,int,int,int] = None) -> Drople
         img = cv2.line(img, (0,y_int), (width, y_int), (255,0,0), thickness=2, lineType=cv2.LINE_AA)
         img = cv2.putText(img, '<' + str(round(angle_l*180/pi,1)), (5,y_int-5), cv2.FONT_HERSHEY_COMPLEX, .5, (0,0,0))
         img = cv2.putText(img, '<' + str(round(angle_r*180/pi,1)), (width - 80,y_int-5), cv2.FONT_HERSHEY_COMPLEX, .5, (0,0,0))
+        img = cv2.putText(img, 'GOF: ' + str(round(gof,3)), (10, 20), cv2.FONT_HERSHEY_COMPLEX, .5, (0,0,0))
 
     #return drplt#, img
 
@@ -316,6 +319,38 @@ def calc_height_of_droplet(ellipse_pars, y_base) -> float:
     # actual height, baseline - lowspot
     droplt_height = y_base - y_low
     return droplt_height
+
+def calc_goodness_of_fit(ellipse_pars, contour) -> float:
+    """calculates the goodness of the ellipse fit to the contour
+    https://answers.opencv.org/question/20521/how-do-i-get-the-goodness-of-fit-for-the-result-of-fitellipse/
+
+       if point (x,y) is on ellipse with axes a,b the following equation is true:
+           (x/a)^2 + (y/b)^2 = 1
+
+        goodness of fit is calculated as sum( abs( (x/a)^2 + (y/b)^2 - 1 ) )  
+
+    -----
+    :param ellipse_pars: ellipse parameters x0,y0,a,b,phi
+    :param contour: contour the ellipse was fitted to
+    :return: goodness of fit, smaller is better
+    """
+    (x0, y0, a, b, phi) = ellipse_pars
+
+    cosphi = cos(phi)
+    sinphi = sin(phi)
+
+    def calc(point):
+        x,y = point[0]
+        # transform to non-rotated ellipse centered to origin
+        x_rot = (x - x0)*cosphi + (y - y0)*sinphi
+        y_rot = (y - y0)*cosphi - (x - x0)*sinphi
+        # calculate difference to point on ellipse and add to sum
+        return abs((x_rot/a)**2 + (y_rot/b)**2 - 1)
+
+    output = [calc(point) for point in contour]
+    gof = np.mean(output)
+    return gof
+
 
 # for testing purposes:
 if __name__ == "__main__":

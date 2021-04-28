@@ -17,8 +17,7 @@
 from math import degrees
 from PySide2.QtCore import QSettings
 import logging
-
-from typing import Tuple
+import inspect
 
 from numpy.lib.function_base import angle
 
@@ -43,6 +42,7 @@ class Droplet(Singleton):
     Has the following attributes:
 
     - **is_valid**: whether contained data is valid
+    - **gof**: the goodness of the droplet fit
     - **_angle_l**, **_angle_r**: the unfiltered left and right tangent angles
     - **_angle_l_avg**, **_angle_r_avg**: the rolling averager filter object for the angles
     - **center**: center point of fitted ellipse (x,y)
@@ -64,23 +64,24 @@ class Droplet(Singleton):
     def __init__(self):
         settings                                    = QSettings()
         self.is_valid       : bool                  = False
+        self.gof            : float                 = 0
         self._angle_l       : float                 = 0.0
         self._angle_l_avg                           = RollingAverager()
         self._angle_r       : float                 = 0.0
         self._angle_r_avg                           = RollingAverager()
-        self.center         : Tuple[int,int]        = (0,0)
+        self.center         : tuple[int,int]        = (0,0)
         self.maj            : int                   = 0
         self.min            : int                   = 0
         self.phi            : float                 = 0.0
         self.tilt_deg       : float                 = 0.0
-        self.foc_pt1        : Tuple[int,int]        = (0,0)
-        self.foc_pt2        : Tuple[int,int]        = (0,0)
+        self.foc_pt1        : tuple[int,int]        = (0,0)
+        self.foc_pt2        : tuple[int,int]        = (0,0)
         self.tan_l_m        : int                   = 0
-        self.int_l          : Tuple[int,int]        = (0,0)
-        self.line_l         : Tuple[int,int,int,int] = (0,0,0,0)
+        self.int_l          : tuple[int,int]        = (0,0)
+        self.line_l         : tuple[int,int,int,int] = (0,0,0,0)
         self.tan_r_m        : int                   = 0
-        self.int_r          : Tuple[int,int]        = (0,0)
-        self.line_r         : Tuple[int,int,int,int] = (0,0,0,0)
+        self.int_r          : tuple[int,int]        = (0,0)
+        self.line_r         : tuple[int,int,int,int] = (0,0,0,0)
         self.base_diam      : int                   = 0
         self._area          : float                 = 0.0
         self._area_avg                              = RollingAverager()
@@ -92,15 +93,41 @@ class Droplet(Singleton):
         if self.is_valid:
             # if scalefactor is present, display in metric, else in pixles
             if self.scale_px_to_mm is None or self.scale_px_to_mm <= 0:
-                return 'Angle Left:\n{:.1f}°\nAngle Right:\n{:.1f}°\nSurface Diam:\n{:.2f} px\nArea:\n{:.2f} px2\nHeight:\n{:.2f} px'.format(
-                    round(self.angle_l,1), round(self.angle_r,1), round(self.base_diam), round(self.area,2), round(self.height,2)
+                ret = inspect.cleandoc(f'''
+                    Angle Left:
+                    {round(self.angle_l,1):.1f}°
+                    Angle Right:
+                    {round(self.angle_r,1):.1f}°
+                    Surface Diam:
+                    {round(self.base_diam):.2f} px
+                    Area:
+                    {round(self.area,2):.2f} px2
+                    Height:
+                    {round(self.height,2):.2f} px
+                    GOF:
+                    {round(self.gof,3)}
+                    '''
                 )
             else:
-                return 'Angle Left:\n{:.1f}°\nAngle Right:\n{:.1f}°\nSurface Diam:\n{:.2f} mm\nArea:\n{:.2f} mm2\nHeight:\n{:.2f} mm'.format(
-                    round(self.angle_l,1), round(self.angle_r,1), round(self.base_diam_mm,2), round(self.area_mm,2), round(self.height_mm,2)
+                ret =  inspect.cleandoc(f'''
+                    Angle Left:
+                    {round(self.angle_l,1):.1f}°
+                    Angle Right:
+                    {round(self.angle_r,1):.1f}°
+                    Surface Diam:
+                    {round(self.base_diam_mm,2):.2f} mm
+                    Area:
+                    {round(self.area_mm,2):.2f} mm2
+                    Height:
+                    {round(self.height_mm,2):.2f} mm
+                    GOF:
+                    {round(self.gof,3)}
+                    '''   
                 )
         else:
-            return 'No droplet!'
+            ret = 'No droplet!'
+        
+        return ret
 
     # properties section, get returns the average, set feeds the rolling averager
     @property
