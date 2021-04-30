@@ -19,11 +19,17 @@
 # TODO add rolling average, with outlier ingoring and 1 sec worth of averaging
 # ideally to the whole contour before fitting the ellipse
 
-from math import acos, cos, sin, pi, sqrt, atan2, radians, degrees
+import time
 from typing import Tuple
-import cv2
+
+from math import acos, cos, sin, pi, sqrt, atan2, radians, degrees
+
+import numba as nb
+from numba.np.ufunc import parallel
 import numpy as np
 import skimage.measure
+import cv2
+
 
 from droplet import Droplet
 
@@ -92,45 +98,37 @@ def evaluate_droplet(img, y_base, mask: Tuple[int,int,int,int] = None) -> Drople
     phi = radians(phi_deg)
     a = maj_ax/2
     b = min_ax/2
-    r2 = calc_regr_score_r2((x0,y0,a,b,phi), edge)
 
-    # diesen fit vllt zum laufen bringen https://scikit-image.org/docs/0.15.x/api/skimage.measure.html
-    #points = edge.reshape(-1,2)
-    #points[:,[0,1]] = points[:,[1,0]]
-    # ell = EllipseModel()
-    # if not ell.estimate(points): raise RuntimeError('Couldn\'t fit ellipse')
-    # x0, y0, a, b, phi = ell.params
-    # maj_ax = 2*a
-    # min_ax = 2*b
-    # phi_deg = degrees(phi)
+    r2 = calc_regr_score_r2_y_only(x0,y0,a,b,phi, edge)
 
     if DEBUG & DBG_DRAW_ELLIPSE:
         img = cv2.ellipse(img, (int(round(x0)),int(round(y0))), (int(round(a)),int(round(b))), int(round(phi*180/pi)), 0, 360, (255,0,255), thickness=1, lineType=cv2.LINE_AA)
         #img = cv2.ellipse(img, (int(round(x0)),int(round(y0))), (int(round(a)),int(round(b))), 0, 0, 360, (0,0,255), thickness=1, lineType=cv2.LINE_AA)
 
     # calculate intersections of ellipse with baseline
-    intersection = calc_intersection_line_ellipse((x0,y0,a,b,phi),(0,y_base))
+    intersection = calc_intersection_line_ellipse(x0,y0,a,b,phi,0,y_base)
 
-    if intersection is None or not isinstance(intersection, list):
+    if intersection == []:
         raise ContourError('No valid intersections found')
     x_int_l = min(intersection)
     x_int_r = max(intersection)
 
-    foc_len = sqrt(abs(a**2 - b**2))
+    foc_len = np.sqrt(abs(a**2 - b**2))
 
     # calc slope and angle of tangent at intersections
-    m_t_l = calc_slope_of_ellipse((x0,y0,a,b,phi), x_int_l, y_base)
-    m_t_r = calc_slope_of_ellipse((x0,y0,a,b,phi), x_int_r, y_base)
+    m_t_l = calc_slope_of_ellipse(x0,y0,a,b,phi, x_int_l, y_base)
+    m_t_r = calc_slope_of_ellipse(x0,y0,a,b,phi, x_int_r, y_base)
 
     # calc angle from inclination of tangents
     angle_l = (pi - atan2(m_t_l,1)) % pi
     angle_r = (atan2(m_t_r,1) + pi) % pi
 
     # calc area of droplet
-    area = calc_area_of_droplet((x_int_l, x_int_r), (x0,y0,a,b,phi), y_base)
+    #area = calc_area_of_droplet((x_int_l, x_int_r), (x0,y0,a,b,phi), y_base)
+    volume = calc_volume_of_droplet(x0,y0,a,b,phi, y_base)
 
     # calc height of droplet
-    drplt_height = calc_height_of_droplet((x0,y0,a,b,phi), y_base)
+    drplt_height = calc_height_of_droplet(x0,y0,a,b,phi, y_base)
     
     # write values to droplet object
     drplt.angle_l = degrees(angle_l)
@@ -146,10 +144,10 @@ def evaluate_droplet(img, y_base, mask: Tuple[int,int,int,int] = None) -> Drople
     drplt.line_r = (x_int_r - y_base/m_t_r, 0, x_int_r + (height - y_base)/m_t_r, height)
     drplt.int_l = (x_int_l, y_base)
     drplt.int_r = (x_int_r, y_base)
-    drplt.foc_pt1 = (x0 + foc_len*cos(phi), y0 + foc_len*sin(phi))
-    drplt.foc_pt2 = (x0 - foc_len*cos(phi), y0 - foc_len*sin(phi))
+    drplt.foc_pt1 = (x0 + foc_len*np.cos(phi), y0 + foc_len*np.sin(phi))
+    drplt.foc_pt2 = (x0 - foc_len*np.cos(phi), y0 - foc_len*np.sin(phi))
     drplt.base_diam = x_int_r - x_int_l
-    drplt.area = area
+    drplt.volume = volume
     drplt.height = drplt_height
     drplt.r2 = r2
     drplt.is_valid = True
@@ -164,9 +162,10 @@ def evaluate_droplet(img, y_base, mask: Tuple[int,int,int,int] = None) -> Drople
         img = cv2.line(img, (0,y_int), (width, y_int), (255,0,0), thickness=2, lineType=cv2.LINE_AA)
         img = cv2.putText(img, '<' + str(round(angle_l*180/pi,1)), (5,y_int-5), cv2.FONT_HERSHEY_COMPLEX, .5, (0,0,0))
         img = cv2.putText(img, '<' + str(round(angle_r*180/pi,1)), (width - 80,y_int-5), cv2.FONT_HERSHEY_COMPLEX, .5, (0,0,0))
-        img = cv2.putText(img, 'GOF: ' + str(round(r2,3)), (10, 20), cv2.FONT_HERSHEY_COMPLEX, .5, (0,0,0))
+        img = cv2.putText(img, 'R2: ' + str(round(r2,3)), (10, 20), cv2.FONT_HERSHEY_COMPLEX, .5, (0,0,0))
 
     #return drplt#, img
+
 
 def find_contour(img, is_masked):
     """searches for contours and returns the ones with largest bounding rect
@@ -217,75 +216,73 @@ def find_contour(img, is_masked):
         contour = cntr_area_list_sorted[-1][0]
     return contour
 
-def calc_intersection_line_ellipse(ellipse_pars, line_pars):
+@nb.njit(cache=True)
+def calc_intersection_line_ellipse(x0, y0, h, v, phi, m, t,):
     """
     calculates intersection(s) of an ellipse with a horizontal line
 
-    :param ellipse_pars: tuple of (x0,y0,a,b,phi): x0,y0 center of ellipse; a,b sem-axis of ellipse; phi tilt rel to x axis
-    :param line_pars: tuple of (m,t): m is the slope and t is intercept of the intersecting line
+    :param x0, y0, h, v, phi: x0,y0 center of ellipse; a,b sem-axis of ellipse; phi tilt rel to x axis
+    :param m, t: m is the slope and t is intercept of the intersecting line
     :returns: x-coordinate(s) of intesection as list or float or none if none found
     """
     ## -->> http://quickcalcbasic.com/ellipse%20line%20intersection.pdf
-    (x0, y0, h, v, phi) = ellipse_pars
-    (m, t) = line_pars
     y = t - y0
-    try:
-        a = v**2 * cos(phi)**2 + h**2 * sin(phi)**2
-        b = 2*y*cos(phi)*sin(phi) * (v**2 - h**2)
-        c = y**2 * (v**2 * sin(phi)**2 + h**2 * cos(phi)**2) - (h**2 * v**2)
-        det = b**2 - 4*a*c
-        if det > 0:
-            x1: float = (-b - sqrt(det))/(2*a) + x0
-            x2: float = (-b + sqrt(det))/(2*a) + x0
-            return [x1,x2]
-        elif det == 0:
-            x: float = (-b / (2*a)) + x0
-            return [x]
-        else:
-            return None
-    except Exception as ex:
-        raise ex
+    a = v**2 * np.cos(phi)**2 + h**2 * np.sin(phi)**2
+    b = 2*y*np.cos(phi)*np.sin(phi) * (v**2 - h**2)
+    c = y**2 * (v**2 * np.sin(phi)**2 + h**2 * np.cos(phi)**2) - (h**2 * v**2)
+    det = b**2 - 4*a*c
+    retval:list[float] = []
+    if det > 0:
+        x1: float = (-b - np.sqrt(det))/(2*a) + x0
+        x2: float = (-b + np.sqrt(det))/(2*a) + x0
+        retval.append(x1)
+        retval.append(x2)
+    elif det == 0:
+        x: float = (-b / (2*a)) + x0
+        retval.append(x)
 
-def calc_slope_of_ellipse(ellipse_pars, x, y):
+    return retval
+
+@nb.njit(cache=True)
+def calc_slope_of_ellipse(x0, y0, a, b, phi, x, y):
     """
     calculates slope of tangent at point x,y, the point needs to be on the ellipse!
 
-    :param ellipse_params: tuple of (x0,y0,a,b,phi): x0,y0 center of ellipse; a,b sem-axis of ellipse; phi tilt rel to x axis
+    :param x0,y0,a,b,phi: x0,y0 center of ellipse; a,b sem-axis of ellipse; phi tilt rel to x axis
     :param x: x-coord where the slope will be calculated
     :returns: the slope of the tangent
     """
-    (x0, y0, a, b, phi) = ellipse_pars
     # transform to non-rotated ellipse centered to origin
-    x_rot = (x - x0)*cos(phi) + (y - y0)*sin(phi)
-    y_rot = (y - y0)*cos(phi) - (x - x0)*sin(phi)
+    x_rot = (x - x0)*np.cos(phi) + (y - y0)*np.sin(phi)
+    y_rot = (y - y0)*np.cos(phi) - (x - x0)*np.sin(phi)
     # general line equation for tangent Ax + By = C
     tan_a = x_rot/a**2
     tan_b = y_rot/b**2
     # tan_c = 1
     #rotate tangent line back to angle of the rotated ellipse
-    tan_a_r = tan_a*cos(phi) - tan_b*sin(phi)
-    tan_b_r = tan_b*cos(phi) + tan_a*sin(phi)
+    tan_a_r = tan_a*np.cos(phi) - tan_b*np.sin(phi)
+    tan_b_r = tan_b*np.cos(phi) + tan_a*np.sin(phi)
     #calc slope of tangent m = -A/B
     m_tan = - (tan_a_r / tan_b_r)
 
     return m_tan
 
-def calc_area_of_droplet(line_intersections, ellipse_pars, y_int) -> float:
+@nb.njit(cache=True)
+def calc_area_of_droplet(line_intersections, x0, y0, a, b, phi, y_int) -> float:
     """
     calculate the are of the droplet by approximating the area of the ellipse cut off at the baseline
 
-    :param ellipse_params: tuple of (x0,y0,a,b,phi): x0,y0 center of ellipse; a,b sem-axis of ellipse; phi tilt rel to x axis
+    :param x0,y0,a,b,phi: x0,y0 center of ellipse; a,b sem-axis of ellipse; phi tilt rel to x axis
     :param y_int: y coordinate of baseline
     :returns: area of droplet in px^2 
     """
-    (x0, y0, a, b, phi) = ellipse_pars
     (x1,x2) = line_intersections
     # calculate the angles of the vectors from ellipse origin to the intersections
     dy = abs(y_int - y0)
     dx1 = abs(x1 - x0)
-    ang_x1 = acos(dx1 / sqrt(dy**2 + dx1**2))
+    ang_x1 = np.arcnp.cos(dx1 / np.sqrt(dy**2 + dx1**2))
     dx2 = abs(x2 - x0) 
-    ang_x2 = acos(dx2 / sqrt(dy**2 + dx2**2))
+    ang_x2 = np.arcnp.cos(dx2 / np.sqrt(dy**2 + dx2**2))
     if y_int > y0:
         ang_x1 += pi
         ang_x2 -= pi/2
@@ -297,7 +294,7 @@ def calc_area_of_droplet(line_intersections, ellipse_pars, y_int) -> float:
 
     # calculate the surface area of the segment between x1 and x2, https://rechneronline.de/pi/elliptical-sector.php
     dphi = ang_x1 - ang_x2
-    sec_area = a*b/2 * (dphi - atan2( (b-a)*sin(2*ang_x1), (a+b+(b-a)*cos(2*ang_x1) ) + atan2( (b-a)*sin(2*ang_x2), (a+b+(b-a)*cos(2*ang_x2)) )))
+    sec_area = a*b/2 * (dphi - np.atan2( (b-a)*np.sin(2*ang_x1), (a+b+(b-a)*np.cos(2*ang_x1) ) + np.atan2( (b-a)*np.sin(2*ang_x2), (a+b+(b-a)*np.cos(2*ang_x2)) )))
     # add or remove triangle enclosed by x1, x2 and origin of ellipse to get area of ellipse above baseline
     if y_int > y0:
         area = sec_area + (dy*(dx1/2 + dx2/2))
@@ -306,40 +303,51 @@ def calc_area_of_droplet(line_intersections, ellipse_pars, y_int) -> float:
 
     return area
 
-def calc_height_of_droplet(ellipse_pars, y_base) -> float:
+@nb.jit(cache=True)
+def calc_height_of_droplet(x0, y0, a, b, phi, y_base) -> float:
     """
     calculate the height of the droplet by measuring distance between baseline and top of ellipse
 
-    :param ellipse_params: tuple of (x0,y0,a,b,phi): x0,y0 center of ellipse; a,b sem-axis of ellipse; phi tilt rel to x axis
+    :param x0,y0,a,b,phi: x0,y0 center of ellipse; a,b sem-axis of ellipse; phi tilt rel to x axis
     :param y_base: y coordinate of baseline
     :returns: height of ellipse in px
     """
-    (x0, y0, a, b, phi) = ellipse_pars
     # https://math.stackexchange.com/questions/91132/how-to-get-the-limits-of-rotated-ellipse
     # lowspot of ellipse ( topspot in image ), ell_origin - ell_height
-    y_low = y0 - sqrt(a**2 * sin(phi)**2 + b**2 * cos(phi)**2)
+    y_low = y0 - np.sqrt(a**2 * np.sin(phi)**2 + b**2 * np.cos(phi)**2)
     # actual height, baseline - lowspot
     droplt_height = y_base - y_low
     return droplt_height
 
-def calc_goodness_of_fit(ellipse_pars, contour) -> float:
+@nb.jit(cache=True)
+def calc_volume_of_droplet(x0, y0, a, b, phi, y_base) -> float:
+    """calculate the volume of the droplet by approximation of the ellipse to an ellipsoid
+
+    :param ellipse_pars: ellipse fitted to the droplet
+    :param y_base: baseline height
+    :return: volume of droplet in px3
+    :rtype: float
+    """
+    return -1
+
+@nb.jit(cache=True)
+def calc_goodness_of_fit(x0, y0, a, b, phi, contour) -> float:
     """calculates the goodness of the ellipse fit to the contour
     https://answers.opencv.org/question/20521/how-do-i-get-the-goodness-of-fit-for-the-result-of-fitellipse/
 
        if point (x,y) is on ellipse with axes a,b the following equation is true:
            (x/a)^2 + (y/b)^2 = 1
 
-        goodness of fit is calculated as sum( abs( (x/a)^2 + (y/b)^2 - 1 ) )  
+        goodness of fit is calculated as mean( abs( (x/a)^2 + (y/b)^2 - 1 ) )  
 
     -----
     :param ellipse_pars: ellipse parameters x0,y0,a,b,phi
     :param contour: contour the ellipse was fitted to
     :return: goodness of fit, smaller is better
     """
-    (x0, y0, a, b, phi) = ellipse_pars
 
-    cosphi = cos(phi)
-    sinphi = sin(phi)
+    cosphi = np.cos(phi)
+    sinphi = np.sin(phi)
 
     def calc(point):
         x,y = point[0]
@@ -353,34 +361,87 @@ def calc_goodness_of_fit(ellipse_pars, contour) -> float:
     gof = np.mean(output)
     return gof
 
-def calc_regr_score_r2(ellipse_pars, contour) -> float:
+def calc_regr_score_r2(x0, y0, a, b, phi, contour) -> float:
     """calculates the coefficient of determination R²
     https://en.wikipedia.org/wiki/Coefficient_of_determination
 
     -----
-    :param ellipse_pars: ellipse parameters x0,y0,a,b,phi
+    :param x0, y0, a, b, phi: ellipse parameters x0,y0,a,b,phi
     :param contour: contour the ellipse was fitted to
     :return: R²: 0 worst, 1 best, other: wrong fit model!
     """
-    (x0, y0, a, b, phi) = ellipse_pars
-    data = np.reshape(contour,[-1,2])
+    data = contour.reshape(-1,2)
     ell = skimage.measure.EllipseModel()
-    ell.params = ellipse_pars
-    cosphi = cos(phi)
-    sinphi = sin(phi)
+    ell.params = (x0, y0, a, b, phi)
+
     xm, ym = np.mean(data, axis=0)
-    sq_sum_res = sum(ell.residuals(data))
 
     def calc_sq_sum(point):
         xi,yi = point
         return np.sqrt((xi - xm)**2 + (yi - ym)**2)
 
     #sq_sum_tot = sum(np.linalg.norm(data,axis=1))
-    sq_sum_tot = sum([calc_sq_sum(point) for point in data])
+    time_start = time.time()
+    sq_sum_res = np.sum(ell.residuals(data))
+    print(time.time() - time_start)
+    sq_sum_tot = np.sum([calc_sq_sum(point) for point in data])
+    print(time.time() - time_start)
 
     r2 = 1 - sq_sum_res/sq_sum_tot
 
     return r2
+
+def calc_regr_score_r2_y_only(x0, y0, a, b, phi, contour) -> float:
+    """
+    calculates the coefficient of determination R² only from the y delta!
+    https://en.wikipedia.org/wiki/Coefficient_of_determination
+
+
+    -----
+    :param x0, y0, a, b, phi: ellipse parameters x0,y0,a,b,phi
+    :param contour: contour the ellipse was fitted to
+    :return: R²: 0 worst, 1 best, other: wrong fit model!
+    """
+    data = contour.reshape(-1,2)
+    y_data = data[:,1]
+
+    rot_mat = np.array( [
+                        [np.cos(phi)    ,   np.sin(phi)], 
+                        [-np.sin(phi)   ,   np.cos(phi)] 
+                        ])
+    data_trans = data - np.array([x0, y0])
+    data_trans = rot_mat.dot(data_trans.T).T
+    #sq_sum_res = np.apply_along_axis(calc_ss_res, 1, data_trans, a, b)
+    sq_sum_res = calc_ss_res(data_trans, a, b).sum()
+    # sq_sum_res = 0.0
+    # for point in data_trans:
+    #     xi,yi = point
+    #     xe = xi if np.abs(xi) < a else a * np.sign(xi) # prevent from checking points outside of ellipse
+    #     ye = (np.sqrt(1 - (xe/a)**2) * b) * np.sign(yi)
+    #     sq_sum_res += (ye - yi)**2
+
+    #sq_sum_res = np.sum(sq_sum_res)
+    ym = np.mean(y_data)
+    sq_sum_tot = np.sum((y_data - ym)**2)
+
+
+    r2 = 1 - sq_sum_res/sq_sum_tot
+
+    return r2
+
+@nb.guvectorize(['void(double[:], float32, float32, double[:])'], "(n),(),()->()", target='parallel')
+def calc_ss_res(point, a, b, out):
+    """calculate square of difference from points to points of ellipse
+
+    :param point: point to check
+    :type point: np.ndarray
+    :param a,b: ellipse half-axes
+    :return: (y_point - ell(x_point)) ^2
+    """
+    xi,yi = point
+    xe = xi if np.abs(xi) < a else a * np.sign(xi) # prevent from checking points outside of ellipse
+    ye = (np.sqrt(1 - (xe/a)**2) * b) * np.sign(yi)
+    out[0] = (ye - yi)**2
 
 
 # for testing purposes:
@@ -388,9 +449,9 @@ if __name__ == "__main__":
     im = cv2.imread('untitled1.png', cv2.IMREAD_GRAYSCALE)
     im = np.reshape(im, im.shape + (1,) )
     (h,w,d) = np.shape(im)
-    try:
-        drp = evaluate_droplet(im, 250, (int(w/2-40), 0, 80, h))
-    except Exception as ex:
-        print(ex)
+    # try:
+    drp = evaluate_droplet(im, 250, (int(w/2-40), 0, 80, h))
+    # except Exception as ex:
+    #     print(ex)
     cv2.imshow('Test',im)
     cv2.waitKey(0)
