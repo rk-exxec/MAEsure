@@ -241,7 +241,7 @@ class CameraPreview(QOpenGLWidget):
         bytes_per_line = ch * w
         qimg = QtGui.QImage(cv_img, w, h, bytes_per_line, QtGui.QImage.Format_Grayscale8)
         if scaled: 
-            qimg_scaled = qimg.scaled(self.size(), Qt.KeepAspectRatio)
+            qimg_scaled = qimg.scaled(self.size(), aspectMode=Qt.KeepAspectRatio, mode=Qt.SmoothTransformation)
             return QPixmap.fromImage(qimg_scaled)
         else:
             return qimg
