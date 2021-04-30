@@ -83,8 +83,8 @@ class Droplet(Singleton):
         self.int_r          : tuple[int,int]        = (0,0)
         self.line_r         : tuple[int,int,int,int] = (0,0,0,0)
         self.base_diam      : int                   = 0
-        self._area          : float                 = 0.0
-        self._area_avg                              = RollingAverager()
+        self._volume        : float                 = 0.0
+        self._volume_avg                            = RollingAverager()
         self._height        : float                 = 0.0
         self._height_avg                            = RollingAverager()
         var_scale = settings.value("droplet/scale_px_to_mm", 0.0)
@@ -101,8 +101,8 @@ class Droplet(Singleton):
                     {round(self.angle_r,1):.1f}°
                     Surface Diam:
                     {round(self.base_diam):.2f} px
-                    Area:
-                    {round(self.area,2):.2f} px2
+                    Volume:
+                    {round(self.volume,2):.2f} px2
                     Height:
                     {round(self.height,2):.2f} px
                     R²:
@@ -117,8 +117,8 @@ class Droplet(Singleton):
                     {round(self.angle_r,1):.1f}°
                     Surface Diam:
                     {round(self.base_diam_mm,2):.2f} mm
-                    Area:
-                    {round(self.area_mm,2):.2f} mm2
+                    Volume:
+                    {round(self.volume_mm,2):.2f} mm2
                     Height:
                     {round(self.height_mm,2):.2f} mm
                     R²:
@@ -162,14 +162,14 @@ class Droplet(Singleton):
         self._height = value
 
     @property
-    def area(self):
-        """ approx area of droplet silouette in px^2 """
-        return self._area_avg.average
+    def volume(self):
+        """ approx volume of droplet  in px^3 """
+        return self._volume_avg.average
 
-    @area.setter
-    def area(self, value):
-        self._area_avg._put(value)
-        self._area = value
+    @volume.setter
+    def volume(self, value):
+        self._volume_avg._put(value)
+        self._volume = value
 
     # return values after converting to metric
     @property
@@ -189,8 +189,8 @@ class Droplet(Singleton):
         return self.base_diam * self.scale_px_to_mm
 
     @property
-    def area_mm(self):
-        return self._area_avg.average * self.scale_px_to_mm**2
+    def volume_mm(self):
+        return self._volume_avg.average * self.scale_px_to_mm**2
 
     def set_scale(self, scale):
         """ set and store a scalefactor to calculate mm from pixels
@@ -213,7 +213,7 @@ class Droplet(Singleton):
         self._angle_l_avg.set_length(value)
         self._angle_r_avg.set_length(value)
         self._height_avg.set_length(value)
-        self._area_avg.set_length(value)
+        self._volume_avg.set_length(value)
 
     def reset_filters(self):
         """reset the filters for special modes
@@ -221,7 +221,7 @@ class Droplet(Singleton):
         self._angle_l_avg.reset()
         self._angle_r_avg.reset()
         self._height_avg.reset()
-        self._area_avg.reset()
+        self._volume_avg.reset()
 
     def change_filter_mode(self, mode):
         """change the filter modes
@@ -231,7 +231,7 @@ class Droplet(Singleton):
         self._angle_l_avg.change_mode(mode)
         self._angle_r_avg.change_mode(mode)
         self._height_avg.change_mode(mode)
-        self._area_avg.change_mode(mode)
+        self._volume_avg.change_mode(mode)
 
 class RollingAverager:
     """ 
