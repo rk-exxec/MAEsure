@@ -64,7 +64,7 @@ class Droplet(Singleton):
     def __init__(self):
         settings                                    = QSettings()
         self.is_valid       : bool                  = False
-        self.r2            : float                 = 0
+        self.r2             : float                 = 0
         self._angle_l       : float                 = 0.0
         self._angle_l_avg                           = RollingAverager()
         self._angle_r       : float                 = 0.0
