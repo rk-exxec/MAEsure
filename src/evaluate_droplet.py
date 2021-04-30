@@ -23,6 +23,7 @@ from math import acos, cos, sin, pi, sqrt, atan2, radians, degrees
 from typing import Tuple
 import cv2
 import numpy as np
+import skimage.measure
 
 from droplet import Droplet
 
@@ -91,7 +92,7 @@ def evaluate_droplet(img, y_base, mask: Tuple[int,int,int,int] = None) -> Drople
     phi = radians(phi_deg)
     a = maj_ax/2
     b = min_ax/2
-    gof = calc_goodness_of_fit((x0,y0,a,b,phi), edge)
+    r2 = calc_regr_score_r2((x0,y0,a,b,phi), edge)
 
     # diesen fit vllt zum laufen bringen https://scikit-image.org/docs/0.15.x/api/skimage.measure.html
     #points = edge.reshape(-1,2)
@@ -150,7 +151,7 @@ def evaluate_droplet(img, y_base, mask: Tuple[int,int,int,int] = None) -> Drople
     drplt.base_diam = x_int_r - x_int_l
     drplt.area = area
     drplt.height = drplt_height
-    drplt.gof = gof
+    drplt.r2 = r2
     drplt.is_valid = True
 
     if DEBUG & DBG_DRAW_TAN_ANGLE:
@@ -163,7 +164,7 @@ def evaluate_droplet(img, y_base, mask: Tuple[int,int,int,int] = None) -> Drople
         img = cv2.line(img, (0,y_int), (width, y_int), (255,0,0), thickness=2, lineType=cv2.LINE_AA)
         img = cv2.putText(img, '<' + str(round(angle_l*180/pi,1)), (5,y_int-5), cv2.FONT_HERSHEY_COMPLEX, .5, (0,0,0))
         img = cv2.putText(img, '<' + str(round(angle_r*180/pi,1)), (width - 80,y_int-5), cv2.FONT_HERSHEY_COMPLEX, .5, (0,0,0))
-        img = cv2.putText(img, 'GOF: ' + str(round(gof,3)), (10, 20), cv2.FONT_HERSHEY_COMPLEX, .5, (0,0,0))
+        img = cv2.putText(img, 'GOF: ' + str(round(r2,3)), (10, 20), cv2.FONT_HERSHEY_COMPLEX, .5, (0,0,0))
 
     #return drplt#, img
 
@@ -351,6 +352,35 @@ def calc_goodness_of_fit(ellipse_pars, contour) -> float:
     output = [calc(point) for point in contour]
     gof = np.mean(output)
     return gof
+
+def calc_regr_score_r2(ellipse_pars, contour) -> float:
+    """calculates the coefficient of determination R²
+    https://en.wikipedia.org/wiki/Coefficient_of_determination
+
+    -----
+    :param ellipse_pars: ellipse parameters x0,y0,a,b,phi
+    :param contour: contour the ellipse was fitted to
+    :return: R²: 0 worst, 1 best, other: wrong fit model!
+    """
+    (x0, y0, a, b, phi) = ellipse_pars
+    data = np.reshape(contour,[-1,2])
+    ell = skimage.measure.EllipseModel()
+    ell.params = ellipse_pars
+    cosphi = cos(phi)
+    sinphi = sin(phi)
+    xm, ym = np.mean(data, axis=0)
+    sq_sum_res = sum(ell.residuals(data))
+
+    def calc_sq_sum(point):
+        xi,yi = point
+        return np.sqrt((xi - xm)**2 + (yi - ym)**2)
+
+    #sq_sum_tot = sum(np.linalg.norm(data,axis=1))
+    sq_sum_tot = sum([calc_sq_sum(point) for point in data])
+
+    r2 = 1 - sq_sum_res/sq_sum_tot
+
+    return r2
 
 
 # for testing purposes:

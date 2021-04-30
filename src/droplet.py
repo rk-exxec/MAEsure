@@ -64,7 +64,7 @@ class Droplet(Singleton):
     def __init__(self):
         settings                                    = QSettings()
         self.is_valid       : bool                  = False
-        self.gof            : float                 = 0
+        self.r2            : float                 = 0
         self._angle_l       : float                 = 0.0
         self._angle_l_avg                           = RollingAverager()
         self._angle_r       : float                 = 0.0
@@ -104,8 +104,8 @@ class Droplet(Singleton):
                     {round(self.area,2):.2f} px2
                     Height:
                     {round(self.height,2):.2f} px
-                    GOF:
-                    {round(self.gof,3)}
+                    R²:
+                    {round(self.r2,3)}
                     '''
                 )
             else:
@@ -120,8 +120,8 @@ class Droplet(Singleton):
                     {round(self.area_mm,2):.2f} mm2
                     Height:
                     {round(self.height_mm,2):.2f} mm
-                    GOF:
-                    {round(self.gof,3)}
+                    R²:
+                    {round(self.r2,3)}
                     '''   
                 )
         else:
@@ -316,6 +316,3 @@ class RollingAverager:
             self.length = 0
         elif mode == 2:
             self.set_length(1)
-
-        
-
