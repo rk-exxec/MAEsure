@@ -204,7 +204,7 @@ class CameraPreview(QOpenGLWidget):
                 try:
                     self._droplet.is_valid = False
                     evaluate_droplet(cv_img, self.get_baseline_y(), self._mask)
-                except (ContourError, cv2.error, TypeError):
+                except (ContourError, cv2.error, TypeError) as ex:
                     pass
                 except Exception as ex:
                     logging.exception("Exception thrown in %s", "fcn:evaluate_droplet", exc_info=ex)
