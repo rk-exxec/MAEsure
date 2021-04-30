@@ -87,7 +87,8 @@ class Droplet(Singleton):
         self._area_avg                              = RollingAverager()
         self._height        : float                 = 0.0
         self._height_avg                            = RollingAverager()
-        self.scale_px_to_mm : float                 = float(settings.value("droplet/scale_px_to_mm", 0.0)) # try to load from persistent storage
+        var_scale = settings.value("droplet/scale_px_to_mm", 0.0)
+        self.scale_px_to_mm : float                 = float(var_scale) if var_scale else None # try to load from persistent storage
 
     def __str__(self) -> str:
         if self.is_valid:
