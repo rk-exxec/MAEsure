@@ -20,12 +20,11 @@
 # ideally to the whole contour before fitting the ellipse
 
 import time
-from typing import Tuple
+from typing import List, Tuple
 
 from math import acos, cos, sin, pi, sqrt, atan2, radians, degrees
 
 import numba as nb
-from numba.np.ufunc import parallel
 import numpy as np
 import skimage.measure
 import cv2
@@ -40,7 +39,7 @@ DBG_DRAW_TAN_ANGLE = 0x4
 DBG_ALL = 0x7
 DEBUG = DBG_NONE
 
-USE_GPU = False
+USE_GPU = True
 
 class ContourError(Exception):
     pass
@@ -110,10 +109,11 @@ def evaluate_droplet(img, y_base, mask: Tuple[int,int,int,int] = None) -> Drople
 
     if intersection == []:
         raise ContourError('No valid intersections found')
-    x_int_l = min(intersection)
-    x_int_r = max(intersection)
 
-    foc_len = np.sqrt(abs(a**2 - b**2))
+    x_int_l = np.min(intersection)
+    x_int_r = np.max(intersection)
+
+    foc_len = np.sqrt(np.abs(a**2 - b**2))
 
     # calc slope and angle of tangent at intersections
     m_t_l = calc_slope_of_ellipse(x0,y0,a,b,phi, x_int_l, y_base)
@@ -129,7 +129,8 @@ def evaluate_droplet(img, y_base, mask: Tuple[int,int,int,int] = None) -> Drople
 
     # calc height of droplet
     drplt_height = calc_height_of_droplet(x0,y0,a,b,phi, y_base)
-    
+
+    #region droplet value assignment
     # write values to droplet object
     drplt.angle_l = degrees(angle_l)
     drplt.angle_r = degrees(angle_r)
@@ -151,6 +152,7 @@ def evaluate_droplet(img, y_base, mask: Tuple[int,int,int,int] = None) -> Drople
     drplt.height = drplt_height
     drplt.r2 = r2
     drplt.is_valid = True
+    #endregion
 
     if DEBUG & DBG_DRAW_TAN_ANGLE:
         # painting
@@ -217,7 +219,7 @@ def find_contour(img, is_masked):
     return contour
 
 @nb.njit(cache=True)
-def calc_intersection_line_ellipse(x0, y0, h, v, phi, m, t,):
+def calc_intersection_line_ellipse(x0, y0, h, v, phi, m, t,) -> List[float]:
     """
     calculates intersection(s) of an ellipse with a horizontal line
 
@@ -244,7 +246,7 @@ def calc_intersection_line_ellipse(x0, y0, h, v, phi, m, t,):
     return retval
 
 @nb.njit(cache=True)
-def calc_slope_of_ellipse(x0, y0, a, b, phi, x, y):
+def calc_slope_of_ellipse(x0, y0, a, b, phi, x, y) -> float:
     """
     calculates slope of tangent at point x,y, the point needs to be on the ellipse!
 
