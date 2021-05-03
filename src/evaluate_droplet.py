@@ -76,7 +76,12 @@ def evaluate_droplet(img, y_base, mask: Tuple[int,int,int,int] = None) -> Drople
     # block detection of syringe
     if (not mask is None):
         x,y,w,h = mask
-        bw_edges[:, x:x+w] = 0
+        if USE_GPU:
+            mask_mat = np.zeros(shape)
+            mask_mat[:, x:x+w] = 1
+            bw_edges.setTo(0, mask_mat)
+        else:
+            bw_edges[:, x:x+w] = 0
         #img[:, x:x+w] = 0
         masked = True
     else:
