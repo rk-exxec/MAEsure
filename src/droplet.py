@@ -103,7 +103,7 @@ class Droplet(Singleton):
                     Surface Diam:
                     {round(self.base_diam):.2f} px
                     Volume:
-                    {round(self.volume,2):.2f} px2
+                    {round(self.volume,2):.2f} px3
                     Height:
                     {round(self.height,2):.2f} px
                     R²:
@@ -119,7 +119,7 @@ class Droplet(Singleton):
                     Surface Diam:
                     {round(self.base_diam_mm,2):.2f} mm
                     Volume:
-                    {round(self.volume_mm,2):.2f} mm2
+                    {round(self.volume_mm,2):.2f} µl
                     Height:
                     {round(self.height_mm,2):.2f} mm
                     R²:
@@ -193,7 +193,7 @@ class Droplet(Singleton):
 
     @property
     def volume_mm(self):
-        return self._volume_avg.average * self.scale_px_to_mm**2
+        return self._volume_avg.average * self.scale_px_to_mm**3
 
     def set_scale(self, scale):
         """ set and store a scalefactor to calculate mm from pixels

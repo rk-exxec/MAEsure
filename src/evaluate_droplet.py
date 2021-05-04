@@ -335,7 +335,7 @@ def calc_height_of_droplet(x0, y0, a, b, phi, y_base) -> float:
     droplt_height = y_base - y_low
     return droplt_height
 
-@nb.jit(cache=True)
+#@nb.jit(cache=True)
 def calc_volume_of_droplet(x0, y0, a, b, phi, y_base) -> float:
     """calculate the volume of the droplet by approximation of the ellipse to an ellipsoid
 
@@ -344,7 +344,28 @@ def calc_volume_of_droplet(x0, y0, a, b, phi, y_base) -> float:
     :return: volume of droplet in px3
     :rtype: float
     """
-    return -1
+    # cutting plane params Ax + By + Cz = D
+    # transformation in same coordinate system as non rotated ellipse at origin
+    rot_mat = np.array([[np.cos(-phi), -np.sin(-phi), 0],
+                        [np.sin(-phi), np.cos(-phi), 0],
+                        [0, 0, 1]])
+    ell_origin = np.array([x0,y0,0])
+    plane_norm_vec = np.array([0,1,0])
+    plane_norm_vec = rot_mat.dot(plane_norm_vec.T).T
+    plane_supp_vec = np.array([x0,y_base,0]) - ell_origin
+    plane_supp_vec = rot_mat.dot(plane_supp_vec.T).T
+    pA,pB,pC = plane_norm_vec
+    pD = plane_supp_vec.dot(plane_norm_vec)
+
+    # ellipsoid params a,b,c: c=a
+    c = a
+
+    # calculating volume https://math.stackexchange.com/questions/1145267/volume-of-the-smaller-region-of-ellipsoid-cut-by-plane
+    frac = (np.abs(pD) / np.sqrt((pA*a)**2 + (pB*b)**2 + (pC*c)**2))
+    volume = (a*b*c * pi/ 3) * (frac**3 - 3*frac + 2)
+    # subtract piece above plane to get piece below plane
+    volume = 4*pi/3 * a*b*c - volume
+    return volume
 
 @nb.jit(cache=True)
 def calc_goodness_of_fit(x0, y0, a, b, phi, contour) -> float:
