@@ -232,7 +232,7 @@ def get_largest_area_contours(contour_area_list, is_masked):
         contour = cntr_area_list_sorted[-1][0]
     return contour
 
-@nb.njit(cache=True)
+#@nb.njit(cache=True)
 def calc_intersection_line_ellipse(x0, y0, h, v, phi, m, t,) -> List[float]:
     """
     calculates intersection(s) of an ellipse with a horizontal line
@@ -259,7 +259,7 @@ def calc_intersection_line_ellipse(x0, y0, h, v, phi, m, t,) -> List[float]:
 
     return retval
 
-@nb.njit(cache=True)
+#@nb.njit(cache=True)
 def calc_slope_of_ellipse(x0, y0, a, b, phi, x, y) -> float:
     """
     calculates slope of tangent at point x,y, the point needs to be on the ellipse!
@@ -283,7 +283,7 @@ def calc_slope_of_ellipse(x0, y0, a, b, phi, x, y) -> float:
 
     return m_tan
 
-@nb.njit(cache=True)
+#@nb.njit(cache=True)
 def calc_area_of_droplet(line_intersections, x0, y0, a, b, phi, y_int) -> float:
     """
     calculate the are of the droplet by approximating the area of the ellipse cut off at the baseline
@@ -319,7 +319,7 @@ def calc_area_of_droplet(line_intersections, x0, y0, a, b, phi, y_int) -> float:
 
     return area
 
-@nb.jit(cache=True)
+#@nb.njit(cache=True)
 def calc_height_of_droplet(x0, y0, a, b, phi, y_base) -> float:
     """
     calculate the height of the droplet by measuring distance between baseline and top of ellipse
@@ -335,7 +335,7 @@ def calc_height_of_droplet(x0, y0, a, b, phi, y_base) -> float:
     droplt_height = y_base - y_low
     return droplt_height
 
-#@nb.jit(cache=True)
+#@nb.njit(cache=True)
 def calc_volume_of_droplet(x0, y0, a, b, phi, y_base) -> float:
     """calculate the volume of the droplet by approximation of the ellipse to an ellipsoid
 
@@ -346,11 +346,11 @@ def calc_volume_of_droplet(x0, y0, a, b, phi, y_base) -> float:
     """
     # cutting plane params Ax + By + Cz = D
     # transformation in same coordinate system as non rotated ellipse at origin
-    rot_mat = np.array([[np.cos(-phi), -np.sin(-phi), 0],
-                        [np.sin(-phi), np.cos(-phi), 0],
-                        [0, 0, 1]])
-    ell_origin = np.array([x0,y0,0])
-    plane_norm_vec = np.array([0,1,0])
+    rot_mat = np.array([[np.cos(-phi), -np.sin(-phi), 0.0],
+                        [np.sin(-phi), np.cos(-phi), 0.0],
+                        [0.0, 0.0, 1.0]] )
+    ell_origin = np.array([x0, y0, 0.0])
+    plane_norm_vec = np.array([0.0, 1.0, 0.0])
     plane_norm_vec = rot_mat.dot(plane_norm_vec.T).T
     plane_supp_vec = np.array([x0,y_base,0]) - ell_origin
     plane_supp_vec = rot_mat.dot(plane_supp_vec.T).T
@@ -367,7 +367,7 @@ def calc_volume_of_droplet(x0, y0, a, b, phi, y_base) -> float:
     volume = 4*pi/3 * a*b*c - volume
     return volume
 
-@nb.jit(cache=True)
+#@nb.jit(cache=True)
 def calc_goodness_of_fit(x0, y0, a, b, phi, contour) -> float:
     """calculates the goodness of the ellipse fit to the contour
     https://answers.opencv.org/question/20521/how-do-i-get-the-goodness-of-fit-for-the-result-of-fitellipse/
@@ -457,6 +457,7 @@ def calc_regr_score_r2_y_only(x0, y0, a, b, phi, contour) -> float:
 
     return r2
 
+# decorator makes function accept numpy array and applies calculation to every element, returns numpy array of results
 @nb.guvectorize(['void(double[:], float32, float32, double[:])'], "(n),(),()->()", target='parallel')
 def calc_ss_res(point, a, b, out):
     """calculate square of difference from points to points of ellipse
