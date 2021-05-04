@@ -39,7 +39,7 @@ DBG_DRAW_TAN_ANGLE = 0x4
 DBG_ALL = 0x7
 DEBUG = DBG_NONE
 
-USE_GPU = True
+USE_GPU = False # slower somehow
 
 class ContourError(Exception):
     pass
@@ -76,32 +76,37 @@ def evaluate_droplet(img, y_base, mask: Tuple[int,int,int,int] = None) -> Drople
     # block detection of syringe
     if (not mask is None):
         x,y,w,h = mask
-        if USE_GPU:
-            mask_mat = np.zeros(shape)
-            mask_mat[:, x:x+w] = 1
-            bw_edges.setTo(0, mask_mat)
-        else:
-            bw_edges[:, x:x+w] = 0
+        # if USE_GPU:
+        mask_mat = np.ones([y_base, width], dtype="uint8")
+        mask_mat[:, x:x+w] = 0
+        
+        bw_edges = cv2.bitwise_and(bw_edges, bw_edges, mask=mask_mat)
+        # else:
+        #     bw_edges[:, x:x+w] = 0
         #img[:, x:x+w] = 0
         masked = True
     else:
         masked = False
 
-    edge = find_contour(bw_edges, masked)
-
     if USE_GPU:
         # fetch contours from gpu memory
         # cntrs = [cv2.UMat.get(c) for c in contours]
-        edge = cv2.UMat.get(edge)
-        if DEBUG & DBG_SHOW_CONTOURS:
-            # img = cv2.drawContours(img,cntrs,-1,(100,100,255),2)
-            img = cv2.drawContours(img,edge,-1,(255,0,0),2)
+        bw_edges = cv2.UMat.get(bw_edges)
+
+    edge = find_contour(bw_edges, masked)
+
+    if DEBUG & DBG_SHOW_CONTOURS:
+        # img = cv2.drawContours(img,cntrs,-1,(100,100,255),2)
+        img = cv2.drawContours(img,edge,-1,(255,0,0),2)
 
     # apply ellipse fitting algorithm to droplet
     (x0,y0), (maj_ax,min_ax), phi_deg = cv2.fitEllipse(edge)
     phi = radians(phi_deg)
     a = maj_ax/2
     b = min_ax/2
+
+    if a == 0 or b == 0:
+        raise ValueError('Malformed ellipse fit! Axis = 0')
 
     r2 = calc_regr_score_r2_y_only(x0,y0,a,b,phi, edge)
 
@@ -200,8 +205,12 @@ def find_contour(img, is_masked):
         x,y,w,h = cv2.boundingRect(cont)
         # store contour, area of bounding rect and bounding rect in array
         cntr_area_list.append([cont, w*h, x, y, x+w, y+h])
+    
+    return get_largest_area_contours(cntr_area_list, is_masked)
+    
+def get_largest_area_contours(contour_area_list, is_masked):
     # sort contours by bounding rect area
-    cntr_area_list_sorted = sorted(cntr_area_list, key=lambda item: item[1])
+    cntr_area_list_sorted = sorted(contour_area_list, key=lambda item: item[1])
     
     if is_masked:
         # select largest 2 non overlapping contours, assumes mask splits largest contour in the middle
@@ -211,9 +220,9 @@ def find_contour(img, is_masked):
         #check if second largest contour is not from inside the droplet by checking overlap of bounding rects
         BR = rects[-1] # biggest rect
         SR = rects[0] # slightly smaller rect
-        # check if smaller rect overaps with larger rect
+        # check if smaller rect overlaps with larger rect
         if (BR[2] < SR[0] or BR[0] > SR[2] or BR[1] > SR[3] or BR[3] < SR[1]):
-            # if not both rects are valid droplet contours, merge them
+            # if not, both rects are valid droplet contours, merge them
             contour = np.concatenate((largest_conts[0], largest_conts[1]))
         else:
             # else only biggest is valid droplet contour
@@ -418,19 +427,10 @@ def calc_regr_score_r2_y_only(x0, y0, a, b, phi, contour) -> float:
                         ])
     data_trans = data - np.array([x0, y0])
     data_trans = rot_mat.dot(data_trans.T).T
-    #sq_sum_res = np.apply_along_axis(calc_ss_res, 1, data_trans, a, b)
     sq_sum_res = calc_ss_res(data_trans, a, b).sum()
-    # sq_sum_res = 0.0
-    # for point in data_trans:
-    #     xi,yi = point
-    #     xe = xi if np.abs(xi) < a else a * np.sign(xi) # prevent from checking points outside of ellipse
-    #     ye = (np.sqrt(1 - (xe/a)**2) * b) * np.sign(yi)
-    #     sq_sum_res += (ye - yi)**2
 
-    #sq_sum_res = np.sum(sq_sum_res)
     ym = np.mean(y_data)
     sq_sum_tot = np.sum((y_data - ym)**2)
-
 
     r2 = 1 - sq_sum_res/sq_sum_tot
 
@@ -456,8 +456,10 @@ if __name__ == "__main__":
     im = cv2.imread('untitled1.png', cv2.IMREAD_GRAYSCALE)
     im = np.reshape(im, im.shape + (1,) )
     (h,w,d) = np.shape(im)
+    dt = time.time()
     # try:
     drp = evaluate_droplet(im, 250, (int(w/2-40), 0, 80, h))
+    print(time.time() - dt)
     # except Exception as ex:
     #     print(ex)
     cv2.imshow('Test',im)
