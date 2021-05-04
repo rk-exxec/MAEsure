@@ -178,7 +178,6 @@ def evaluate_droplet(img, y_base, mask: Tuple[int,int,int,int] = None) -> Drople
 
     #return drplt#, img
 
-
 def find_contour(img, is_masked):
     """searches for contours and returns the ones with largest bounding rect
 
@@ -206,11 +205,14 @@ def find_contour(img, is_masked):
         # store contour, area of bounding rect and bounding rect in array
         cntr_area_list.append([cont, w*h, x, y, x+w, y+h])
     
+    cntr_area_list = np.array(cntr_area_list)
     return get_largest_area_contours(cntr_area_list, is_masked)
     
+#@nb.jit(nopython=True, parallel=True)
 def get_largest_area_contours(contour_area_list, is_masked):
     # sort contours by bounding rect area
-    cntr_area_list_sorted = sorted(contour_area_list, key=lambda item: item[1])
+    #cntr_area_list_sorted = sorted(contour_area_list, key=lambda item: item[1])
+    cntr_area_list_sorted = contour_area_list[contour_area_list[:,1].argsort()]
     
     if is_masked:
         # select largest 2 non overlapping contours, assumes mask splits largest contour in the middle
