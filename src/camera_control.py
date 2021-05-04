@@ -285,20 +285,26 @@ class CameraControl(QGroupBox):
         """ 
         map pixels to mm 
         
-        - place object with known size at default distance from camera
+        - use needle mask to closely measure needle
         - call this fcn
-        - enter size of object
+        - enter size of needle
         - fcn calculates scale factor and saves it to droplet object
         """
+        if self.ui.camera_prev._needle_mask.isHidden():
+            QMessageBox.warning(self, "Error setting scale", "The needle mask needs to be active and set to a known width!")
+            return
+        # get size of needle mask
+        rect = self.ui.camera_prev._mask
+
         # do oneshot eval and extract height from droplet, then calc scale and set in droplet
-        res,ok = QInputDialog.getDouble(self,"Size of calib element", "Please enter the height of the test subject in mm:", 0, 0, 100)
+        res,ok = QInputDialog.getDouble(self,"Size of calib element", "Please enter the size of the test subject in mm:", 0, 0, 100)
         if not ok or res == 0.0:
             return
-        self._oneshot_eval = True
+        
         droplt = Droplet() # singleton
-        self.cam.snapshot()
-        droplt.set_scale(res / droplt._height)
-        logging.info(f"set image to real scae to {res / droplt._height}")
+        droplt.set_scale(res / rect[2])
+        QMessageBox.information(self, "Success", f"Scale set to {res / rect[2]:.3f} mm/px")
+        logging.info(f"set image to real scale to {res / rect[2]}")
 
     @Slot()
     def remove_size_calib(self):

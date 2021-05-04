@@ -18,6 +18,7 @@ from typing import List, Tuple, Union
 import cv2
 import numpy as np
 import logging
+import time
 
 from PySide2 import QtGui
 from PySide2.QtWidgets import QLabel, QOpenGLWidget
@@ -283,7 +284,6 @@ class CameraPreview(QOpenGLWidget):
         scale_x, scale_y, offset_x, offset_y = self.get_from_image_transform()
         res: List[int] = []
         if x is not None:
-            # subtract half the width delta, then scale
             tr_x = int(round((x - offset_x) / scale_x))
             res.append(tr_x)
         if y is not None:
