@@ -26,6 +26,7 @@ from math import acos, cos, sin, pi, sqrt, atan2, radians, degrees
 
 import numba as nb
 import numpy as np
+from pyqtgraph.graphicsItems.LegendItem import LegendItem
 import skimage.measure
 import cv2
 
@@ -198,40 +199,44 @@ def find_contour(img, is_masked):
     if len(contours) == 0:
         raise ContourError('No contours found!')
     # edge = max(contours, key=cv2.contourArea)
+    
+    return get_largest_area_contours(contours, is_masked)
+    
+#@nb.jit(cache=True)
+def get_largest_area_contours(contours, is_masked):
+    length = len(contours)
+    area_list = np.zeros(length, dtype=float)
+    rect_list = np.zeros([length,4], dtype=float)
+    contours = np.array(contours, dtype=object)
 
-    cntr_area_list = []
-    for cont in contours:
+    for idx, cont in np.ndenumerate(contours):
         x,y,w,h = cv2.boundingRect(cont)
         # store contour, area of bounding rect and bounding rect in array
-        cntr_area_list.append([cont, w*h, x, y, x+w, y+h])
-    
-    cntr_area_list = np.array(cntr_area_list)
-    return get_largest_area_contours(cntr_area_list, is_masked)
-    
-#@nb.jit(nopython=True, parallel=True)
-def get_largest_area_contours(contour_area_list, is_masked):
+        area_list[idx] = w*h
+        rect_list[idx] = [x,y,w,h]
+
     # sort contours by bounding rect area
     #cntr_area_list_sorted = sorted(contour_area_list, key=lambda item: item[1])
-    cntr_area_list_sorted = contour_area_list[contour_area_list[:,1].argsort()]
+    sorted_indizes = area_list.argsort()
+    area_list = area_list[sorted_indizes]
+    contours_sorted = contours[sorted_indizes]
+    rect_list = rect_list[sorted_indizes]
     
-    if is_masked:
+    if is_masked and len(rect_list) > 1:
         # select largest 2 non overlapping contours, assumes mask splits largest contour in the middle
-        rects = [elem[2:] for elem in cntr_area_list_sorted[-2:]]
-        largest_conts = [elem[0] for elem in cntr_area_list_sorted[-2:]]
-
-        #check if second largest contour is not from inside the droplet by checking overlap of bounding rects
-        BR = rects[-1] # biggest rect
-        SR = rects[0] # slightly smaller rect
+        # check if second largest contour is not from inside the droplet by checking overlap of bounding rects
+        BR = rect_list[-1] # biggest rect
+        SR = rect_list[-2] # slightly smaller rect
         # check if smaller rect overlaps with larger rect
         if (BR[2] < SR[0] or BR[0] > SR[2] or BR[1] > SR[3] or BR[3] < SR[1]):
             # if not, both rects are valid droplet contours, merge them
-            contour = np.concatenate((largest_conts[0], largest_conts[1]))
+            contour = np.concatenate((contours_sorted[-2], contours_sorted[-1]))
         else:
             # else only biggest is valid droplet contour
-            contour = cntr_area_list_sorted[-1][0]
+            contour = contours_sorted[-1]
     else:
         # contour with largest area
-        contour = cntr_area_list_sorted[-1][0]
+        contour = contours_sorted[-1]
     return contour
 
 #@nb.njit(cache=True)
