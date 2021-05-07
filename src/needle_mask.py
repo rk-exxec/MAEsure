@@ -65,6 +65,23 @@ class DynamicNeedleMask(QWidget):
         """
         return self.geometry().normalized().getRect()
 
+    def set_mask_geometry(self, x,y,w,h):
+        #x,y,w,h = self.geometry().normalized().getRect()
+
+        # limit size to parent boundaries
+        if (x < 0):
+            # remove width that has been added by leftward dragging if x is at leftmost edge
+            w += x
+        x = max(0, min(x, self.parent().width()))
+        w = min(w, self.parent().width() - x)
+        
+        self.setGeometry(x, y, w, self.parent().height())
+        self.updateGrips()
+        self.rubberband.resize(self.size())
+        self._old_geo = self.geometry()
+        self.update_mask_signal.emit()
+        self.save_geo()
+
     def lock(self):
         """lock resizing
         """

@@ -127,6 +127,15 @@ class AbstractCamera(QObject):
         """
         raise NotImplementedError
 
+    def get_roi(self):
+        """ 
+        get the region of interest on the cam
+
+        :param x,y: x,y of ROI in image coordinates
+        :param w,h: width and height of ROI
+        """
+        raise NotImplementedError
+
     def reset_roi(self):
         """ Reset ROI to full size """
         raise NotImplementedError
@@ -226,6 +235,16 @@ if HAS_VIMBA:
             self._image_size_invalid = True
             self.snapshot()
             if was_running: self.start_streaming()
+
+        
+        def get_roi(self):
+            with self._vimba:
+                with self._cam:
+                    w = self._cam.Width.get()
+                    h = self._cam.Height.get()
+                    x = self._cam.OffsetX.get()
+                    y = self._cam.OffsetY.get()
+            return x,y,w,h
 
         def _frame_producer(self):
             with self._vimba:

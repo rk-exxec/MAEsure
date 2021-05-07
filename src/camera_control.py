@@ -116,7 +116,7 @@ class CameraControl(QGroupBox):
         self.ui.startCamBtn.clicked.connect(self.prev_start_pushed)
         self.ui.oneshotEvalBtn.clicked.connect(self.oneshot_eval)
         self.ui.setROIBtn.clicked.connect(self.apply_roi)
-        self.ui.resetROIBtn.clicked.connect(self.cam.reset_roi)
+        self.ui.resetROIBtn.clicked.connect(self.reset_roi)
         self.ui.syr_mask_chk.stateChanged.connect(self.needle_mask_changed)
         # action menu signals
         self.ui.actionVideo_Path.triggered.connect(self.set_video_path)
@@ -222,8 +222,24 @@ class CameraControl(QGroupBox):
     def apply_roi(self):
         """ Apply the ROI selected by the rubberband rectangle """
         x,y,w,h = self.ui.camera_prev.get_roi()
+        xc,yc,_,_ = self.cam.get_roi()
+        xm,ym,wm,hm = self.ui.camera_prev.get_mask_dim()
+        base_y = self.ui.camera_prev.get_baseline_y()
         logging.info(f"Applying ROI pos:({x}, {y}), size:({w}, {h})")
         self.cam.set_roi(x,y,w,h)
+        self.ui.camera_prev.set_baseline_y(base_y-(y-yc))
+        self.ui.camera_prev.set_mask_dim(xm - (x-xc), ym - (x-yc), wm, hm)
+
+    @Slot()
+    def reset_roi(self):
+        """ Reset the ROI of the camera """
+        xc,yc,_,_ = self.cam.get_roi()
+        base_y = self.ui.camera_prev.get_baseline_y()
+        xm,ym,wm,hm = self.ui.camera_prev.get_mask_dim()
+        logging.info(f"Resetting ROI")
+        self.cam.reset_roi()
+        self.ui.camera_prev.set_baseline_y(base_y + yc)
+        self.ui.camera_prev.set_mask_dim(xm + xc, ym + yc, wm, hm)
         
 
     @Slot(np.ndarray)

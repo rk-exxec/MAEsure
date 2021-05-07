@@ -204,7 +204,9 @@ class CameraPreview(QOpenGLWidget):
             if eval:
                 try:
                     self._droplet.is_valid = False
+                    dt = time.time()
                     evaluate_droplet(cv_img, self.get_baseline_y(), self._mask)
+                    print(time.time() - dt)
                 except (ContourError, cv2.error, TypeError) as ex:
                     self._droplet.error = str(ex)
                 except Exception as ex:
@@ -357,6 +359,24 @@ class CameraPreview(QOpenGLWidget):
         y_base = self._baseline.y_level
         y = self.mapToImage(y=y_base)
         return y
+
+    def set_baseline_y(self, value):
+        """ 
+        set the y value the baseline is on in image coordinates 
+        
+        :returns: y value of baseline in image coordinates
+        """
+        y = self.mapFromImage(y=value)
+        self._baseline.y_level = y
+        return y
+
+    def get_mask_dim(self):
+        rect = self.mapToImage(*self._needle_mask.get_mask_geometry())
+        return rect
+
+    def set_mask_dim(self, x,y,w,h):
+        x,_,w,h = self.mapFromImage(x,y,w,h)
+        self._needle_mask.set_mask_geometry(x,0,w,h)
 
     def set_new_baseline_constraints(self):
         """ set the min and max y value for the baseline """
