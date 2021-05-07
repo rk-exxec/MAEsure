@@ -26,7 +26,7 @@ from math import acos, cos, sin, pi, sqrt, atan2, radians, degrees
 
 import numba as nb
 import numpy as np
-from pyqtgraph.graphicsItems.LegendItem import LegendItem
+
 import skimage.measure
 import cv2
 
@@ -196,15 +196,10 @@ def find_contour(img, is_masked):
     # https://docs.opencv.org/3.4/d3/dc0/group__imgproc__shape.html#ga4303f45752694956374734a03c54d5ff
     # contours, hierarchy = cv2.findContours(bw_edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
     contours, hierarchy = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    if len(contours) == 0:
-        raise ContourError('No contours found!')
-    # edge = max(contours, key=cv2.contourArea)
-    
-    return get_largest_area_contours(contours, is_masked)
-    
-#@nb.jit(cache=True)
-def get_largest_area_contours(contours, is_masked):
     length = len(contours)
+    if length == 0:
+        raise ContourError('No contours found!')
+    
     area_list = np.zeros(length, dtype=float)
     rect_list = np.zeros([length,4], dtype=float)
     contours = np.array(contours, dtype=object)
@@ -348,14 +343,14 @@ def calc_volume_of_droplet(x0, y0, a, b, phi, y_base) -> float:
 
     :param ellipse_pars: ellipse fitted to the droplet
     :param y_base: baseline height
-    :return: volume of droplet in px3
+    :return: volume of droplet in px^3
     :rtype: float
     """
     # cutting plane params Ax + By + Cz = D
     # transformation in same coordinate system as non rotated ellipse at origin
-    rot_mat = np.array([[np.cos(-phi), -np.sin(-phi), 0.0],
-                        [np.sin(-phi), np.cos(-phi), 0.0],
-                        [0.0, 0.0, 1.0]] )
+    rot_mat = np.array([[np.cos(-phi),  -np.sin(-phi),  0.0],
+                        [np.sin(-phi),  np.cos(-phi),   0.0],
+                        [0.0,           0.0,            1.0]] )
     ell_origin = np.array([x0, y0, 0.0])
     plane_norm_vec = np.array([0.0, 1.0, 0.0])
     plane_norm_vec = rot_mat.dot(plane_norm_vec.T).T
@@ -455,7 +450,7 @@ def calc_regr_score_r2_y_only(x0, y0, a, b, phi, contour) -> float:
                         ])
     data_trans = data - np.array([x0, y0])
     data_trans = rot_mat.dot(data_trans.T).T
-    sq_sum_res = calc_ss_res(data_trans, a, b).sum()
+    sq_sum_res = calc_residuals(data_trans, a, b).sum()
 
     ym = np.mean(y_data)
     sq_sum_tot = np.sum((y_data - ym)**2)
@@ -465,8 +460,8 @@ def calc_regr_score_r2_y_only(x0, y0, a, b, phi, contour) -> float:
     return r2
 
 # decorator makes function accept numpy array and applies calculation to every element, returns numpy array of results
-@nb.guvectorize(['void(double[:], float32, float32, double[:])'], "(n),(),()->()", target='parallel')
-def calc_ss_res(point, a, b, out):
+@nb.guvectorize(['void(double[:], float32, float32, double[:])'], "(n),(),()->()", target='parallel', cache=True)
+def calc_residuals(point, a, b, out):
     """calculate square of difference from points to points of ellipse
 
     :param point: point to check
