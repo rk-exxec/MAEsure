@@ -79,7 +79,7 @@ class DynamicNeedleMask(QWidget):
         self.updateGrips()
         self.rubberband.resize(self.size())
         self._old_geo = self.geometry()
-        self.update_mask_signal.emit()
+        if not self.isHidden(): self.update_mask_signal.emit()
         self.save_geo()
 
     def lock(self):
