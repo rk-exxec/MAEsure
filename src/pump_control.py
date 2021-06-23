@@ -41,6 +41,7 @@ class PumpControl(QGroupBox):
         self.ui: Ui_main = self.window().ui
         port = self.find_com_port()
         self._context_depth = 0
+        self._first_show = True
         logging.debug("initialize pump")
         try:
             chain = pumpy.Chain(port)
@@ -51,10 +52,12 @@ class PumpControl(QGroupBox):
         self.worker: Worker = Worker(None)
 
     def showEvent(self, event):
-        self._pump.stop()
-        self._pump.setdiameter(self.ui.diamSpinBox.value())
-        self._pump.setflowrate(self.ui.flowSpinBox.value()) # 2ul / s
-        self.connect_signals()
+        if self._first_show:
+            self._pump.stop()
+            self._pump.setdiameter(self.ui.diamSpinBox.value())
+            self._pump.setflowrate(self.ui.flowSpinBox.value()) # 2ul / s
+            self.connect_signals()
+            self._first_show = False
 
     def connect_signals(self):
         self.ui.dispenseBtn.clicked.connect(self.infuse)
