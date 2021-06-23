@@ -53,7 +53,8 @@ class CameraPreview(QOpenGLWidget):
 
     def prepare(self):
         """ preset the baseline to 250 which is roughly base of the test image droplet """
-        self._baseline.y_level = self.mapFromImage(y=250)
+        # replaced by saving previous line height
+        #self._baseline.y_level = self.mapFromImage(y=250)
 
     def paintEvent(self, event: QPaintEvent):
         """

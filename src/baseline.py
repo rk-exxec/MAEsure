@@ -17,8 +17,7 @@
 import logging
 from PySide2.QtWidgets import QWidget, QHBoxLayout
 from PySide2.QtGui import QBrush, QPainter, QPainterPath, QPen
-from PySide2.QtCore import QRectF, Qt, QPoint
-# TODO store baseline y in QSettings
+from PySide2.QtCore import QRectF, Qt, QPoint, QSettings
 COLOR = Qt.green
 
 class Baseline(QWidget):  
@@ -28,6 +27,7 @@ class Baseline(QWidget):
     def __init__(self, parent=None):
         super(Baseline, self).__init__(parent)
         #self.setWindowFlags(Qt.SubWindow)
+        self.settings = QSettings()
         self.layout = QHBoxLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.setCursor(Qt.SizeVerCursor)
@@ -123,6 +123,12 @@ class Baseline(QWidget):
         #painter.endNativePainting()
         painter.end()
 
+    def save_y_level(self):
+        self.settings.setValue("baseline/y_level", self.y_level)
+
+    def load_y_level(self):
+        self.y_level = self.settings.value("baseline/y_level", defaultValue=0.0, type=float)
+
     def showEvent(self, event):
         """
         custom show event
@@ -132,6 +138,7 @@ class Baseline(QWidget):
         if self._first_show:
             self.setGeometry(0, self.parent().geometry().height() - 10, self.parent().geometry().width(), 20)
             self.max_level = self.parent().geometry().height() - self.height()
+            self.load_y_level()
             self._first_show = False
 
     def mousePressEvent(self, event):
@@ -140,7 +147,7 @@ class Baseline(QWidget):
 
         remembers initial mouse down position
         """
-        if event.buttons() == Qt.LeftButton:
+        if event.button() == Qt.LeftButton:
             self.origin = event.globalPos() - self.pos()
 
     def mouseReleaseEvent(self, event):
@@ -149,8 +156,9 @@ class Baseline(QWidget):
 
         remembers mouse up position
         """
-        if event.buttons() == Qt.LeftButton:
+        if event.button() == Qt.LeftButton:
             self.origin = event.pos()
+            self.save_y_level()
 
     def mouseMoveEvent(self, event):
         """
