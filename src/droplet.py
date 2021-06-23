@@ -31,8 +31,6 @@ class Singleton(object):
 
 # TODO make length always be a fixed fraction of a second and change with framerate
 
-# TODO comments
-
 class Droplet(Singleton):
     """
     provides a singleton storage structure for droplet information and conversion functions  
@@ -107,7 +105,7 @@ class Droplet(Singleton):
                     Height:
                     {round(self.height,2):.2f} px
                     R²:
-                    {round(self.r2,3)}
+                    {round(self.r2,5)}
                     '''
                 )
             else:
@@ -123,7 +121,7 @@ class Droplet(Singleton):
                     Height:
                     {round(self.height_mm,2):.2f} mm
                     R²:
-                    {round(self.r2,3)}
+                    {round(self.r2,5)}
                     '''   
                 )
         else:
