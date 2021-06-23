@@ -18,8 +18,6 @@
 #   - zeit immer vor magnetfeld gemessen falls beide gewählt!
 #   - wnn nur magnet, droplet nicht nach jedem punkt wieder neu ausgeben?
 
-# TODO wenn scale gegeben pixel und mm ausgeben
-
 import math
 from evaluate_droplet import Droplet
 import logging

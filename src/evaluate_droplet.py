@@ -16,9 +16,6 @@
 
 # Droplet eval function
 
-# TODO add rolling average, with outlier ingoring and 1 sec worth of averaging
-# ideally to the whole contour before fitting the ellipse
-
 import time
 from typing import List, Tuple
 
@@ -71,7 +68,6 @@ def evaluate_droplet(img, y_base, mask: Tuple[int,int,int,int] = None) -> Drople
     # values only for 8bit images!
 
     # apply canny filter to image
-    # FIXME adjust canny params, detect too much edges
     bw_edges = cv2.Canny(crop_img, thresh_low, thresh_high)
     
     # block detection of syringe

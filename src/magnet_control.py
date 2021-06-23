@@ -14,10 +14,6 @@
 #     You should have received a copy of the GNU General Public License
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-# TODO expose more settings of lt_control, reference side, etc.
-
-# TODO maybe do StageControl class and expand it with the magnet stuff??
-
 import pyvisa
 import time
 import logging
@@ -46,10 +42,8 @@ class CustomCallbackTimer(QTimer):
         self.setSingleShot(False)
         self.timeout.connect(target)
 
-# TODO implement as standalone for Heiko Unold
 # TODO calib - test
 # TODO retry failed serial port in timer and update motor status once connected again
-# TODO test new decorator
 
 class MagnetControl(LinearStageControlGUI):
     """
@@ -169,7 +163,6 @@ class MagnetControl(LinearStageControlGUI):
 
     def do_calibration(self):
         """ do a magnet vs mm calibration """
-        # TODO test this
         rm = pyvisa.ResourceManager()
         res = rm.list_resources('GPIB?*INSTR')
         gm_addr = res[0]

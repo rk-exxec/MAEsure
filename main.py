@@ -31,12 +31,6 @@ from camera_control import CameraControl
 from data_control import DataControl
 from additional_gui_elements import AboutDialog
 
-# TODO use QSettings to store settings ( also maybe put some stuff in dialog boxes)
-
-# TODO comments for droplet, camera control etc
-
-# FIXME sometimes doenst kill process on close, camera?
-
 class MainWindow(QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
