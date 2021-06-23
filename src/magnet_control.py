@@ -68,6 +68,7 @@ class MagnetControl(LinearStageControlGUI):
     def showEvent(self, event: QShowEvent):
         if super().showEvent(event):
             self.ui = self.window().ui
+            self.ui.magCalBtn.clicked.connect(self.do_calibration)
             try:
                 self.load_calib_file('./MagnetCalibration.csv')
                 #self.unlock_mag_unit()
@@ -163,8 +164,8 @@ class MagnetControl(LinearStageControlGUI):
     def load_calib_file(self, file):
         """ load magnet to mm calibration file """
         self._calibration_table = pd.read_csv(file)
-        self.mag_to_mm_interp = interp1d(self._calibration_table['Field(T)'], self._calibration_table['Distance(m)'])
-        self.mm_to_mag_interp = interp1d(self._calibration_table['Distance(m)'], self._calibration_table['Field(T)'])
+        self.mag_to_mm_interp = interp1d(self._calibration_table['Field_T'], self._calibration_table['Distance_m'])
+        self.mm_to_mag_interp = interp1d(self._calibration_table['Distance_m'], self._calibration_table['Field_T'])
 
     def do_calibration(self):
         """ do a magnet vs mm calibration """
@@ -176,7 +177,7 @@ class MagnetControl(LinearStageControlGUI):
         gaussmeter.query('AUTO 1')
         _prefix = {'y': 1e-24, 'z': 1e-21,'a': 1e-18,'f': 1e-15,'p': 1e-12,'n': 1e-9,'u': 1e-6,'m': 1e-3,
            'c': 1e-2,'d': 1e-1,'k': 1e3,'M': 1e6,'G': 1e9,'T': 1e12,'P': 1e15,'E': 1e18,'Z': 1e21,'Y': 1e24}
-        df = pd.DataFrame(columns=['Steps','Field(T)','Distance(m)'])
+        df = pd.DataFrame(columns=['Steps','Field_T','Distance_m'])
 
         csv_sep = '\t'
         path = './MagnetCalibration.csv'
@@ -184,24 +185,26 @@ class MagnetControl(LinearStageControlGUI):
         with open(path, 'w') as f:
             #f.write('SEP=' + csv_sep +'\n')
             #df.to_csv(f, sep = csv_sep)
-            f.write('Steps\tDistance(mm)\tField(T)\n')
+            f.write('Steps\tDist_mm\tField_T\n')
             #print('Steps\tDistance(mm)\tField(T)')
-            for i in np.arange(0, 35, .5):
-                self.ls_ctl.move_absolute_mm(i)
-                time.sleep(1)
-                mult = gaussmeter.query('FIELDM?').strip()
-                if len(mult) == 0:
-                    mult = 1
-                else:
-                    mult = _prefix[mult]
-                tesla = abs(float(gaussmeter.query('FIELD?'))*mult)
-                steps = self.ls_ctl.get_position()
-                #df = df.append(pd.DataFrame([[steps, self._lt_ctl.steps_to_mm(steps), tesla]]))
-                #df.at[i,'Steps'] = steps
-                #df.at[i,'Field(T)'] = tesla
-                #df.at[i,'Distance(m)'] = steps*(1.25e-3/1600)
-                #print('{0:d}\t{1:.3E} mm\t{2:.3E} T'.format(steps, self._lt_ctl.steps_to_mm(steps), tesla))
-                f.write('{0:d}\t{1:.3E}\t{2:.3E}\n'.format(steps, self.ls_ctl.steps_to_mm(steps), tesla))
+            with self.ls_ctl as lt:
+                for i in np.arange(0, 35, .5):
+                    
+                    lt.move_absolute_mm(i)
+                    time.sleep(1)
+                    mult = gaussmeter.query('FIELDM?').strip()
+                    if len(mult) == 0:
+                        mult = 1
+                    else:
+                        mult = _prefix[mult]
+                    tesla = abs(float(gaussmeter.query('FIELD?'))*mult)
+                    steps = lt.get_position()
+                    #df = df.append(pd.DataFrame([[steps, self._lt_ctl.steps_to_mm(steps), tesla]]))
+                    #df.at[i,'Steps'] = steps
+                    #df.at[i,'Field(T)'] = tesla
+                    #df.at[i,'Distance(m)'] = steps*(1.25e-3/1600)
+                    #print('{0:d}\t{1:.3E} mm\t{2:.3E} T'.format(steps, self._lt_ctl.steps_to_mm(steps), tesla))
+                    f.write('{0:d}\t{1:.3E}\t{2:.3E}\n'.format(steps, lt.steps_to_mm(steps), tesla))
         self.load_calib_file(path)
         self.unlock_mag_unit()
         #self._lt_ctl.move_absolute(0)
