@@ -204,9 +204,9 @@ class CameraPreview(QOpenGLWidget):
             if eval:
                 try:
                     self._droplet.is_valid = False
-                    dt = time.time()
+                    #dt = time.time()
                     evaluate_droplet(cv_img, self.get_baseline_y(), self._mask)
-                    print(time.time() - dt)
+                    #print(time.time() - dt)
                 except (ContourError, cv2.error, TypeError) as ex:
                     self._droplet.error = str(ex)
                 except Exception as ex:
