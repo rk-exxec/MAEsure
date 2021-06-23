@@ -41,12 +41,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from ui_form import Ui_main
 
-
-# TODO camera control
-#   pause running while setting roi - needs testing
-
-# TODO add ability to load video instead of using camera, with new camera class and moviepy ffmpeg reader?
-
 USE_TEST_IMAGE = False
 
 class CameraControl(QGroupBox):
