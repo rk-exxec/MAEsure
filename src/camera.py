@@ -119,6 +119,9 @@ class AbstractCamera(QObject):
     def stop_streaming(self):
         raise NotImplementedError
 
+    def reset(self):
+        raise NotImplementedError
+
     def set_roi(self, x, y, w, h):
         """ 
         set the region of interest on the cam
@@ -190,6 +193,13 @@ if HAS_VIMBA:
         def _prime_vimba(self):
             # prime vimba interface, so it doesnt shut down
             # speeds up all camera actions
+            self._vimba.__enter__()
+            self._cam.__enter__()
+
+        def reset(self):
+            self.stop_streaming()
+            self._cam.__exit__(None, None, None)
+            self._vimba.__exit__(None, None, None)
             self._vimba.__enter__()
             self._cam.__enter__()
 

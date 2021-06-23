@@ -121,6 +121,7 @@ class CameraControl(QGroupBox):
         self.ui.actionDelete_Size_Calibration.triggered.connect(self.remove_size_calib)
         self.ui.actionSave_Image.triggered.connect(self.save_image_dialog)
         self.ui.actionCameraSettings.triggered.connect(self.camera_settings_dialog)
+        self.ui.actionReset_Camera.triggered.connect(self.reset_camera)
 
     def is_streaming(self) -> bool:
         """ 
@@ -363,3 +364,6 @@ class CameraControl(QGroupBox):
         dlg = CameraSettings(self, self.cam)
         dlg.exec_()
 
+    @Slot()
+    def reset_camera(self):
+        self.cam.reset()
