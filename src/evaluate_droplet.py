@@ -62,8 +62,8 @@ def evaluate_droplet(img, y_base, mask: Tuple[int,int,int,int] = None) -> Drople
     width = shape[1]
     if USE_GPU:
         crop_img = cv2.UMat(crop_img)
-    # calculate thrresholds
-    thresh_high, thresh_im = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    # calculate thresholds
+    thresh_high, _ = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     thresh_low = 0.5*thresh_high
     # thresh_high = 179
     # thresh_low = 76
@@ -77,27 +77,21 @@ def evaluate_droplet(img, y_base, mask: Tuple[int,int,int,int] = None) -> Drople
     # block detection of syringe
     if (not mask is None):
         x,y,w,h = mask
-        # if USE_GPU:
         mask_mat = np.ones([y_base, width], dtype="uint8")
         mask_mat[:, x:x+w] = 0
         
         bw_edges = cv2.bitwise_and(bw_edges, bw_edges, mask=mask_mat)
-        # else:
-        #     bw_edges[:, x:x+w] = 0
-        #img[:, x:x+w] = 0
         masked = True
     else:
         masked = False
 
     if USE_GPU:
         # fetch contours from gpu memory
-        # cntrs = [cv2.UMat.get(c) for c in contours]
         bw_edges = cv2.UMat.get(bw_edges)
 
     edge = find_contour(bw_edges, masked)
 
     if DEBUG & DBG_SHOW_CONTOURS:
-        # img = cv2.drawContours(img,cntrs,-1,(100,100,255),2)
         img = cv2.drawContours(img,edge,-1,(255,0,0),2)
 
     # apply ellipse fitting algorithm to droplet
@@ -195,7 +189,7 @@ def find_contour(img, is_masked):
     # https://docs.opencv.org/3.4/d9/d8b/tutorial_py_contours_hierarchy.html 
     # https://docs.opencv.org/3.4/d3/dc0/group__imgproc__shape.html#ga4303f45752694956374734a03c54d5ff
     # contours, hierarchy = cv2.findContours(bw_edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-    contours, hierarchy = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    contours, _ = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     length = len(contours)
     if length == 0:
         raise ContourError('No contours found!')
