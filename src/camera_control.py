@@ -97,6 +97,8 @@ class CameraControl(QGroupBox):
             self.cam.snapshot()
             # prep preview window
             self.ui.camera_prev.prepare()
+            # start cam
+            self.ui.startCamBtn.click()
 
     def closeEvent(self, event: QtGui.QCloseEvent):
         """
