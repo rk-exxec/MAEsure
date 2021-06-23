@@ -178,6 +178,7 @@ if HAS_VIMBA:
             self._frc = FrameRateCounter(10)
             #self._vimba.enable_log(LOG_CONFIG_TRACE_FILE_ONLY)
             self._init_camera()
+            self._prime_vimba()
             self._setup_camera()
             self._cur_roi_origin = (0,0) # keep track of ROI pos to support nested ROI selection
 
@@ -185,6 +186,12 @@ if HAS_VIMBA:
             self.stop_streaming()
             del self._cam
             del self._vimba
+        
+        def _prime_vimba(self):
+            # prime vimba interface, so it doesnt shut down
+            # speeds up all camera actions
+            self._vimba.__enter__()
+            self._cam.__enter__()
 
         def snapshot(self):
             if self._is_running: return
