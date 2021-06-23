@@ -14,6 +14,7 @@
 #     You should have received a copy of the GNU General Public License
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import logging
 from threading import Thread, Event
 import cv2
 import pydevd
@@ -146,6 +147,21 @@ class AbstractCamera(QObject):
 
     def get_resolution(self) -> Tuple[int,int]:
         """ return resolution of current camera capture (width, height) """
+        raise NotImplementedError
+
+    def get_exposure(self):
+        raise NotImplementedError
+
+    def set_exposure(self, exposure):
+        raise NotImplementedError
+
+    def get_exposure_range(self):
+        raise NotImplementedError
+
+    def get_exposure_mode(self):
+        raise NotImplementedError
+
+    def set_exposure_mode(self, mode):
         raise NotImplementedError
 
 
@@ -300,6 +316,38 @@ if HAS_VIMBA:
                     res_x = self._cam.Width.get()
                     res_y = self._cam.Height.get()
                     return (res_x, res_y)
+
+        
+        def get_exposure(self):
+            with self._vimba:
+                with self._cam:
+                    return self._cam.ExposureTime.get()
+
+        def set_exposure(self, exposure: float):
+            with self._vimba:
+                with self._cam:
+                    self._cam.ExposureTime.set(exposure)
+
+        def get_exposure_range(self):
+            with self._vimba:
+                with self._cam:
+                    min = self._cam.ExposureAutoMin.get()
+                    max = self._cam.ExposureAutoMax.get()
+            return min,max
+
+        def get_exposure_mode(self):
+            with self._vimba:
+                with self._cam:
+                    mode = self._cam.ExposureAuto.get()
+                    logging.debug(f"Exposure mode read: {mode}")
+            return mode
+
+        def set_exposure_mode(self, mode):
+            if mode not in ["Off", "Once", "Continuous"]:
+                raise ValueError()
+            with self._vimba:
+                with self._cam:
+                    self._cam.ExposureAuto.set(mode)
 
 
 class TestCamera(AbstractCamera):

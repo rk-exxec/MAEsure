@@ -32,6 +32,7 @@ from vimba.frame import BAYER_PIXEL_FORMATS
 
 
 from droplet import Droplet
+from additional_gui_elements import CameraSettings
 from camera import AbstractCamera, TestCamera, HAS_VIMBA
 if HAS_VIMBA:
     from camera import VimbaCamera
@@ -123,6 +124,7 @@ class CameraControl(QGroupBox):
         self.ui.actionKalibrate_Size.triggered.connect(self.calib_size)
         self.ui.actionDelete_Size_Calibration.triggered.connect(self.remove_size_calib)
         self.ui.actionSave_Image.triggered.connect(self.save_image_dialog)
+        self.ui.actionCameraSettings.triggered.connect(self.camera_settings_dialog)
 
     def is_streaming(self) -> bool:
         """ 
@@ -360,5 +362,8 @@ class CameraControl(QGroupBox):
 
         qimg.save(path, quality=100)
 
-
+    @Slot()
+    def camera_settings_dialog(self):
+        dlg = CameraSettings(self, self.cam)
+        dlg.exec_()
 

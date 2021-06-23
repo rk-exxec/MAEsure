@@ -303,7 +303,7 @@ Surface Diam:
     <property name="title">
      <string>Magnet / Motor Control</string>
     </property>
-    <widget class="QPushButton" name="pushButton_12">
+    <widget class="QPushButton" name="magCalBtn">
      <property name="geometry">
       <rect>
        <x>10</x>
@@ -1216,6 +1216,7 @@ every cycle</string>
      <string>Menu</string>
     </property>
     <addaction name="actionReset_Camera"/>
+    <addaction name="actionCameraSettings"/>
     <addaction name="actionVideo_Path"/>
     <addaction name="separator"/>
     <addaction name="actionSyringe_Settings"/>
@@ -1290,6 +1291,11 @@ every cycle</string>
    </property>
    <property name="toolTip">
     <string>Save the image from the camera with or without overlay</string>
+   </property>
+  </action>
+  <action name="actionCameraSettings">
+   <property name="text">
+    <string>CameraSettings</string>
    </property>
   </action>
  </widget>
