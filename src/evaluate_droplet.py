@@ -19,7 +19,7 @@
 import time
 from typing import List, Tuple
 
-from math import acos, cos, sin, pi, sqrt, atan2, radians, degrees
+from math import acos, cos, dist, sin, pi, sqrt, atan2, radians, degrees
 
 import numba as nb
 import numpy as np
@@ -99,7 +99,8 @@ def evaluate_droplet(img, y_base, mask: Tuple[int,int,int,int] = None) -> Drople
     if a == 0 or b == 0:
         raise ValueError('Malformed ellipse fit! Axis = 0')
 
-    r2 = calc_regr_score_r2_y_only(x0,y0,a,b,phi, edge)
+    # r2 = calc_regr_score_r2_y_only(x0,y0,a,b,phi, edge)
+    r2 = calc_regr_score_r2_from_dist(x0,y0,a,b,phi, edge)
 
     if DEBUG & DBG_DRAW_ELLIPSE:
         img = cv2.ellipse(img, (int(round(x0)),int(round(y0))), (int(round(a)),int(round(b))), int(round(phi*180/pi)), 0, 360, (255,0,255), thickness=1, lineType=cv2.LINE_AA)
@@ -438,20 +439,57 @@ def calc_regr_score_r2_y_only(x0, y0, a, b, phi, contour) -> float:
                         [np.cos(phi)    ,   np.sin(phi)], 
                         [-np.sin(phi)   ,   np.cos(phi)] 
                         ])
+    # subtract origin
     data_trans = data - np.array([x0, y0])
+    # rotate around origin 
     data_trans = rot_mat.dot(data_trans.T).T
-    sq_sum_res = calc_residuals(data_trans, a, b).sum()
+    sq_sum_res = calc_residuals_y_only(data_trans, a, b).sum()
 
     ym = np.mean(y_data)
     sq_sum_tot = np.sum((y_data - ym)**2)
 
-    r2 = 1 - sq_sum_res/sq_sum_tot
+    r2 = 1 - (sq_sum_res/sq_sum_tot)
+
+    return r2
+
+def calc_regr_score_r2_from_dist(x0, y0, a, b, phi, contour) -> float:
+    """
+    calculates the coefficient of determination R²!
+    https://en.wikipedia.org/wiki/Coefficient_of_determination
+
+
+    -----
+    :param x0, y0, a, b, phi: ellipse parameters x0,y0,a,b,phi
+    :param contour: contour the ellipse was fitted to
+    :return: R²: 0 worst, 1 best, other: wrong fit model!
+    """
+    data = contour.reshape(-1,2)
+    y_data = data[:,1]
+    x_data = data[:,0]
+
+    rot_mat = np.array( [
+                        [np.cos(phi)    ,   np.sin(phi)], 
+                        [-np.sin(phi)   ,   np.cos(phi)] 
+                        ])
+    # subtract origin
+    data_trans = data - np.array([x0, y0])
+    # rotate around origin 
+    data_trans = rot_mat.dot(data_trans.T).T
+    sq_sum_res = 0.0
+    # for point in data_trans:
+    #     sq_sum_res += calc_residuals(point, a, b)
+    sq_sum_res = calc_residuals(data_trans, a, b).sum()
+
+    xm, ym = np.mean(data, axis=0)
+    sq_sum_tot = np.sum((x_data - xm)**2 + (y_data - ym)**2)
+
+    r2 = 1 - (sq_sum_res/sq_sum_tot)
 
     return r2
 
 # decorator makes function accept numpy array and applies calculation to every element, returns numpy array of results
 @nb.guvectorize(['void(double[:], float32, float32, double[:])'], "(n),(),()->()", target='parallel', cache=True)
-def calc_residuals(point, a, b, out):
+def calc_residuals_y_only(point, a, b, out):
     """calculate square of difference from points to points of ellipse
 
     :param point: point to check
@@ -459,10 +497,74 @@ def calc_residuals(point, a, b, out):
     :param a,b: ellipse half-axes
     :return: (y_point - ell(x_point)) ^2
     """
-    xi,yi = point
+    xi,yi = point # point of contour
     xe = xi if np.abs(xi) < a else a * np.sign(xi) # prevent from checking points outside of ellipse
-    ye = (np.sqrt(1 - (xe/a)**2) * b) * np.sign(yi)
-    out[0] = (ye - yi)**2
+    fi = (np.sqrt(1 - (xe/a)**2) * b) * np.sign(yi) # get fitted y at x coord of datapoint
+    out[0] = (yi - fi)**2 # calc residual
+
+# decorator makes function accept numpy array and applies calculation to every element, returns numpy array of results
+@nb.guvectorize(['void(double[:], float32, float32, double[:])'], "(n),(),()->()", target='parallel', cache=True)
+def calc_residuals(point, a, b, out):
+    """calculate square of difference from points to points of ellipse
+    https://www.geometrictools.com/Documentation/DistancePointEllipseEllipsoid.pdf
+    y0,y1 == xi,yi
+    z0,z1 == xz,yz
+    e0,e1 == a,b
+    x0,x1 == xe,ye
+    converts every calculation to 1st quadrant, should be the same, as ellipse is symmetric to both axes
+    :param point: point to check
+    :type point: np.ndarray
+    :param a,b: ellipse half-axes
+    :return: distance of point to ellipse squared
+    """
+    xi,yi = np.abs(point)
+    max_iter = 149 # for float or 1074 for double
+    distance: float = 0
+    if(yi > 0):
+        if (xi > 0):
+            zx = xi/a
+            zy = yi/b
+            g = zx**2 + zy**2 - 1
+            if (g != 0):
+                r0 = (a/b)**2
+                n0 = r0*zx
+                s0 = zy - 1
+                s1  = ( 0 if g < 0 else np.sqrt(n0**2 + zy**2))
+                s = 0
+                for i in range(0, max_iter):
+                    s = (s0 + s1) / 2
+                    if s == s0 or s == s1 : break
+                    ratio0 = n0/(s + r0)
+                    ratio1 = zy/(s + 1)
+                    g = ratio0**2 + ratio1**2 - 1
+                    if g > 0:
+                        s0 = s
+                    elif g < 0:
+                        s1 = s
+                    else:
+                        break
+                xe = r0*xi/(s + r0)
+                ye = yi/(s + 1)
+                distance = np.sqrt((xe - xi)**2 + (ye - yi)**2)
+            else:
+                xe,ye = xi,yi
+                distance = 0
+        else:
+            xe,ye = 0,b
+            distance = np.abs(yi - b)
+    else:
+        num = a*xi
+        den = a**2 - b**2
+        if num < den:
+            frac = num/den
+            xe = a*frac
+            ye = b*np.sqrt(1-frac**2)
+            distance = np.sqrt((xe - xi)**2 + (ye - yi)**2)
+        else:
+            xe,ye = a,0
+            distance = np.abs(xi - a)
+    #return distance
+    out[0] = (xi - xe)**2 + (yi - ye)**2
 
 
 # for testing purposes:
