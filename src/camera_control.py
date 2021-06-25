@@ -31,7 +31,7 @@ from PySide2.QtCore import QSettings, QSignalBlocker, Qt, Signal, Slot
 from vimba.frame import BAYER_PIXEL_FORMATS
 
 
-from droplet import Droplet
+from droplet import Droplet, RollingAverager
 from additional_gui_elements import CameraSettings
 from camera import AbstractCamera, TestCamera, HAS_VIMBA
 if HAS_VIMBA:
@@ -73,6 +73,7 @@ class CameraControl(QGroupBox):
             else: logging.info("Using Test Camera")
         self.update()
         self._oneshot_eval = False
+        self._frametime = RollingAverager(1000)
         logging.debug("initialized camera control")
 
     def __del__(self):
@@ -187,6 +188,7 @@ class CameraControl(QGroupBox):
             self.ui.resetROIBtn.setEnabled(True)
             self.cam.snapshot()
             self.ui.frameInfoLbl.setText('Stopped')
+            self.ui.processingTimeLbl.setText('')
             self.ui.drpltDataLbl.setText(str(self.ui.camera_prev._droplet))
 
     def oneshot_eval(self):
@@ -276,14 +278,26 @@ class CameraControl(QGroupBox):
             self.ui.camera_prev.invalidate_imagesize()
             self.cam._image_size_invalid = False
 
+        dt = time.time()
         # update preview image    
         self.ui.camera_prev.update_image(cv_img, eval)
+        self.frametime = (time.time() - dt) * 1000
+        self.ui.processingTimeLbl.setText(f"Frametime: {self.frametime:.1f} ms")
 
         # display droplet parameters
         self.ui.drpltDataLbl.setText(str(self.ui.camera_prev._droplet))
 
         # unblock signals from cam
-        blocker.unblock()
+        #blocker.unblock()
+
+    @property
+    def frametime(self):
+        """ approx volume of droplet  in px^3 """
+        return self._frametime.average
+
+    @frametime.setter
+    def frametime(self, value):
+        self._frametime._put(value)
 
     @Slot()
     def set_video_path(self):
