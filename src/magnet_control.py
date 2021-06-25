@@ -128,11 +128,11 @@ class MagnetControl(LinearStageControlGUI):
                 logging.error(f"magnet control: motor not referenced")
                 return
             if unit == 'mm':
-                self.ls_ctl.move_absolute_mm(pos)
+                self.ls_ctl.move_absolute_mm(pos, self._mov_speed_mm)
             elif unit == 'steps':
-                self.ls_ctl.move_absolute(int(pos))
+                self.ls_ctl.move_absolute(int(pos), self._mov_speed)
             elif unit == 'mT':
-                self.ls_ctl.move_absolute_mm(self.mag_to_mm_interp(pos/1000))
+                self.ls_ctl.move_absolute_mm(self.mag_to_mm_interp(pos/1000), self._mov_speed_mm)
         self.lock_movement_buttons()
         logging.info(f"magnet control: start movement to {pos} {unit}")
         if blocking:
