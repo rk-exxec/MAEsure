@@ -14,7 +14,7 @@
 #     You should have received a copy of the GNU General Public License
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from typing import List, Tuple, Union
+from typing import List
 import cv2
 import numpy as np
 import logging
@@ -22,7 +22,7 @@ import time
 
 from PySide2 import QtGui
 from PySide2.QtWidgets import QLabel, QOpenGLWidget
-from PySide2.QtCore import  Qt, QPoint, QRect, QSize, Slot
+from PySide2.QtCore import  QTimer, Qt, QPoint, QRect, QSize, Slot
 from PySide2.QtGui import QBrush, QImage, QPaintEvent, QPainter, QPen, QPixmap, QTransform
 from needle_mask import DynamicNeedleMask
 
@@ -49,12 +49,17 @@ class CameraPreview(QOpenGLWidget):
         self._baseline = Baseline(self)
         self._droplet = Droplet()
         self._mask = None
+
+        self._timer = QTimer(self)
+        self._timer.setSingleShot(True)
+        self._timer.setInterval(500)
         logging.debug("initialized camera preview")
 
     def prepare(self):
         """ preset the baseline to 250 which is roughly base of the test image droplet """
         # replaced by saving previous line height
         #self._baseline.y_level = self.mapFromImage(y=250)
+        pass
 
     def paintEvent(self, event: QPaintEvent):
         """
@@ -195,8 +200,11 @@ class CameraPreview(QOpenGLWidget):
                 except Exception as ex:
                     logging.exception("Exception thrown in %s", "fcn:evaluate_droplet", exc_info=ex)
                     self._droplet.error = str(ex)
-            else:
-                self._droplet.is_valid = False
+                finally:
+                    #bloc
+                    self._timer.start()
+            # else:
+            #     self._droplet.is_valid = False
             qt_img = self._convert_cv_qt(cv_img)
             self._pixmap = qt_img
             if self._image_size_invalid:
