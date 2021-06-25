@@ -224,7 +224,7 @@ class CameraControl(QGroupBox):
         xc,yc,_,_ = self.cam.get_roi()
         xm,ym,wm,hm = self.ui.camera_prev.get_mask_dim()
         base_y = self.ui.camera_prev.get_baseline_y()
-        logging.info(f"Applying ROI pos:({x}, {y}), size:({w}, {h})")
+        logging.info(f"Applying ROI pos:({x+xc}, {y+yc}), size:({w}, {h})")
         self.cam.set_roi(x,y,w,h)
         self.ui.camera_prev.set_baseline_y(base_y-(y-yc))
         self.ui.camera_prev.set_mask_dim(xm - (x-xc), ym - (x-yc), wm, hm)

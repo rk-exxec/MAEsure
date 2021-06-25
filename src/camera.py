@@ -183,7 +183,6 @@ if HAS_VIMBA:
             self._init_camera()
             self._prime_vimba()
             self._setup_camera()
-            self._cur_roi_origin = (0,0) # keep track of ROI pos to support nested ROI selection
 
         def __del__(self):
             self.stop_streaming()
@@ -224,7 +223,6 @@ if HAS_VIMBA:
 
         def reset_roi(self):
             #self.set_roi(0,0, 2064, 1544)
-            self._cur_roi_origin = (0,0)
             was_running = self._is_running
             self.stop_streaming()
             with self._vimba:
@@ -253,18 +251,16 @@ if HAS_VIMBA:
             h = int(8 * int(round(h/8)))
             if h > 1542:
                 h = 1542
-            if self._cur_roi_origin != (0,0):
-                x += self._cur_roi_origin[0]
-                y += self._cur_roi_origin[1]
-            self._cur_roi_origin = (x,y)
             was_running = self._is_running
             self.stop_streaming()
             with self._vimba:
                 with self._cam:
+                    xo = self._cam.OffsetX.get()
+                    yo = self._cam.OffsetY.get()
                     self._cam.Width.set(w)
                     self._cam.Height.set(h)
-                    self._cam.OffsetX.set(x)
-                    self._cam.OffsetY.set(y)
+                    self._cam.OffsetX.set(x + xo)
+                    self._cam.OffsetY.set(y + yo)
             self._image_size_invalid = True
             self.snapshot()
             if was_running: self.start_streaming()
