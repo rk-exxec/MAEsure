@@ -171,24 +171,6 @@ class CameraPreview(QOpenGLWidget):
             self._abort_roi()
             self.update()
 
-    def hide_mask(self):
-        """hides and disables the needle mask
-        """
-        self._needle_mask.hide()
-        self._mask = None
-
-    def show_mask(self):
-        """shows the needle mask
-        """
-        self._needle_mask.show()
-        self.update_mask()
-
-    def update_mask(self):
-        """update mask from widget
-        """
-        mask_rect = self._needle_mask.get_mask_geometry()
-        self._mask = self.mapToImage(*mask_rect[:])
-
     @Slot(np.ndarray, bool)
     def update_image(self, cv_img: np.ndarray, eval: bool = True):
         """ 
@@ -370,6 +352,24 @@ class CameraPreview(QOpenGLWidget):
         y = self.mapFromImage(y=value)
         self._baseline.y_level = y
         return y
+
+    def hide_mask(self):
+        """hides and disables the needle mask
+        """
+        self._needle_mask.hide()
+        self._mask = None
+
+    def show_mask(self):
+        """shows the needle mask
+        """
+        self._needle_mask.show()
+        self.update_mask()
+
+    def update_mask(self):
+        """update mask from widget
+        """
+        mask_rect = self._needle_mask.get_mask_geometry()
+        self._mask = self.mapToImage(*mask_rect[:])
 
     def get_mask_dim(self):
         rect = self.mapToImage(*self._needle_mask.get_mask_geometry())
