@@ -17,6 +17,7 @@
 # This Python file uses the following encoding: utf-8
 
 from typing import Tuple
+import logging
 from PySide2.QtWidgets import QWidget, QHBoxLayout, QSizeGrip, QRubberBand
 from PySide2.QtGui import QPainter, QPen, QResizeEvent
 from PySide2.QtCore import QSettings, Qt, QPoint, QRect, Signal
@@ -67,13 +68,13 @@ class DynamicNeedleMask(QWidget):
 
     def set_mask_geometry(self, x,y,w,h):
         #x,y,w,h = self.geometry().normalized().getRect()
-
+        logging.info(f"set mask geometry to {x},{y},{w},{h}")
         # limit size to parent boundaries
         if (x < 0):
             # remove width that has been added by leftward dragging if x is at leftmost edge
             w += x
-        x = max(0, min(x, self.parent().width()))
-        w = min(w, self.parent().width() - x)
+        x = max(0, min(x, self.parent().width() - w))
+        w = max(1, min(w, self.parent().width() - x))
         
         self.setGeometry(x, y, w, self.parent().height())
         self.updateGrips()
@@ -98,6 +99,7 @@ class DynamicNeedleMask(QWidget):
 
         initializes geometry for first show
         """
+        super().showEvent(event)
         if self._first_show:
             geo = self.load_geo()
             if geo:
@@ -146,8 +148,8 @@ class DynamicNeedleMask(QWidget):
             if (x < 0):
                 # remove width that has been added by leftward dragging if x is at leftmost edge
                 w += x
-            x = max(0, min(x, self.parent().width()))
-            w = min(w, self.parent().width() - x)
+            x = max(0, min(x, self.parent().width() - w))
+            w = max(1, min(w, self.parent().width() - x))
             
             self.setGeometry(x, y, w, self.parent().height())
             self.updateGrips()

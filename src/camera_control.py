@@ -17,6 +17,7 @@
 # This Python file uses the following encoding: utf-8
 
 import os
+import time
 import numpy as np
 import logging
 from numpy.lib.npyio import save
@@ -145,7 +146,6 @@ class CameraControl(QGroupBox):
         else:
             self.ui.camera_prev.show_mask()
 
-
     @Slot()
     def prev_start_pushed(self, event):
         """
@@ -222,10 +222,10 @@ class CameraControl(QGroupBox):
     @Slot()
     def apply_roi(self):
         """ Apply the ROI selected by the rubberband rectangle """
-        x,y,w,h = self.ui.camera_prev.get_roi()
-        xc,yc,_,_ = self.cam.get_roi()
-        xm,ym,wm,hm = self.ui.camera_prev.get_mask_dim()
-        base_y = self.ui.camera_prev.get_baseline_y()
+        x,y,w,h = self.ui.camera_prev.get_roi() # new roi selection by rubberband
+        xc,yc,_,_ = self.cam.get_roi() # current roi
+        xm,ym,wm,hm = self.ui.camera_prev.get_mask_dim() # current mask selection
+        base_y = self.ui.camera_prev.get_baseline_y() # current baseline
         logging.info(f"Applying ROI pos:({x+xc}, {y+yc}), size:({w}, {h})")
         self.cam.set_roi(x,y,w,h)
         self.ui.camera_prev.set_baseline_y(base_y-(y-yc))
@@ -256,7 +256,7 @@ class CameraControl(QGroupBox):
         .. seealso:: :py:meth:`camera_preview.CameraPreview.update_image`, :attr:`camera.AbstractCamera.new_image_available`
         """
         # block image signal to prevent overloading
-        blocker = QSignalBlocker(self.cam)
+        #blocker = QSignalBlocker(self.cam)
         if self.cam.is_running:
             # evaluate droplet if checkbox checked
             eval = self.ui.evalChk.isChecked() or self._oneshot_eval
