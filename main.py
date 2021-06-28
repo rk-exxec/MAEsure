@@ -47,7 +47,7 @@ class MainWindow(QMainWindow):
         pass
 
     def closeEvent(self, event):
-        self.ui.camera_prev.closeEvent(event)
+        self.ui.camera_ctl.closeEvent(event)
         self.ui.dataControl.closeEvent(event)
         self.ui.idCombo.closeEvent(event)
         return super().closeEvent(event)
