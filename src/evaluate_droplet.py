@@ -51,6 +51,7 @@ def evaluate_droplet(img, y_base, mask: Tuple[int,int,int,int] = None) -> Drople
     :param y_base: the y coordinate of the surface the droplet sits on
     :returns: a Droplet() object with all the informations
     """
+    # reset droplet values
     drplt = Droplet()
     # crop img from baseline down (contains no useful information)
     crop_img = img[:y_base,:]
@@ -100,7 +101,8 @@ def evaluate_droplet(img, y_base, mask: Tuple[int,int,int,int] = None) -> Drople
         raise ValueError('Malformed ellipse fit! Axis = 0')
 
     # r2 = calc_regr_score_r2_y_only(x0,y0,a,b,phi, edge)
-    r2 = calc_regr_score_r2_from_dist(x0,y0,a,b,phi, edge)
+    r2 = calc_regr_score_r2_dist(x0,y0,a,b,phi, edge)
+    # r2 = calc_regr_score_r2(x0,y0,a,b,phi, edge)
 
     if DEBUG & DBG_DRAW_ELLIPSE:
         img = cv2.ellipse(img, (int(round(x0)),int(round(y0))), (int(round(a)),int(round(b))), int(round(phi*180/pi)), 0, 360, (255,0,255), thickness=1, lineType=cv2.LINE_AA)
@@ -122,15 +124,15 @@ def evaluate_droplet(img, y_base, mask: Tuple[int,int,int,int] = None) -> Drople
     m_t_r = calc_slope_of_ellipse(x0,y0,a,b,phi, x_int_r, y_base)
 
     # calc angle from inclination of tangents
-    angle_l = (pi - atan2(m_t_l,1)) % pi
-    angle_r = (atan2(m_t_r,1) + pi) % pi
+    angle_l = (pi - np.arctan2(m_t_l,1)) % pi
+    angle_r = (np.arctan2(m_t_r,1) + pi) % pi
 
     # calc area of droplet
     #area = calc_area_of_droplet((x_int_l, x_int_r), (x0,y0,a,b,phi), y_base)
-    volume = calc_volume_of_droplet(x0,y0,a,b,phi, y_base)
+    volume = calc_volume_of_droplet(x0,y0,a,b,phi,y_base)
 
     # calc height of droplet
-    drplt_height = calc_height_of_droplet(x0,y0,a,b,phi, y_base)
+    drplt_height = calc_height_of_droplet(x0,y0,a,b,phi,y_base)
 
     #region droplet value assignment
     # write values to droplet object
@@ -401,8 +403,8 @@ def calc_regr_score_r2(x0, y0, a, b, phi, contour) -> float:
     :return: R²: 0 worst, 1 best, other: wrong fit model!
     """
     data = contour.reshape(-1,2)
-    ell = skimage.measure.EllipseModel()
-    ell.params = (x0, y0, a, b, phi)
+    # ell = skimage.measure.EllipseModel()
+    # ell.params = (x0, y0, a, b, phi)
 
     xm, ym = np.mean(data, axis=0)
 
@@ -412,7 +414,7 @@ def calc_regr_score_r2(x0, y0, a, b, phi, contour) -> float:
 
     #sq_sum_tot = sum(np.linalg.norm(data,axis=1))
     time_start = time.time()
-    sq_sum_res = np.sum(ell.residuals(data))
+    sq_sum_res = np.sum(calc_residuals(x0,y0,a,b,phi,data))
     print(time.time() - time_start)
     sq_sum_tot = np.sum([calc_sq_sum(point) for point in data])
     print(time.time() - time_start)
@@ -452,7 +454,7 @@ def calc_regr_score_r2_y_only(x0, y0, a, b, phi, contour) -> float:
 
     return r2
 
-def calc_regr_score_r2_from_dist(x0, y0, a, b, phi, contour) -> float:
+def calc_regr_score_r2_dist(x0, y0, a, b, phi, contour) -> float:
     """
     calculates the coefficient of determination R²!
     https://en.wikipedia.org/wiki/Coefficient_of_determination
@@ -464,26 +466,33 @@ def calc_regr_score_r2_from_dist(x0, y0, a, b, phi, contour) -> float:
     :return: R²: 0 worst, 1 best, other: wrong fit model!
     """
     data = contour.reshape(-1,2)
-    y_data = data[:,1]
-    x_data = data[:,0]
 
+    # calculations have to happen on non rotated ellipse centered at origin
+    # therefore we have to transform the points from our non-origin rotated ellipse
     rot_mat = np.array( [
                         [np.cos(phi)    ,   np.sin(phi)], 
                         [-np.sin(phi)   ,   np.cos(phi)] 
                         ])
-    # subtract origin
+    # subtract origin from points
     data_trans = data - np.array([x0, y0])
-    # rotate around origin 
+    # rotate points around origin 
     data_trans = rot_mat.dot(data_trans.T).T
+
+    y_data = data_trans[:,1]
+    x_data = data_trans[:,0]
+
     sq_sum_res = 0.0
     # for point in data_trans:
     #     sq_sum_res += calc_residuals(point, a, b)
     sq_sum_res = calc_residuals(data_trans, a, b).sum()
 
-    xm, ym = np.mean(data, axis=0)
-    sq_sum_tot = np.sum((x_data - xm)**2 + (y_data - ym)**2)
+    xm, ym = np.mean(data_trans, axis=0)
+    distances = np.sqrt((x_data)**2 + (y_data)**2)
+    mean_dist = np.mean(distances)
+    #sq_sum_tot = np.sum((x_data - xm)**2 + (y_data - ym)**2)
+    sq_sum_tot = np.sum((distances - mean_dist)**2)
 
-    r2 = 1 - (sq_sum_res/sq_sum_tot)
+    r2 = 1 - (sq_sum_res/sq_sum_tot) if sq_sum_res <= sq_sum_tot else 0.0
 
     return r2
 
@@ -502,69 +511,83 @@ def calc_residuals_y_only(point, a, b, out):
     fi = (np.sqrt(1 - (xe/a)**2) * b) * np.sign(yi) # get fitted y at x coord of datapoint
     out[0] = (yi - fi)**2 # calc residual
 
+@nb.vectorize(["float32(float32, float32, float32, float32)", "double(double, double, double, double)"])
+#@cuda.jit(["void(float32, float32, float32, float32, float32[:])", "double(double, double, double, double)"], device=True, inline=True)
+def get_root(r0, z0, z1, g) -> float:
+    """
+    Implementation of Eqn. 24 \\
+    https://www.geometrictools.com/Documentation/DistancePointEllipseEllipsoid.pdf 
+    
+    """
+    max_iter = 149 # for float or 1074 for double
+    n0 = r0*z0
+    s0 = z1 - 1
+    s1  = ( 0 if g < 0 else sqrt(n0**2 + z1**2))
+    s = 0
+    for i in range(0, max_iter):
+        s = (s0 + s1) / 2
+        if s == s0 or s == s1 : break
+        ratio0 = n0/(s + r0)
+        ratio1 = z1/(s + 1)
+        g = ratio0**2 + ratio1**2 - 1
+        if g > 0:
+            s0 = s
+        elif g < 0:
+            s1 = s
+        else:
+            break
+    return s
+
 # decorator makes function accept numpy array and applies calculation to every element, returns numpy array of results
 @nb.guvectorize(['void(double[:], float32, float32, double[:])'], "(n),(),()->()", target='parallel', cache=True)
 def calc_residuals(point, a, b, out):
     """calculate square of difference from points to points of ellipse
-    https://www.geometrictools.com/Documentation/DistancePointEllipseEllipsoid.pdf
-    y0,y1 == xi,yi
-    z0,z1 == xz,yz
-    e0,e1 == a,b
-    x0,x1 == xe,ye
+    https://www.geometrictools.com/Documentation/DistancePointEllipseEllipsoid.pdf \\
+    y0,y1 == xi,yi \\
+    z0,z1 == xz,yz \\
+    e0,e1 == a,b \\
+    x0,x1 == xe,ye \\
     converts every calculation to 1st quadrant, should be the same, as ellipse is symmetric to both axes
     :param point: point to check
     :type point: np.ndarray
     :param a,b: ellipse half-axes
     :return: distance of point to ellipse squared
     """
-    xi,yi = np.abs(point)
-    max_iter = 149 # for float or 1074 for double
+    point_x,point_y = point
+    point_x = abs(point_x)
+    point_y = abs(point_y)
     distance: float = 0
-    if(yi > 0):
-        if (xi > 0):
-            zx = xi/a
-            zy = yi/b
-            g = zx**2 + zy**2 - 1
+    if(point_y > 0):
+        if (point_x > 0):
+            point_x_scaled = point_x/a
+            point_y_scaled = point_y/b
+            g = point_x_scaled**2 + point_y_scaled**2 - 1
             if (g != 0):
-                r0 = (a/b)**2
-                n0 = r0*zx
-                s0 = zy - 1
-                s1  = ( 0 if g < 0 else np.sqrt(n0**2 + zy**2))
-                s = 0
-                for i in range(0, max_iter):
-                    s = (s0 + s1) / 2
-                    if s == s0 or s == s1 : break
-                    ratio0 = n0/(s + r0)
-                    ratio1 = zy/(s + 1)
-                    g = ratio0**2 + ratio1**2 - 1
-                    if g > 0:
-                        s0 = s
-                    elif g < 0:
-                        s1 = s
-                    else:
-                        break
-                xe = r0*xi/(s + r0)
-                ye = yi/(s + 1)
-                distance = np.sqrt((xe - xi)**2 + (ye - yi)**2)
+                ratio_sq_ell_ax = (a/b)**2
+                root = get_root(ratio_sq_ell_ax, point_x_scaled, point_y_scaled, g)
+                ellipse_point_x = ratio_sq_ell_ax*point_x/(root + ratio_sq_ell_ax)
+                ellipse_point_y = point_y/(root + 1)
+                distance = sqrt((ellipse_point_x - point_x)**2 + (ellipse_point_y - point_y)**2)
             else:
-                xe,ye = xi,yi
+                ellipse_point_x,ellipse_point_y = point_x,point_y
                 distance = 0
         else:
-            xe,ye = 0,b
-            distance = np.abs(yi - b)
+            ellipse_point_x,ellipse_point_y = 0,b
+            distance = abs(point_y - b)
     else:
-        num = a*xi
+        num = a*point_x
         den = a**2 - b**2
         if num < den:
             frac = num/den
-            xe = a*frac
-            ye = b*np.sqrt(1-frac**2)
-            distance = np.sqrt((xe - xi)**2 + (ye - yi)**2)
+            ellipse_point_x = a*frac
+            ellipse_point_y = b*sqrt(1-frac**2)
+            distance = sqrt((ellipse_point_x - point_x)**2 + (ellipse_point_y - point_y)**2)
         else:
-            xe,ye = a,0
-            distance = np.abs(xi - a)
+            ellipse_point_x,ellipse_point_y = a,0
+            distance = abs(point_x - a)
     #return distance
-    out[0] = (xi - xe)**2 + (yi - ye)**2
+    out[0] = (point_x - ellipse_point_x)**2 + (point_y - ellipse_point_y)**2
+
 
 
 # for testing purposes:
@@ -574,8 +597,10 @@ if __name__ == "__main__":
     (h,w,d) = np.shape(im)
     dt = time.time()
     # try:
-    drp = evaluate_droplet(im, 250, (int(w/2-40), 0, 80, h))
+    drp = Droplet()
+    evaluate_droplet(im, 250, (int(w/2-40), 0, 80, h))
     print(time.time() - dt)
+    print(drp)
     # except Exception as ex:
     #     print(ex)
     cv2.imshow('Test',im)
