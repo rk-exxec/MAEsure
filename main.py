@@ -52,6 +52,22 @@ class MainWindow(QMainWindow):
         self.ui.idCombo.closeEvent(event)
         return super().closeEvent(event)
 
+    def register_action_events(self):
+        # action menu signals
+        self.ui.actionVideo_Path.triggered.connect(self.ui.camera_ctl.set_video_path)
+        self.ui.actionKalibrate_Size.triggered.connect(self.ui.camera_ctl.calib_size)
+        self.ui.actionDelete_Size_Calibration.triggered.connect(self.ui.camera_ctl.remove_size_calib)
+        self.ui.actionSave_Image.triggered.connect(self.ui.camera_ctl.save_image_dialog)
+        self.ui.actionCameraSettings.triggered.connect(self.ui.camera_ctl.camera_settings_dialog)
+        self.ui.actionReset_Camera.triggered.connect(self.ui.camera_ctl.reset_camera)
+        # menu reset settings
+        self.ui.actionSyringe_Mask.triggered.connect(self.ui.camera_prev._needle_mask.delete_geo)
+        self.ui.actionBaseline.triggered.connect(self.ui.camera_prev._baseline.delete_y_level)
+        self.ui.actionSample_IDs.triggered.connect(self.ui.idCombo.delete_entries)
+        self.ui.actionCamera_scale_factor.triggered.connect(Droplet.delete_scale)
+
+    
+
     def cleanup(self):
         del self
 

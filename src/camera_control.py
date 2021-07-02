@@ -117,13 +117,6 @@ class CameraControl(QGroupBox):
         self.ui.setROIBtn.clicked.connect(self.apply_roi)
         self.ui.resetROIBtn.clicked.connect(self.reset_roi)
         self.ui.syr_mask_chk.stateChanged.connect(self.needle_mask_changed)
-        # action menu signals
-        self.ui.actionVideo_Path.triggered.connect(self.set_video_path)
-        self.ui.actionKalibrate_Size.triggered.connect(self.calib_size)
-        self.ui.actionDelete_Size_Calibration.triggered.connect(self.remove_size_calib)
-        self.ui.actionSave_Image.triggered.connect(self.save_image_dialog)
-        self.ui.actionCameraSettings.triggered.connect(self.camera_settings_dialog)
-        self.ui.actionReset_Camera.triggered.connect(self.reset_camera)
 
     def is_streaming(self) -> bool:
         """ 

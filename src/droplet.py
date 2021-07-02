@@ -131,6 +131,11 @@ class Droplet(Singleton):
         
         return ret
 
+    @staticmethod
+    def delete_scale():
+        settings = QSettings()
+        settings.remove("droplet")
+
     # properties section, get returns the average, set feeds the rolling averager
     @property
     def angle_l(self):

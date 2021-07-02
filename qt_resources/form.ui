@@ -1228,6 +1228,15 @@ every cycle</string>
     <property name="title">
      <string>Menu</string>
     </property>
+    <widget class="QMenu" name="menuReset_Saved_Parameters">
+     <property name="title">
+      <string>Reset Saved Parameters</string>
+     </property>
+     <addaction name="actionSyringe_Mask"/>
+     <addaction name="actionBaseline"/>
+     <addaction name="actionSample_IDs"/>
+     <addaction name="actionCamera_scale_factor"/>
+    </widget>
     <addaction name="actionReset_Camera"/>
     <addaction name="actionCameraSettings"/>
     <addaction name="actionVideo_Path"/>
@@ -1239,6 +1248,7 @@ every cycle</string>
     <addaction name="actionDelete_Size_Calibration"/>
     <addaction name="separator"/>
     <addaction name="actionSave_Image"/>
+    <addaction name="menuReset_Saved_Parameters"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -1309,6 +1319,26 @@ every cycle</string>
   <action name="actionCameraSettings">
    <property name="text">
     <string>CameraSettings</string>
+   </property>
+  </action>
+  <action name="actionSyringe_Mask">
+   <property name="text">
+    <string>Syringe Mask</string>
+   </property>
+  </action>
+  <action name="actionBaseline">
+   <property name="text">
+    <string>Baseline</string>
+   </property>
+  </action>
+  <action name="actionSample_IDs">
+   <property name="text">
+    <string>Sample IDs</string>
+   </property>
+  </action>
+  <action name="actionCamera_scale_factor">
+   <property name="text">
+    <string>Camera scale factor</string>
    </property>
   </action>
  </widget>

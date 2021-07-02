@@ -36,6 +36,9 @@ class IdComboBox(QComboBox):
         self.settings.setValue("id_combo_control/ids", self._ids)
         return super().closeEvent(event)
 
+    def delete_entries(self):
+        self.settings.remove("id_combo_control")
+
     def showEvent(self, event):
         if self._first_show:
             self._first_show = False

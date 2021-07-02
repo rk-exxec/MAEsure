@@ -180,6 +180,9 @@ class DynamicNeedleMask(QWidget):
     
     def load_geo(self):
         return self.settings.value("needle_mask/geometry")
+
+    def delete_geo(self):
+        self.settings.remove("needle_mask")
         
     def updateGrips(self):
         self.setContentsMargins(*[self.gripSize] * 4)

@@ -129,6 +129,9 @@ class Baseline(QWidget):
     def load_y_level(self):
         self.y_level = self.settings.value("baseline/y_level", defaultValue=0.0, type=float)
 
+    def delete_y_level(self):
+        self.settings.remove("baseline")
+
     def showEvent(self, event):
         """
         custom show event
