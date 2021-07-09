@@ -250,9 +250,15 @@ class CameraControl(QGroupBox):
         """
         # block image signal to prevent overloading
         #blocker = QSignalBlocker(self.cam)
+        
         if self.cam.is_running:
             # evaluate droplet if checkbox checked
             eval = self.ui.evalChk.isChecked() or self._oneshot_eval
+            # disable droplet avg for oneshot measurements but not for continous
+            if self.ui.evalChk.isChecked():
+                self.ui.camera_prev._droplet.averaging = True
+            elif self._oneshot_eval:
+                self.ui.camera_prev._droplet.averaging = False
             self._oneshot_eval = False
             # display current fps
             self.ui.frameInfoLbl.setText('Running | FPS: ' + str(self.cam.get_framerate()))
@@ -262,6 +268,8 @@ class CameraControl(QGroupBox):
         elif self._oneshot_eval:
             # enable evaluate for one frame (eg snapshots)
             eval = True
+            # disable droplet avg for oneshot measurements
+            self.ui.camera_prev._droplet.averaging = False
             self._oneshot_eval = False
         else:
             eval = False

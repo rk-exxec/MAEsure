@@ -27,6 +27,7 @@ class Singleton(object):
     def __new__(class_, *args, **kwargs):
         if not isinstance(class_._instance, class_):
             class_._instance = object.__new__(class_, *args, **kwargs)
+            class_._instance._initialized = False
         return class_._instance
 
 # TODO make length always be a fixed fraction of a second and change with framerate
@@ -60,8 +61,11 @@ class Droplet(Singleton):
     - **scale_px_to_mm**: scale to convert between px and mm, is loaded from storage on startup
     """
     def __init__(self):
-        settings                                    = QSettings()
         self.is_valid       : bool                  = False
+        if self._initialized: return
+        self._initialized = True
+        settings                                    = QSettings()
+        self.averaging      : bool                  = True
         self.r2             : float                 = 0
         self._angle_l       : float                 = 0.0
         self._angle_l_avg                           = RollingAverager()
@@ -140,7 +144,10 @@ class Droplet(Singleton):
     @property
     def angle_l(self):
         """ average of left tangent angle """
-        return self._angle_l_avg.average
+        if self.averaging:
+            return self._angle_l_avg.average
+        else: 
+            return self._angle_l
 
     @angle_l.setter
     def angle_l(self, value):
@@ -150,7 +157,10 @@ class Droplet(Singleton):
     @property
     def angle_r(self):
         """ average of right tangent angle """
-        return self._angle_r_avg.average
+        if self.averaging:
+            return self._angle_r_avg.average
+        else:
+            return self._angle_r
 
     @angle_r.setter
     def angle_r(self, value):
@@ -160,7 +170,10 @@ class Droplet(Singleton):
     @property
     def height(self):
         """ height of droplet in px """
-        return self._height_avg.average
+        if self.averaging:
+            return self._height_avg.average
+        else:
+            return self._height
 
     @height.setter
     def height(self, value):
@@ -170,7 +183,10 @@ class Droplet(Singleton):
     @property
     def volume(self):
         """ approx volume of droplet  in px^3 """
-        return self._volume_avg.average
+        if self.averaging:
+            return self._volume_avg.average
+        else:
+            return self._volume
 
     @volume.setter
     def volume(self, value):
@@ -184,7 +200,10 @@ class Droplet(Singleton):
         
         .. seealso:: :meth:`set_scale` 
         """
-        return self._height_avg.average * self.scale_px_to_mm
+        if self.averaging:
+            return self._height_avg.average * self.scale_px_to_mm
+        else:
+            return self._height * self.scale_px_to_mm
 
     @property
     def base_diam_mm(self):
@@ -196,7 +215,10 @@ class Droplet(Singleton):
 
     @property
     def volume_mm(self):
-        return self._volume_avg.average * self.scale_px_to_mm**3
+        if self.averaging:
+            return self._volume_avg.average * self.scale_px_to_mm**3
+        else:
+            return self._volume * self.scale_px_to_mm**3
 
     def set_scale(self, scale):
         """ set and store a scalefactor to calculate mm from pixels
@@ -321,5 +343,5 @@ class RollingAverager:
         elif mode == 1:
             self.buffer = []
             self.length = 0
-        elif mode == 2:
+        else:
             self.set_length(1)
