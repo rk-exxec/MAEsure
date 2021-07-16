@@ -117,6 +117,8 @@ class CameraSettings(QDialog):
         self.exp_off_btn.clicked.connect(lambda: self.set_exp_mode("Off"))
         self.exp_once_btn.clicked.connect(lambda: self.set_exp_mode("Once"))
         self.exp_cont_btn.clicked.connect(lambda: self.set_exp_mode("Continuous"))
+        self.rough_exp_btn.clicked.connect(lambda: self.set_exposure(8000))
+        self.one_thousand_btn.clicked.connect(lambda: self.set_exposure(1000))
         self.timer.timeout.connect(self.update_exposure)
 
     @Slot(int)
@@ -129,7 +131,7 @@ class CameraSettings(QDialog):
         self.set_exposure(value)
 
     def set_exposure(self, value):
-        value = self.exp_value.value()
+        if(not value): value = self.exp_value.value()
         logging.debug(f"Setting camera exposure to {value}")
         self.cam.set_exposure(value)
 
@@ -250,6 +252,37 @@ class CameraSettings(QDialog):
 
         self.horizontalLayout_4.addWidget(self.exp_cont_btn)
         self.verticalLayout.addLayout(self.horizontalLayout_4)
+
+        self.horizontalLayout_5 = QHBoxLayout()
+        self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
+
+        self.one_thousand_btn = QPushButton(self.verticalLayoutWidget)
+        self.one_thousand_btn.setObjectName(u"one_thousand_btn")
+        sizePolicy4 = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        sizePolicy4.setHorizontalStretch(0)
+        sizePolicy4.setVerticalStretch(0)
+        sizePolicy4.setHeightForWidth(self.one_thousand_btn.sizePolicy().hasHeightForWidth())
+        self.one_thousand_btn.setSizePolicy(sizePolicy4)
+        self.one_thousand_btn.setMinimumSize(QSize(0, 0))
+        self.one_thousand_btn.setCheckable(False)
+        self.one_thousand_btn.setAutoExclusive(False)
+        self.horizontalLayout_5.addWidget(self.one_thousand_btn)
+
+        self.rough_exp_btn = QPushButton(self.verticalLayoutWidget)
+        self.rough_exp_btn.setObjectName(u"rough_exp_btn")
+        sizePolicy5 = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        sizePolicy5.setHorizontalStretch(0)
+        sizePolicy5.setVerticalStretch(0)
+        sizePolicy5.setHeightForWidth(self.rough_exp_btn.sizePolicy().hasHeightForWidth())
+        self.rough_exp_btn.setSizePolicy(sizePolicy5)
+        self.rough_exp_btn.setMinimumSize(QSize(0, 0))
+        self.rough_exp_btn.setCheckable(False)
+        self.rough_exp_btn.setAutoExclusive(False)
+        self.horizontalLayout_5.addWidget(self.rough_exp_btn)
+
+
+        self.verticalLayout.addLayout(self.horizontalLayout_5)
+
         self.retranslateUi()
 
     # setupUi
@@ -261,3 +294,5 @@ class CameraSettings(QDialog):
         self.exp_off_btn.setText(QCoreApplication.translate("CameraSettings", u"Off", None))
         self.exp_once_btn.setText(QCoreApplication.translate("CameraSettings", u"Once", None))
         self.exp_cont_btn.setText(QCoreApplication.translate("CameraSettings", u"Continuous", None))
+        self.one_thousand_btn.setText(QCoreApplication.translate("CameraSettings", u"1000", None))
+        self.rough_exp_btn.setText(QCoreApplication.translate("CameraSettings", u"8000", None))
