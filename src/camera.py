@@ -222,45 +222,61 @@ if HAS_VIMBA:
             self._frame_producer_thread.start() # actually start the thread to execute the method given as target
 
         def reset_roi(self):
-            #self.set_roi(0,0, 2064, 1544)
             was_running = self._is_running
             self.stop_streaming()
             with self._vimba:
                 with self._cam:
-                    h = self._cam.SensorHeight.get()
-                    w = self._cam.SensorWidth.get()
-                    w = int(8 * round(w/8))
-                    h = int(8 * round(h/8))
-                    if h > 1542:
-                        h = 1542
-                    with self._vimba:
-                        with self._cam:
-                            self._cam.OffsetX.set(0)
-                            self._cam.OffsetY.set(0)
-                            self._cam.Width.set(w)
-                            self._cam.Height.set(h)
+                    self._cam.OffsetX.set(0)
+                    self._cam.OffsetY.set(0)
+                    _, w_max = self._cam.Width.get_range()
+                    _, h_max = self._cam.Height.get_range()
+                    self._cam.Width.set(w_max)
+                    self._cam.Height.set(h_max)
             self._image_size_invalid = True
             self.snapshot()
             if was_running: self.start_streaming()
 
         def set_roi(self, x, y, w, h):
-            # x, y, width and height need be multiple of 8
-            x = int(8 * int(round(x/8)))
-            y = int(8 * int(round(y/8)))
-            w = int(8 * int(round(w/8)))
-            h = int(8 * int(round(h/8)))
-            if h > 1542:
-                h = 1542
             was_running = self._is_running
             self.stop_streaming()
             with self._vimba:
                 with self._cam:
-                    xo = self._cam.OffsetX.get()
-                    yo = self._cam.OffsetY.get()
+                    xo,yo,cw,ch = self.get_roi()
+                    xo = x+xo
+                    yo = y+yo
+                    w = min(w, cw - xo)
+                    h = min(h, ch - yo)
+
+                    # get range and step size
+                    w_step = self._cam.Width.get_increment()
+                    h_step = self._cam.Height.get_increment()
+                    w_min, w_max = self._cam.Width.get_range()
+                    h_min, h_max = self._cam.Height.get_range()
+
+                    # clamp values to range and step size
+                    w = (w - w_min) // w_step * w_step + w_min
+                    h = (h - h_min) // h_step * h_step + h_min
+                    w = max(w_min, min(w_max, w))
+                    h = max(h_min, min(h_max, h))
+
                     self._cam.Width.set(w)
                     self._cam.Height.set(h)
-                    self._cam.OffsetX.set(x + xo)
-                    self._cam.OffsetY.set(y + yo)
+
+                    
+                    xo_step = self._cam.OffsetX.get_increment()
+                    yo_step = self._cam.OffsetY.get_increment()
+                    xo_min, xo_max = self._cam.OffsetX.get_range()
+                    yo_min, yo_max = self._cam.OffsetY.get_range()
+
+                    #clamp offset to range and step size
+                    xo = (xo - xo_min) // xo_step * xo_step + xo_min
+                    yo = (yo - yo_min) // yo_step * yo_step + yo_min
+                    xo = max(xo_min, min(xo_max, xo))
+                    yo = max(yo_min, min(yo_max, yo))
+
+                    self._cam.OffsetX.set(xo)
+                    self._cam.OffsetY.set(yo)
+
             self._image_size_invalid = True
             self.snapshot()
             if was_running: self.start_streaming()
@@ -329,7 +345,6 @@ if HAS_VIMBA:
                     res_x = self._cam.Width.get()
                     res_y = self._cam.Height.get()
                     return (res_x, res_y)
-
         
         def get_exposure(self):
             with self._vimba:
@@ -344,8 +359,9 @@ if HAS_VIMBA:
         def get_exposure_range(self):
             with self._vimba:
                 with self._cam:
-                    min = self._cam.ExposureAutoMin.get()
-                    max = self._cam.ExposureAutoMax.get()
+                    # min = self._cam.ExposureAutoMin.get()
+                    # max = self._cam.ExposureAutoMax.get()
+                    min,max = self._cam.ExposureTime.get_range()
             return min,max
 
         def get_exposure_mode(self):
