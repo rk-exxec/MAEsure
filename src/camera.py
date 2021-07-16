@@ -241,13 +241,16 @@ if HAS_VIMBA:
             self.stop_streaming()
             with self._vimba:
                 with self._cam:
+                    # get current ROI
                     xo,yo,cw,ch = self.get_roi()
+                    # support nested ROI by adding current offset to new one
                     xo = x+xo
                     yo = y+yo
+                    # limit width / height to stay within boundaries of new offset and current width/heigth
                     w = min(w, cw - xo)
                     h = min(h, ch - yo)
 
-                    # get range and step size
+                    # get width/height range and step size
                     w_step = self._cam.Width.get_increment()
                     h_step = self._cam.Height.get_increment()
                     w_min, w_max = self._cam.Width.get_range()
@@ -259,10 +262,11 @@ if HAS_VIMBA:
                     w = max(w_min, min(w_max, w))
                     h = max(h_min, min(h_max, h))
 
+                    # set width and height
                     self._cam.Width.set(w)
                     self._cam.Height.set(h)
 
-                    
+                    # get offset range and step
                     xo_step = self._cam.OffsetX.get_increment()
                     yo_step = self._cam.OffsetY.get_increment()
                     xo_min, xo_max = self._cam.OffsetX.get_range()
