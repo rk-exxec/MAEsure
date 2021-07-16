@@ -168,8 +168,6 @@ class CameraControl(QGroupBox):
             self.ui.startCamBtn.setText('Stop')
             self.ui.record_chk.setEnabled(False)
             self.ui.frameInfoLbl.setText('Running')
-            self.ui.setROIBtn.setEnabled(False)
-            self.ui.resetROIBtn.setEnabled(False)
         else:
             self.cam.stop_streaming()
             if self.ui.record_chk.isChecked():
@@ -177,8 +175,6 @@ class CameraControl(QGroupBox):
             self.ui.record_chk.setEnabled(True)
             logging.info("Stop camera stream")
             self.ui.startCamBtn.setText('Start')
-            self.ui.setROIBtn.setEnabled(True)
-            self.ui.resetROIBtn.setEnabled(True)
             self.cam.snapshot()
             self.ui.frameInfoLbl.setText('Stopped')
             self.ui.processingTimeLbl.setText('')
