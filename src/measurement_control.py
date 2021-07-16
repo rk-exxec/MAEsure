@@ -14,9 +14,6 @@
 #     You should have received a copy of the GNU General Public License
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-# TODO meas ctl
-#   - zeit immer vor magnetfeld gemessen falls beide gewählt!
-#   - wnn nur magnet, droplet nicht nach jedem punkt wieder neu ausgeben?
 
 import math
 from evaluate_droplet import Droplet
