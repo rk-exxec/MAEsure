@@ -34,6 +34,7 @@ from PySide2.QtCore import QCoreApplication, QSettings, Qt
 from camera_control import CameraControl
 from data_control import DataControl
 from additional_gui_elements import AboutDialog
+from droplet import Droplet
 
 class MainWindow(QMainWindow):
     def __init__(self):
