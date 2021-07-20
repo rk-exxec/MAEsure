@@ -363,8 +363,6 @@ if HAS_VIMBA:
         def get_exposure_range(self):
             with self._vimba:
                 with self._cam:
-                    # min = self._cam.ExposureAutoMin.get()
-                    # max = self._cam.ExposureAutoMax.get()
                     min,max = self._cam.ExposureTime.get_range()
             return min,max
 
