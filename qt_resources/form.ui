@@ -221,14 +221,27 @@ Surface Diam:
     <widget class="QLabel" name="processingTimeLbl">
      <property name="geometry">
       <rect>
-       <x>250</x>
+       <x>560</x>
        <y>380</y>
-       <width>341</width>
+       <width>31</width>
        <height>16</height>
       </rect>
      </property>
      <property name="text">
       <string/>
+     </property>
+    </widget>
+    <widget class="QLabel" name="camInfoLbl">
+     <property name="geometry">
+      <rect>
+       <x>246</x>
+       <y>380</y>
+       <width>301</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Cam info</string>
      </property>
     </widget>
    </widget>

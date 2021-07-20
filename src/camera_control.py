@@ -28,7 +28,7 @@ from moviepy.video.io.ffmpeg_writer import FFMPEG_VideoWriter as VidWriter
 import cv2
 from PySide2 import QtGui
 from PySide2.QtWidgets import QCheckBox, QDial, QDialog, QFileDialog, QGroupBox, QInputDialog, QMessageBox
-from PySide2.QtCore import QSettings, QSignalBlocker, Qt, Signal, Slot
+from PySide2.QtCore import QSettings, QSignalBlocker, QTimer, Qt, Signal, Slot
 from vimba.frame import BAYER_PIXEL_FORMATS
 
 
@@ -57,6 +57,11 @@ class CameraControl(QGroupBox):
         # load UI components
         self.ui: Ui_main = self.window().ui
         self._first_show = True # whether form is shown for the first time
+
+        self.update_timer = QTimer()
+        self.update_timer.setInterval(500)
+        self.update_timer.setSingleShot(False)
+        self.update_timer.timeout.connect(self.update_cam_info)
         
         # video path and writer object to record videos
         self.video_dir = settings.value("camera_control/video_dir", ".", str)
@@ -74,7 +79,7 @@ class CameraControl(QGroupBox):
             else: logging.info("Using Test Camera")
         self.update()
         self._oneshot_eval = False
-        self._frametime = RollingAverager(1000)
+        self._frametime = RollingAverager(100)
         logging.debug("initialized camera control")
 
     def __del__(self):
@@ -168,6 +173,7 @@ class CameraControl(QGroupBox):
             self.ui.startCamBtn.setText('Stop')
             self.ui.record_chk.setEnabled(False)
             self.ui.frameInfoLbl.setText('Running')
+            self.update_timer.start()
         else:
             self.cam.stop_streaming()
             if self.ui.record_chk.isChecked():
@@ -179,6 +185,7 @@ class CameraControl(QGroupBox):
             self.ui.frameInfoLbl.setText('Stopped')
             self.ui.processingTimeLbl.setText('')
             self.ui.drpltDataLbl.setText(str(self.ui.camera_prev._droplet))
+            self.update_timer.stop()
 
     def oneshot_eval(self):
         self._oneshot_eval = True
@@ -279,13 +286,22 @@ class CameraControl(QGroupBox):
         # update preview image    
         self.ui.camera_prev.update_image(cv_img, eval)
         self.frametime = (time.time() - dt) * 1000
-        self.ui.processingTimeLbl.setText(f"Frametime: {self.frametime:.1f} ms")
+        self.ui.processingTimeLbl.setText(f"{self.frametime:.1f} ms")
 
         # display droplet parameters
         self.ui.drpltDataLbl.setText(str(self.ui.camera_prev._droplet))
 
         # unblock signals from cam
         #blocker.unblock()
+
+    @Slot()
+    def update_cam_info(self):
+        try:
+            roi = self.cam.get_roi()
+            exp = self.cam.get_exposure()
+            self.ui.camInfoLbl.setText(f"Exp: {exp:.1f} | ROI: {roi[2]}x{roi[3]} @ ({roi[0]},{roi[1]})")
+        except:
+            self.ui.camInfoLbl.setText(f"Error fetching data")
 
     @property
     def frametime(self):
