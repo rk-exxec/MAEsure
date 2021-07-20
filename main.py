@@ -75,6 +75,7 @@ class MainWindow(QMainWindow):
         QShortcut(QtGui.QKeySequence("F10"), self, self.ui.camera_ctl.set_dark)
         QShortcut(QtGui.QKeySequence("up"), self, self.ui.camera_ctl.increase_exposure)
         QShortcut(QtGui.QKeySequence("down"), self, self.ui.camera_ctl.decrease_exposure)
+        QShortcut(QtGui.QKeySequence("F12"), self, self.ui.camera_ctl.save_image_dialog)
 
     def cleanup(self):
         del self
