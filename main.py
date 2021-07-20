@@ -16,16 +16,20 @@
 
 import sys
 
-from PySide2 import QtWidgets
+from PySide2 import QtGui
+
+
 sys.path.append('./src')
 import os
+import pathlib
+import subprocess
 import pydevd
 import gc
 import atexit
 import logging
-from PySide2.QtGui import QResizeEvent, QPixmap
-from PySide2.QtWidgets import QMainWindow, QApplication, QSplashScreen
-from PySide2.QtCore import QCoreApplication, QSettings
+from PySide2.QtGui import QKeyEvent, QKeySequence, QResizeEvent, QPixmap
+from PySide2.QtWidgets import QMainWindow, QApplication, QShortcut, QSplashScreen
+from PySide2.QtCore import QCoreApplication, QSettings, Qt
 
 from camera_control import CameraControl
 from data_control import DataControl
@@ -34,7 +38,7 @@ from additional_gui_elements import AboutDialog
 class MainWindow(QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
-        self.ui = None
+        self.ui : Ui_main = None
         atexit.register(self.cleanup)
         #self._size = self.size()
 
@@ -65,8 +69,11 @@ class MainWindow(QMainWindow):
         self.ui.actionBaseline.triggered.connect(self.ui.camera_prev._baseline.delete_y_level)
         self.ui.actionSample_IDs.triggered.connect(self.ui.idCombo.delete_entries)
         self.ui.actionCamera_scale_factor.triggered.connect(Droplet.delete_scale)
-
-    
+        # shortcuts
+        QShortcut(QtGui.QKeySequence("F9"), self, self.ui.camera_ctl.set_bright)
+        QShortcut(QtGui.QKeySequence("F10"), self, self.ui.camera_ctl.set_dark)
+        QShortcut(QtGui.QKeySequence("up"), self, self.ui.camera_ctl.increase_exposure)
+        QShortcut(QtGui.QKeySequence("down"), self, self.ui.camera_ctl.decrease_exposure)
 
     def cleanup(self):
         del self
@@ -109,13 +116,21 @@ class App(QApplication):
         self.ui = Ui_main()
         self.window.ui = self.ui
         self.ui.setupUi(self.window)
+        self.window.register_action_events()
         self.window.show()
         
         splash.finish(self.window)
 
 if __name__ == "__main__":
     # compile python qt form.ui into python file
-    os.system('pyside2-uic -o src/ui_form.py qt_resources/form.ui')
+    # uic_path = pathlib.PurePath(os.path.dirname(sys.executable)) / "Scripts"
+    # py_file_path = pathlib.PurePath(os.getcwd()) / 'src/ui_form.py'
+    # ui_file_path = pathlib.PurePath(os.getcwd()) / 'qt_resources/form.ui'
+    # command = f"pyside2-uic -o {py_file_path.as_posix()} {ui_file_path.as_posix()}"
+    # print(command)
+    # p = subprocess.Popen(command, cwd=uic_path.as_posix())
+    # p.wait()
+    os.system("pyside2-uic -o src/ui_form.py qt_resources/form.ui")
 
     from ui_form import Ui_main
 

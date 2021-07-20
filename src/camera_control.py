@@ -237,7 +237,22 @@ class CameraControl(QGroupBox):
         self.cam.reset_roi()
         self.ui.camera_prev.set_baseline_y(base_y + yc)
         self.ui.camera_prev.set_mask_dim(xm + xc, ym + yc, wm, hm)
+
+    @Slot()
+    def increase_exposure(self):
+        self.cam.set_exposure(self.cam.get_exposure()*2)
+
+    @Slot()
+    def decrease_exposure(self):
+        self.cam.set_exposure(self.cam.get_exposure()/2)    
         
+    @Slot()
+    def set_bright(self):
+        self.cam.set_exposure(8000)
+
+    @Slot()
+    def set_dark(self):
+        self.cam.set_exposure(1000)
 
     @Slot(np.ndarray)
     def update_image(self, cv_img: np.ndarray):
