@@ -73,9 +73,17 @@ class MainWindow(QMainWindow):
         # shortcuts
         QShortcut(QtGui.QKeySequence("F9"), self, self.ui.camera_ctl.set_bright)
         QShortcut(QtGui.QKeySequence("F10"), self, self.ui.camera_ctl.set_dark)
-        QShortcut(QtGui.QKeySequence("up"), self, self.ui.camera_ctl.increase_exposure)
-        QShortcut(QtGui.QKeySequence("down"), self, self.ui.camera_ctl.decrease_exposure)
+        QShortcut(QtGui.QKeySequence("PgUp"), self, self.ui.camera_ctl.increase_exposure)
+        QShortcut(QtGui.QKeySequence("PgDown"), self, self.ui.camera_ctl.decrease_exposure)
         QShortcut(QtGui.QKeySequence("F12"), self, self.ui.camera_ctl.save_image_dialog)
+        QShortcut(QtGui.QKeySequence("left"), self, lambda: self.ui.camera_ctl.shift_roi("left"))
+        QShortcut(QtGui.QKeySequence("Shift+left"), self, lambda: self.ui.camera_ctl.shift_roi("left",True))
+        QShortcut(QtGui.QKeySequence("right"), self, lambda: self.ui.camera_ctl.shift_roi("right"))
+        QShortcut(QtGui.QKeySequence("Shift+right"), self, lambda: self.ui.camera_ctl.shift_roi("right",True))
+        QShortcut(QtGui.QKeySequence("up"), self, lambda: self.ui.camera_ctl.shift_roi("up"))
+        QShortcut(QtGui.QKeySequence("Shift+up"), self, lambda: self.ui.camera_ctl.shift_roi("up",True))
+        QShortcut(QtGui.QKeySequence("down"), self, lambda: self.ui.camera_ctl.shift_roi("down"))
+        QShortcut(QtGui.QKeySequence("Shift+down"), self, lambda: self.ui.camera_ctl.shift_roi("down",True))
 
     def cleanup(self):
         del self

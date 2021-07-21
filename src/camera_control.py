@@ -254,6 +254,21 @@ class CameraControl(QGroupBox):
     def set_dark(self):
         self.cam.set_exposure(1000)
 
+    def shift_roi(self, direction:str, fast=False):
+        x,y,w,h = self.cam.get_roi() 
+        amount = 500 if fast else 50
+        if direction == "left":
+            self.cam.set_roi(x-amount,y,w,h,nested=False)
+        elif direction == "right":
+            self.cam.set_roi(x+amount,y,w,h,nested=False)
+        elif direction == "up":
+            self.cam.set_roi(x,y-amount,w,h,nested=False)
+        elif direction == "down":
+            self.cam.set_roi(x,y+amount,w,h,nested=False)
+        else:
+            logging.debug(f"Wrong roi shift direction: {direction}")
+
+
     @Slot(np.ndarray)
     def update_image(self, cv_img: np.ndarray):
         """ 
