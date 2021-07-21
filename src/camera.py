@@ -131,12 +131,11 @@ class AbstractCamera(QObject):
         """
         raise NotImplementedError
 
-    def get_roi(self):
+    def get_roi(self) -> Tuple[int,int,int,int]:
         """ 
         get the region of interest on the cam
 
-        :param x,y: x,y of ROI in image coordinates
-        :param w,h: width and height of ROI
+        :returns: x,y,w,h of ROI in image coordinates
         """
         raise NotImplementedError
 
@@ -233,22 +232,26 @@ if HAS_VIMBA:
                     self._cam.Width.set(w_max)
                     self._cam.Height.set(h_max)
             self._image_size_invalid = True
-            self.snapshot()
             if was_running: self.start_streaming()
+            else: self.snapshot()
 
-        def set_roi(self, x, y, w, h):
+        def set_roi(self, x, y, w, h, nested=True):
             was_running = self._is_running
             self.stop_streaming()
             with self._vimba:
                 with self._cam:
                     # get current ROI
                     xo,yo,cw,ch = self.get_roi()
-                    # support nested ROI by adding current offset to new one
-                    xo = x+xo
-                    yo = y+yo
-                    # limit width / height to stay within boundaries of new offset and current width/heigth
-                    w = min(w, cw - xo)
-                    h = min(h, ch - yo)
+                    if nested:
+                        # support nested ROI by adding current offset to new one
+                        xo = x+xo
+                        yo = y+yo
+                        # limit width / height to stay within boundaries of new offset and current width/heigth
+                        w = min(w, cw - xo)
+                        h = min(h, ch - yo)
+                    else:
+                        xo = x
+                        yo = y
 
                     # get width/height range and step size
                     w_step = self._cam.Width.get_increment()
@@ -282,8 +285,10 @@ if HAS_VIMBA:
                     self._cam.OffsetY.set(yo)
 
             self._image_size_invalid = True
-            self.snapshot()
-            if was_running: self.start_streaming()
+            if was_running: 
+                self.start_streaming()
+            else:
+                self.snapshot()
 
         
         def get_roi(self):
